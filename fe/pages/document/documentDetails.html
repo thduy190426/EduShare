@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi tiết tài liệu — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/document/documentDetails.css">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<body>
+  
+  
+  <nav class="navbar">
+    <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+    <div class="nav-search">
+      <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+      <input type="text" placeholder="Tìm kiếm tài liệu...">
+    </div>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+            <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    
+    
+    <div class="main-col">
+      
+      
+      <div class="doc-header-card">
+        <div class="badges-row" id="doc-badges">
+          
+        </div>
+        
+        <h1 class="doc-title" id="doc-title">Đang tải...</h1>
+        
+        <div class="author-meta">
+          <div class="author-info">
+            <div class="author-avatar" id="doc-author-avatar">?</div>
+            <div>
+              <div class="author-name" id="doc-author-name">...</div>
+              <div class="author-date" id="doc-author-date">...</div>
+            </div>
+          </div>
+          <div class="meta-stats">
+            <div class="meta-stat-item"><span><i class="fa-solid fa-eye"></i></span> <strong id="doc-views">0</strong> lượt xem</div>
+            <div class="meta-stat-item"><span><i class="fa-solid fa-download"></i></span> <strong id="doc-downloads">0</strong> lượt tải</div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="preview-container">
+        <div class="preview-header">
+          <span id="preview-filename">Đang tải...</span>
+        </div>
+        <div class="preview-pages">
+          <i class="fa-solid fa-file" id="preview-icon"></i>
+          <p id="preview-text">Bản xem trước tài liệu</p>
+        </div>
+      </div>
+
+      
+      <div class="comments-section">
+        <h3 class="comments-title"><i class="fa-solid fa-comment"></i> Bình luận</h3>
+        
+        <div class="comment-form">
+          <div class="comment-avatar">You</div>
+          <div class="comment-input-area">
+            <textarea id="comment-input" class="comment-textarea" placeholder="Viết bình luận hoặc đặt câu hỏi về tài liệu này..."></textarea>
+            <button id="btn-submit-comment" class="btn-submit"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi bình luận</button>
+          </div>
+        </div>
+
+        <div class="comment-list" id="comments-list"></div>
+      </div>
+    </div>
+
+    <div class="side-col">
+      <div class="action-card">
+        <div class="rating-big">
+          <div class="rating-score" id="doc-rating-score">0.0</div>
+          <div class="rating-stars" id="doc-rating-stars">
+            <i class="fa-regular fa-star" data-val="1" style="cursor:pointer;"></i>
+            <i class="fa-regular fa-star" data-val="2" style="cursor:pointer;"></i>
+            <i class="fa-regular fa-star" data-val="3" style="cursor:pointer;"></i>
+            <i class="fa-regular fa-star" data-val="4" style="cursor:pointer;"></i>
+            <i class="fa-regular fa-star" data-val="5" style="cursor:pointer;"></i>
+          </div>
+          <div class="rating-count" style="font-size:12px; margin-top:5px; color:#6b7280;">Bấm vào sao để đánh giá</div>
+        </div>
+        
+        <button class="btn btn-download" id="btn-download">
+          <span><i class="fa-solid fa-download"></i></span> Tải xuống
+        </button>
+        <button class="btn btn-bookmark" id="btn-bookmark">
+          <span><i class="fa-regular fa-bookmark" id="bookmark-icon"></i></span> <span id="bookmark-text">Lưu vào Bookmark</span>
+        </button>
+        <button class="btn btn-bookmark" id="btn-report" style="color: var(--danger); background: #FEF2F2; border: 1px solid #FCA5A5;">
+          <span><i class="fa-solid fa-flag"></i></span> Báo cáo vi phạm
+        </button>
+        <button class="btn btn-bookmark" id="btn-verify" style="display: none; background: #F3F4F6; border: 1px solid #D1D5DB; color: #374151;">
+          <span><i class="fa-solid fa-certificate" id="verify-icon"></i></span> <span id="verify-text">Xác thực chất lượng</span>
+        </button>
+      </div>
+
+      <div class="related-card">
+        <h3 class="related-title">Tài liệu liên quan</h3>
+        <div class="related-list" id="related-docs-list">
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../../main/document/documentDetails.js"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

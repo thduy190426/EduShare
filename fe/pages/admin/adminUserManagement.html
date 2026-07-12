@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý người dùng — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminUserManagement.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+</head>
+<body>
+  
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    
+    <main class="content-area">
+      
+      <div class="page-header">
+        <h1 class="page-title">Quản lý người dùng</h1>
+      </div>
+
+      
+      <div class="filter-bar">
+        <div class="search-wrapper">
+          <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" id="input-search" placeholder="Tìm kiếm theo tên hoặc email...">
+        </div>
+        <select class="filter-select" id="filter-role" aria-label="Loc theo vai tro">
+          <option value="">Tất cả vai trò</option>
+          <option value="SinhVien">Sinh viên</option>
+          <option value="GiaoVien">Giáo viên</option>
+          <!-- <option value="Admin">Admin</option> -->
+        </select>
+        <select class="filter-select" id="filter-status" aria-label="Lọc theo trạng thái">
+          <option value="">Tất cả trạng thái</option>
+          <option value="HoatDong">Hoạt động</option>
+          <option value="BiKhoa">Bị khóa</option>
+        </select>
+        <select class="filter-select" id="filter-sort" aria-label="Sắp xếp người dùng">
+          <option value="newest">Mới nhất</option>
+          <option value="oldest">Cũ nhất</option>
+          <option value="name_asc">Tên A-Z</option>
+          <option value="name_desc">Tên Z-A</option>
+        </select>
+        <button class="btn-clear-filter" id="btn-clear-filter" type="button">
+          <i class="fa-solid fa-rotate-left"></i> Xóa lọc
+        </button>
+      </div>
+
+      
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="30%"><i class="fa-solid fa-user" style="margin-right: 6px;"></i> Người dùng</th>
+              <th><i class="fa-solid fa-id-badge" style="margin-right: 6px;"></i> Vai trò</th>
+              <th><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Email</th>
+              <th><i class="fa-solid fa-toggle-on" style="margin-right: 6px;"></i> Trạng thái</th>
+              <th><i class="fa-solid fa-gears" style="margin-right: 6px;"></i> Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="user-table-body">
+            
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="../../main/admin/adminUserManagement.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminDashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<body>
+  
+  
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+                  <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+  </nav>
+
+  <div class="main-layout">
+    
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    
+    <main class="content-area">
+      
+      <div class="page-header">
+        <h1 class="page-title">Tổng quan hệ thống</h1>
+        <p class="page-desc">Số liệu thống kê được cập nhật mới nhất hôm nay</p>
+      </div>
+
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Tổng Người Dùng</span>
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-users"></i></div>
+          </div>
+          <div class="stat-value" id="stat-users">...</div>
+          <div class="stat-trend trend-up">Cập nhật trực tiếp</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Tổng Tài Liệu</span>
+            <div class="stat-icon icon-green"><i class="fa-solid fa-file-pdf"></i></div>
+          </div>
+          <div class="stat-value" id="stat-documents">...</div>
+          <div class="stat-trend trend-up">Cập nhật trực tiếp</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Lượt tải toàn hệ thống</span>
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-download"></i></div>
+          </div>
+          <div class="stat-value" id="stat-downloads">...</div>
+          <div class="stat-trend" style="color:var(--text-secondary)">Tích lũy tổng cộng</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Báo Cáo Vi Phạm</span>
+            <div class="stat-icon icon-red"><i class="fa-solid fa-flag"></i></div>
+          </div>
+          <div class="stat-value" id="stat-reports">...</div>
+          <div class="stat-trend trend-down">Báo cáo đang chờ xử lý</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Biểu đồ tổng quan</h3>
+          </div>
+          <div class="chart-container" style="padding: 20px;">
+            <canvas id="overviewChart" width="400" height="250"></canvas>
+            <div style="text-align:center; font-size:12px; color:var(--text-secondary); margin-top:10px;">Thống kê chung hệ thống</div>
+          </div>
+        </div>
+
+        
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Tài liệu mới chờ duyệt</h3>
+            <a href="adminModeration.html" class="panel-action">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th width="45%">Tài liệu</th>
+                <th>Môn học</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-pending-docs">
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="../../main/admin/adminDashboard.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+</body>
+</html>
+

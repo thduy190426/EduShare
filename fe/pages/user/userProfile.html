@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hồ sơ cá nhân — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/user/userProfile.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
+</head>
+
+<body>
+
+
+  <nav class="navbar">
+    <a href="userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+    <div class="nav-actions">
+
+      <div class="notification-container" style="display:none; position: relative; margin-right: 20px;">
+        <div id="btn-notifications"
+          style="cursor:pointer; font-size: 20px; color: var(--text-secondary); position: relative;">
+          <i class="fa-solid fa-bell"></i>
+          <span id="notif-badge"
+            style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); color:white; font-size:10px; padding:2px 5px; border-radius:10px;">0</span>
+        </div>
+        <div id="notif-dropdown"
+          style="display:none; position:absolute; top:35px; right:0; width:300px; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; max-height:400px; overflow-y:auto; border: 1px solid #E5E7EB;">
+          <div style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #E5E7EB; background: #F9FAFB;">
+            Thông báo của bạn</div>
+          <div id="notif-list">
+
+          </div>
+        </div>
+      </div>
+
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+
+      <div class="user-profile">
+        <div class="avatar" id="nav-avatar">U</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+
+    <aside id="app-sidebar" class="sidebar"></aside>
+    <main class="content-area">
+
+
+      <div class="profile-header">
+        <div class="profile-avatar-container">
+          <div class="profile-avatar" id="header-avatar">U</div>
+          <div class="btn-edit-avatar" title="Thay đổi ảnh đại diện"><i class="fa-solid fa-camera"></i></div>
+          <input type="file" id="input-avatar" accept="image/png, image/jpeg, image/jpg, image/webp"
+            style="display: none;">
+        </div>
+
+        <div class="profile-info">
+          <h1 class="profile-name">
+            <span id="header-name">Đang tải...</span>
+            <span class="role-badge" id="header-role">...</span>
+          </h1>
+          <div class="profile-desc">
+            <span><i class="fa-solid fa-envelope"></i> <span id="header-email">...</span></span>
+            <span style="margin: 0 10px; color: var(--border);">|</span>
+            <span style="cursor:pointer; color: var(--primary);"
+              onclick="window.openFollowModal && window.openFollowModal('followers')"><i class="fa-solid fa-users"></i>
+              Người theo dõi: <strong id="count-followers">0</strong></span>
+            <span style="margin: 0 10px; color: var(--border);">|</span>
+            <span style="cursor:pointer; color: var(--primary);"
+              onclick="window.openFollowModal && window.openFollowModal('following')"><i
+                class="fa-solid fa-user-check"></i> Đang theo dõi: <strong id="count-following">0</strong></span>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="form-card">
+        <h2 class="card-title">Thông tin cá nhân</h2>
+        <form>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Họ và tên</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-user input-icon"></i>
+                <input type="text" id="input-hoten" class="form-control">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" title="Email không thể thay đổi">Email</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-envelope input-icon"></i>
+                <input type="email" id="input-email" class="form-control" disabled>
+              </div>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-group">
+              <label class="form-label">Tuổi</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-cake-candles input-icon"></i>
+                <input type="number" id="input-tuoi" class="form-control" min="1" max="150" placeholder="Nhập tuổi của bạn">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Giới tính</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-venus-mars input-icon"></i>
+                <select id="input-gioitinh" class="form-control">
+                  <option value="Khac">Khác</option>
+                  <option value="Nam">Nam</option>
+                  <option value="Nu">Nữ</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-group" style="width: 100%;">
+              <label class="form-label">Địa chỉ</label>
+              <div class="input-icon-wrapper">
+                <i class="fa-solid fa-location-dot input-icon"></i>
+                <input type="text" id="input-diachi" class="form-control" placeholder="Nhập địa chỉ của bạn">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="btn-save-profile" class="btn-primary"><i class="fa-solid fa-floppy-disk"
+                style="margin-right: 6px;"></i> Lưu thay đổi</button>
+          </div>
+        </form>
+      </div>
+
+
+      <div class="form-card">
+        <div class="collapsible-header" id="btn-toggle-pwd">
+          <h2 class="card-title" style="margin: 0;">Đổi mật khẩu</h2>
+          <span class="toggle-status"
+            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+            <span class="toggle-text">Mở rộng</span>
+            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+          </span>
+        </div>
+
+        <div class="collapsible-content" id="pwd-content">
+          <form>
+            <div class="form-group">
+              <label class="form-label">Mật khẩu hiện tại</label>
+              <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
+                autocomplete="current-password">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Mật khẩu mới</label>
+                <input type="password" id="input-new-pw" class="form-control" placeholder="Mật khẩu mới"
+                  autocomplete="new-password">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Xác nhận mật khẩu mới</label>
+                <input type="password" id="input-confirm-pw" class="form-control" placeholder="Nhập lại mật khẩu mới"
+                  autocomplete="new-password">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="btn-change-pw" class="btn-primary"><i class="fa-solid fa-key"
+                  style="margin-right: 6px;"></i> Cập nhật mật khẩu</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+
+      <div class="form-card">
+
+        <div class="tabs-container">
+          <div class="tab-item active" id="tab-my-docs">
+            <i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi
+          </div>
+          <div class="tab-item" id="tab-bookmarks">
+            <i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu
+          </div>
+          <div class="tab-item" id="tab-my-reports">
+            <i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm
+          </div>
+        </div>
+
+        <div class="doc-list" id="my-docs-container">
+          <p>Đang tải tài liệu của bạn...</p>
+        </div>
+
+        <div class="doc-list" id="bookmarks-container" style="display: none;">
+          <p>Đang tải tài liệu đã lưu...</p>
+        </div>
+
+        <div class="doc-list" id="my-reports-container" style="display: none;">
+          <p>Đang tải báo cáo của bạn...</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Follow Modal -->
+  <div id="follow-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center;">
+    <div class="modal-content"
+      style="background: var(--white); width: 100%; max-width: 450px; border-radius: var(--radius-card); padding: 24px; max-height: 80vh; display: flex; flex-direction: column;">
+      <div class="modal-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+        <h2 class="modal-title" id="follow-modal-title" style="font-size: 20px; font-weight: 700; margin: 0;">Danh sách
+        </h2>
+        <span onclick="document.getElementById('follow-modal').style.display='none'"
+          style="cursor: pointer; font-size: 24px; color: var(--text-secondary);">&times;</span>
+      </div>
+      <div id="follow-list-container"
+        style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
+        <!-- Danh sách user sẽ được render ở đây -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../../main/user/userProfile.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+</body>
+
+</html>

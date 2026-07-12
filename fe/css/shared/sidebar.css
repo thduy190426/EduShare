@@ -1,0 +1,78 @@
+:root { --sidebar-width: 260px; }
+.sidebar { width: var(--sidebar-width); background: var(--white); border-right: 1px solid var(--border); height: calc(100vh - var(--header-height)); position: fixed; left: 0; padding: 24px 16px 0 16px; overflow-y: auto; overflow-x: hidden; z-index: 90; display: flex; flex-direction: column; contain: layout paint; }
+.sidebar-animated .sidebar { transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+.sidebar-animated body .content-area { transition: margin-left 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+.sidebar-animated .navbar .logo { transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
+.menu-group { margin-bottom: 24px; }
+.menu-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-left: 12px; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-btn); color: var(--text-primary); font-weight: 500; font-size: 15px; transition: background-color 0.18s ease, color 0.18s ease; margin-bottom: 4px; position: relative; }
+.menu-item:hover { background: #F1F5F9; color: var(--primary); }
+.menu-item.active { background: var(--primary-light); color: var(--primary); }
+.menu-item .menu-icon { font-size: 20px; width: 24px; text-align: center; }
+
+.badge { position: absolute; right: 12px; background: var(--danger); color: var(--white); font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+
+.nav-notifications { width: 40px; height: 40px; border: 0; background: transparent; color: inherit; font-size: 20px; cursor: pointer; position: relative; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s, color 0.2s; }
+.nav-notifications:hover, .nav-notifications:focus-visible { background: rgba(148, 163, 184, 0.18); color: var(--primary); outline: none; }
+.nav-notification-badge { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--danger); color: var(--white); font-size: 11px; font-weight: 700; line-height: 18px; align-items: center; justify-content: center; box-shadow: 0 0 0 2px var(--white); }
+.nav-notifications.has-unread i { transform-origin: 50% 0; animation: bell-soft-ring 1.8s ease-in-out infinite; }
+.nav-notifications.has-unread .nav-notification-badge { animation: notification-soft-glow 1.8s ease-in-out infinite; }
+
+@keyframes bell-soft-ring {
+  0%, 68%, 100% { transform: rotate(0deg); }
+  72% { transform: rotate(-12deg); }
+  76% { transform: rotate(10deg); }
+  80% { transform: rotate(-8deg); }
+  84% { transform: rotate(6deg); }
+  88% { transform: rotate(0deg); }
+}
+
+@keyframes notification-soft-glow {
+  0%, 100% { box-shadow: 0 0 0 2px var(--white), 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 0 2px var(--white), 0 0 10px rgba(239, 68, 68, 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-notifications.has-unread i,
+  .nav-notifications.has-unread .nav-notification-badge { animation: none; }
+}
+
+.user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 8px; border-radius: 30px; transition: background 0.2s; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); color: var(--white); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; }
+.user-info { display: flex; flex-direction: column; }
+.user-name { font-weight: 600; font-size: 14px; }
+.user-role { font-size: 12px; color: var(--text-secondary); }
+
+.menu-item .menu-text { white-space: nowrap; transition: opacity 0.18s ease, width 0.18s ease; opacity: 1; display: inline-block; vertical-align: middle; }
+.sidebar-toggle { display: flex; justify-content: flex-start; padding: 0 12px 12px; cursor: pointer; color: var(--text-secondary); transition: color 0.18s ease; }
+.sidebar-collapsed { --sidebar-width: 80px; }
+.sidebar-collapsed .sidebar-toggle { justify-content: center; padding: 0 0 12px 0; }
+.sidebar-collapsed .menu-label { opacity: 0; height: 0; margin: 0; padding: 0; overflow: hidden; pointer-events: none; transition: opacity 0.18s ease; }
+.sidebar-collapsed .menu-item { justify-content: center; padding: 12px 0; gap: 0; }
+.sidebar-collapsed .menu-item .menu-text { opacity: 0; width: 0; margin: 0; overflow: hidden; }
+.sidebar-collapsed .badge { right: 4px; top: 4px; font-size: 10px; padding: 2px 4px; border-radius: 8px; }
+
+.page-is-leaving .content-area { opacity: 0.92; transform: translateY(2px); transition: opacity 0.12s ease, transform 0.12s ease; }
+.page-is-leaving .menu-item { pointer-events: none; }
+
+@media (max-width: 992px) {
+  :root { --sidebar-width: 80px; }
+  .hide-on-tablet-mobile { display: none !important; }
+  .menu-label { display: none; }
+  .menu-item span:not(.menu-icon):not(.badge) { display: none; }
+  .menu-item { justify-content: center; padding: 12px 0; }
+  .badge { right: 4px; top: 4px; font-size: 10px; padding: 2px 4px; border-radius: 8px; }
+}
+
+@media (max-width: 768px) {
+  :root { --sidebar-width: 0px; }
+  .sidebar { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: 65px; display: flex; flex-direction: row; padding: 0 16px; border-right: none; border-top: 1px solid var(--border); z-index: 100; justify-content: space-between; align-items: center; background: var(--white); overflow: visible; }
+  .menu-group { display: flex; margin: 0; align-items: center; width: 100%; justify-content: space-around; }
+  .menu-label { display: none; }
+  .menu-item { margin: 0; padding: 8px; border-radius: 8px; flex-direction: column; gap: 4px; justify-content: center; flex: 1; }
+  .menu-item .menu-icon { font-size: 18px; }
+  .menu-item span:not(.menu-icon):not(.badge) { display: block; font-size: 10px; font-weight: 500; }
+  .badge { right: 50%; transform: translateX(16px); top: 2px; }
+}
+
+*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }

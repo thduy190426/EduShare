@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng tải tài liệu — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/document/uploadDocument.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<body>
+  
+  
+  <nav class="navbar">
+    <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+                  <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <main class="content-area">
+      <div class="container">
+        
+    <div class="breadcrumb">
+      <a href="../user/userHome.html">Trang chủ</a>
+      <span>/</span>
+      <span>Đăng tài liệu</span>
+    </div>
+
+    <h1 class="page-title">Đăng tải tài liệu mới</h1>
+    <p class="page-desc">Chia sẻ tài liệu học tập của bạn để đóng góp cho cộng đồng ngày càng phát triển hơn</p>
+
+    <div class="form-card">
+      <form id="uploadForm">
+        
+        <div class="form-group">
+          <label class="form-label">Tên tài liệu: <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="tenTL" class="form-control" placeholder="Nhập tên tài liệu" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Môn học: <span style="color:var(--danger)">*</span></label>
+          <select id="maMonHoc" class="form-control" required>
+            <option value="" disabled selected>Chọn môn học</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Cấp học:</label>
+          <div class="radio-grid">
+            <label class="radio-option">
+              <input type="radio" name="level" checked>
+              <div class="radio-card"><i class="fa-solid fa-graduation-cap" style="margin-right: 8px;"></i> Đại học / Cao đẳng</div>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="level">
+              <div class="radio-card"><i class="fa-solid fa-school" style="margin-right: 8px;"></i> Trung học phổ thông</div>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="level">
+              <div class="radio-card"><i class="fa-solid fa-layer-group" style="margin-right: 8px;"></i> Khác</div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Loại file: <span style="color:var(--danger)">*</span></label>
+          <div class="radio-grid">
+            <label class="radio-option">
+              <input type="radio" name="filetype" checked>
+              <div class="radio-card file-type-card">
+                <div class="file-type-icon pdf-icon"><i class="fa-solid fa-file-pdf"></i></div>
+                <div>Tài liệu PDF</div>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="filetype">
+              <div class="radio-card file-type-card">
+                <div class="file-type-icon word-icon"><i class="fa-solid fa-file-word"></i></div>
+                <div>Tài liệu Word</div>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="filetype">
+              <div class="radio-card file-type-card">
+                <div class="file-type-icon powerpoint-icon"><i class="fa-solid fa-file-powerpoint"></i></div>
+                <div>Tài liệu PowerPoint</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Mô tả tài liệu:</label>
+          <textarea id="moTa" class="form-control" placeholder="Viết mô tả ngắn về nội dung tài liệu..."></textarea>
+        </div>
+
+        <div class="form-group" id="official-form-group" style="display: none; background: #F0FDF4; padding: 15px; border: 1px solid #BBF7D0; border-radius: 8px;">
+          <label class="form-label" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; color: #166534;">
+            <input type="checkbox" id="laTaiLieuChinhThuc" style="width: 18px; height: 18px;">
+            <strong>Đánh dấu là "Tài liệu chính thống"</strong>
+          </label>
+          <p style="margin: 5px 0 0 26px; font-size: 13px; color: #15803D;">Tài liệu của Giáo viên / Admin sẽ được cấp huy hiệu xác thực chất lượng.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Tệp đính kèm: <span style="color:var(--danger)">*</span></label>
+          
+          
+          <div class="upload-zone" style="display: none;">
+            <div class="upload-icon"><i class="fa-solid fa-cloud"></i></div>
+            <div class="upload-title">Kéo thả file vào đây hoặc nhấn để chọn file</div>
+            <div class="upload-desc">Chỉ hỗ trợ định dạng PDF, DOCX, PPTX. Tối đa 20MB.</div>
+            <input type="file" id="fileUpload" style="display: none;" accept=".pdf,.docx,.pptx">
+            <button type="button" class="btn btn-ghost" id="btnSelectFile" style="border: 1px solid var(--border);" onclick="document.getElementById('fileUpload').click()"><i class="fa-solid fa-folder-open" style="margin-right: 8px;"></i>Chọn file từ máy tính</button>
+          </div>
+
+          <div class="file-preview" id="filePreview" style="display: none; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-btn); background: #F9FAFB; margin-top: 10px;">
+            <div style="display: flex; align-items: center; gap: 12px; overflow: hidden;">
+              <div class="file-icon" style="font-size: 24px; color: var(--primary);"><i class="fa-solid fa-file-lines"></i></div>
+              <div style="overflow: hidden;">
+                <div id="previewName" style="font-weight: 600; font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;">filename.pdf</div>
+                <div id="previewSize" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Kích thước: 0 MB</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('fileUpload').click()" style="padding: 6px 12px; font-size: 13px; border: 1px solid var(--border);"><i class="fa-solid fa-pen" style="margin-right: 6px;"></i>Đổi file</button>
+              <button type="button" class="btn btn-ghost" id="btnRemoveFile" style="padding: 6px 12px; font-size: 13px; color: var(--danger); border: 1px solid #FECACA; background: #FEF2F2;"><i class="fa-solid fa-trash" style="margin-right: 6px;"></i>Xóa</button>
+            </div>
+          </div>
+
+        <div class="form-actions">
+          <div class="action-note">
+            <span><i class="fa-solid fa-triangle-exclamation"></i></span> Tài liệu sẽ được Admin kiểm duyệt trước khi hiển thị công khai.
+          </div>
+          <button type="button" class="btn btn-ghost" onclick="window.history.back()">
+            <i class="fa-solid fa-xmark"></i>
+            Hủy
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            Đăng tài liệu
+          </button>
+        </div>
+
+      </form>
+    </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../../main/document/upload.js"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

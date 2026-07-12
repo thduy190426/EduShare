@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kết quả tìm kiếm - EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/document/searchResults.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../user/userHome.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare
+    </a>
+
+    <div class="nav-search">
+      <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+      <input type="text" id="searchInput" placeholder="Tìm kiếm tài liệu...">
+    </div>
+
+    <div class="nav-actions">
+      <div class="icon-btn">
+        <a href="uploadDocument.html" style="color:inherit"><i class="fa-solid fa-plus"></i></a>
+      </div>
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thong bao" aria-label="Thong bao">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <main class="content-area">
+      <div class="search-layout">
+        <aside class="filter-sidebar">
+          <div class="filter-header">
+            <h3><i class="fa-solid fa-filter" style="margin-right: 8px;"></i> Bộ lọc</h3>
+            <button class="filter-clear" id="btnClearFilter" type="button">Xóa lọc</button>
+          </div>
+
+          <div class="active-filters" id="activeFilters" aria-live="polite"></div>
+
+          <div class="filter-group">
+            <div class="filter-title"><i class="fa-solid fa-arrow-down-short-wide" style="margin-right: 6px; color: var(--primary);"></i> Sắp xếp theo</div>
+            <select class="filter-select" id="sortSelect">
+              <option value="MoiNhat">Mới nhất</option>
+              <option value="PhoBien">Lượt tải nhiều nhất</option>
+              <option value="Relevance">Liên quan nhất</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <div class="filter-title"><i class="fa-solid fa-book-open" style="margin-right: 6px; color: var(--primary);"></i> Môn học</div>
+            <div class="filter-search">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="search" id="subjectSearch" placeholder="Tìm môn học">
+            </div>
+            <div class="filter-list" id="subjectFilters"></div>
+          </div>
+
+          <div class="filter-group">
+            <div class="filter-title"><i class="fa-solid fa-file-lines" style="margin-right: 6px; color: var(--primary);"></i> Loại file</div>
+            <div class="file-filter-grid" id="fileTypeFilters">
+              <label class="filter-pill">
+                <input type="checkbox" name="loaiFile" value="pdf">
+                <span><i class="fa-solid fa-file-pdf"></i> PDF</span>
+              </label>
+              <label class="filter-pill">
+                <input type="checkbox" name="loaiFile" value="docx">
+                <span><i class="fa-solid fa-file-word"></i> Word</span>
+              </label>
+              <label class="filter-pill">
+                <input type="checkbox" name="loaiFile" value="pptx">
+                <span><i class="fa-solid fa-file-powerpoint"></i> PPT</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <div class="filter-title"><i class="fa-solid fa-circle-check" style="margin-right: 6px; color: var(--primary);"></i> Trạng thái</div>
+            <label class="filter-toggle">
+              <input type="checkbox" id="officialOnly">
+              <span class="toggle-track"></span>
+              <span>Chỉ tài liệu chính thống</span>
+            </label>
+          </div>
+
+          <div class="filter-group">
+            <div class="filter-title"><i class="fa-solid fa-calendar-days" style="margin-right: 6px; color: var(--primary);"></i> Ngày đăng</div>
+            <div class="date-filter-grid">
+              <label>
+                <span>Từ ngày</span>
+                <input type="date" id="fromDate">
+              </label>
+              <label>
+                <span>Đến ngày</span>
+                <input type="date" id="toDate">
+              </label>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <div class="filter-title"><i class="fa-solid fa-user-pen" style="margin-right: 6px; color: var(--primary);"></i> Người đăng</div>
+            <input class="filter-input" type="search" id="authorInput" placeholder="Nhập tên người đăng">
+          </div>
+        </aside>
+
+        <main class="results-area">
+          <div class="results-header" id="resultsHeader" style="display: none;">
+            <h1 class="results-count">Tìm thấy <strong>...</strong> kết quả</h1>
+          </div>
+
+          <div class="doc-grid" id="resultsGrid"></div>
+
+          <div class="pagination" id="paginationContainer" style="display: flex; justify-content: center; gap: 8px; margin-top: 30px;"></div>
+        </main>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../../main/document/search.js"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

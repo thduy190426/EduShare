@@ -1,0 +1,12 @@
+{
+  "watch": ["../"],
+  "ext": "js,json",
+  "ignore": [
+    "../**/node_modules/**",
+    "../**/uploads/**",
+    "../**/logs/**",
+    "../**/.git/**",
+    "../**/.vscode/**"
+  ],
+  "delay": "300ms"
+}
