@@ -35,6 +35,8 @@ function loadUserProfileNav() {
                 avatarEl.style.color = 'transparent';
             } else {
                 avatarEl.textContent = payload.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                avatarEl.style.background = 'var(--primary-light)';
+                avatarEl.style.color = 'var(--primary)';
             }
         }
     } catch (e) {
@@ -97,9 +99,10 @@ function renderNotifications(notifications) {
             iconClass = 'fa-triangle-exclamation';
             typeClass = 'warning';
         }
-
-        const dateStr = new Date(noti.NgayTao).toLocaleString('vi-VN');
-
+        const d = new Date(noti.NgayTao);
+        const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        const dateOnlyStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        const dateStr = `<i class="fa-regular fa-clock" style="margin-right:4px;"></i>${timeStr} <span style="margin: 0 4px; color: #D1D5DB;">|</span> <i class="fa-regular fa-calendar" style="margin-right:4px;"></i>${dateOnlyStr}`;
         item.innerHTML = `
             <div class="noti-icon ${typeClass}"><i class="fa-solid ${iconClass}"></i></div>
             <div class="noti-content">

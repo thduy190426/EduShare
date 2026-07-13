@@ -181,7 +181,7 @@ window.viewGroupDetails = async function(maNhom) {
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #eee;">${m.HoTen}</td>
                 <td style="padding: 8px; border-bottom: 1px solid #eee;">${m.Email}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #eee;">${m.VaiTroTrongNhom === 'QuanTri' ? 'Quản trị' : 'Thành viên'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #eee;">${m.VaiTroTrongNhom === 'QuanTri' ? 'Quản trị viên' : 'Thành viên'}</td>
             </tr>
         `).join('');
 

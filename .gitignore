@@ -19,11 +19,19 @@ pnpm-debug.log*
 dist/
 build/
 coverage/
+.nyc_output/
 .cache/
 .parcel-cache/
 .next/
 .nuxt/
 .vite/
+.eslintcache
+
+# Test artifacts
+playwright-report/
+test-results/
+blob-report/
+junit.xml
 
 # Runtime files
 *.pid
@@ -38,6 +46,7 @@ temp/
 # IDE and editor files
 .vscode/
 .idea/
+*.code-workspace
 *.swp
 *.swo
 

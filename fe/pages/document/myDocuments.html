@@ -14,10 +14,10 @@
   
   <nav class="navbar">
     <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
-    <div class="nav-search">
+    <!-- <div class="nav-search">
       <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
       <input type="text" placeholder="Tìm kiếm tài liệu, môn học, giáo trình...">
-    </div>
+    </div> -->
     <div class="nav-actions">
       <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
         <i class="fa-solid fa-bell"></i>
@@ -52,7 +52,7 @@
           <i class="fa-solid fa-cloud-arrow-up" style="margin-right: 6px;"></i> Đã đăng tải <span class="tab-count" id="count-uploaded">0</span>
         </div>
         <div class="tab-item" data-tab="bookmarks">
-          <i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Đã lưu / Bookmark <span class="tab-count" id="count-bookmarks">0</span>
+          <i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Đã lưu <span class="tab-count" id="count-bookmarks">0</span>
         </div>
         <div class="tab-item" data-tab="downloads">
           <i class="fa-solid fa-cloud-arrow-down" style="margin-right: 6px;"></i> Đã tải xuống <span class="tab-count" id="count-downloads">0</span>
@@ -78,7 +78,10 @@
             <option value="ppt">PowerPoint</option>
         </select>
         
-        <input type="text" id="filter-search" placeholder="Tìm tên tài liệu..." style="padding: 8px 12px; border: 1px solid #E5E7EB; border-radius: 6px; outline: none; flex: 2; min-width: 200px;">
+        <div style="position: relative; flex: 2; min-width: 200px; display: flex; align-items: center;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; color: #9CA3AF;"></i>
+            <input type="text" id="filter-search" placeholder="Tìm tài liệu theo tên..." style="padding: 8px 12px 8px 36px; border: 1px solid #E5E7EB; border-radius: 6px; outline: none; width: 100%;">
+        </div>
       </div>
 
       <div class="table-card">

@@ -14,10 +14,10 @@
   
   <nav class="navbar">
     <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
-    <div class="nav-search">
+    <!-- <div class="nav-search">
       <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
       <input type="text" placeholder="Tìm kiếm nhóm, môn học...">
-    </div>
+    </div> -->
     <div class="nav-actions">
       <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
         <i class="fa-solid fa-bell"></i>
@@ -57,7 +57,10 @@
           <option value="">Tất cả môn học</option>
         </select>
         
-        <input type="text" id="search-group" class="form-control" placeholder="Tìm nhóm...">
+        <div style="position: relative; flex: 1;">
+          <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-secondary);"></i>
+          <input type="text" id="search-group" class="form-control" placeholder="Tìm nhóm học tập theo tên.." style="padding-left: 40px; height: 40px;">
+        </div>
       </div>
 
       <div id="recommended-section" style="display: none; margin-bottom: 32px;">
@@ -79,22 +82,22 @@
             <span class="close-modal" id="btn-close-create-group" style="cursor:pointer; font-size: 24px;">&times;</span>
           </div>
           <div class="form-group">
-            <label class="form-label">Tên nhóm <span style="color:red">*</span></label>
+            <label class="form-label"><i class="fa-solid fa-users" style="margin-right:4px;"></i> Tên nhóm <span style="color:red">*</span></label>
             <input type="text" id="new-group-name" class="form-control" placeholder="Nhập tên nhóm...">
           </div>
           <div class="form-group">
-            <label class="form-label">Môn học</label>
+            <label class="form-label"><i class="fa-solid fa-book" style="margin-right:4px;"></i> Môn học</label>
             <select id="new-group-subject" class="form-control">
               <option value="">Chọn môn học</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Mô tả (tùy chọn)</label>
+            <label class="form-label"><i class="fa-solid fa-align-left" style="margin-right:4px;"></i> Mô tả (tùy chọn)</label>
             <textarea id="new-group-desc" class="form-control" rows="3" placeholder="Nhập mô tả về nhóm..."></textarea>
           </div>
           <div class="modal-footer">
-            <button id="btn-cancel-create-group" class="btn-outline-primary" style="padding: 8px 16px;">Hủy</button>
-            <button id="btn-confirm-create-group" class="btn-primary" style="padding: 8px 16px;">Tạo nhóm</button>
+            <button id="btn-cancel-create-group" class="btn-outline-primary" style="padding: 8px 16px; flex: none;"><i class="fa-solid fa-xmark" style="margin-right:4px;"></i> Hủy</button>
+            <button id="btn-confirm-create-group" class="btn-primary" style="padding: 8px 16px; opacity: 0.6; pointer-events: none;" disabled><i class="fa-solid fa-check" style="margin-right:4px;"></i> Tạo nhóm</button>
           </div>
         </div>
       </div>
@@ -121,7 +124,7 @@
             <textarea id="edit-group-desc" class="form-control" rows="3" placeholder="Nhập mô tả về nhóm..."></textarea>
           </div>
           <div class="modal-footer">
-            <button id="btn-cancel-edit-group" class="btn-outline-primary" style="padding: 8px 16px;">Hủy</button>
+            <button id="btn-cancel-edit-group" class="btn-outline-primary" style="padding: 8px 16px; flex: none;">Hủy</button>
             <button id="btn-confirm-edit-group" class="btn-primary" style="padding: 8px 16px;">Cập nhật</button>
           </div>
         </div>

@@ -39,6 +39,8 @@ function loadUserProfileNav() {
                 avatarEl.style.color = 'transparent';
             } else {
                 avatarEl.textContent = payload.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                avatarEl.style.background = 'var(--primary-light)';
+                avatarEl.style.color = 'var(--primary)';
             }
         }
     } catch (e) {
@@ -194,7 +196,9 @@ function renderTable() {
         if (currentTab === 'bookmarks' && doc.NgayLuu) dateField = doc.NgayLuu;
         if (currentTab === 'downloads' && doc.NgayTai) dateField = doc.NgayTai;
         const dateObj = new Date(dateField);
-        const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+        const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
+        const dateOnlyStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+        const dateStr = `${timeStr} <span style="color: #D1D5DB; margin: 0 4px;">|</span> ${dateOnlyStr}`;
 
         let actionBtns = `<button class="btn-action" title="Xem chi tiết" onclick="window.location.href='documentDetails.html?id=${doc.MaTL}'"><i class="fa-solid fa-eye"></i></button>`;
         

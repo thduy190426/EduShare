@@ -46,8 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else {
                     const initial = (payload.HoTen || 'U').trim().split(' ').pop().charAt(0).toUpperCase();
-                    if (navAvatar) navAvatar.textContent = initial;
-                    if (commentAvatar) commentAvatar.textContent = initial;
+                    if (navAvatar) {
+                        navAvatar.textContent = initial;
+                        navAvatar.style.backgroundColor = 'var(--primary-light)';
+                        navAvatar.style.color = 'var(--primary)';
+                    }
+                    if (commentAvatar) {
+                        commentAvatar.textContent = initial;
+                        commentAvatar.style.backgroundColor = 'var(--primary-light)';
+                        commentAvatar.style.color = 'var(--primary)';
+                    }
                 }
             }
         } catch (e) {
@@ -195,13 +203,16 @@ function renderDocumentInfo(doc) {
         authorAvatarEl.style.backgroundColor = 'transparent';
     } else {
         authorAvatarEl.innerHTML = doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase();
-        authorAvatarEl.style.backgroundColor = '';
+        authorAvatarEl.style.backgroundColor = 'var(--primary-light)';
+        authorAvatarEl.style.color = 'var(--primary)';
     }
     
     
     const dateObj = new Date(doc.NgayDang);
-    const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
-    document.getElementById('doc-author-date').textContent = `Đăng tải: ${dateStr}`;
+    const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
+    const dateOnlyStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+    const dateHtml = `<i class="fa-regular fa-clock" style="margin-right:4px;"></i>${timeStr} <span style="margin: 0 4px; color: #D1D5DB;">|</span> <i class="fa-regular fa-calendar" style="margin-right:4px;"></i>${dateOnlyStr}`;
+    document.getElementById('doc-author-date').innerHTML = `Đăng tải: ${dateHtml}`;
 
     document.getElementById('doc-views').textContent = (doc.SoLuotXem || 0).toLocaleString();
     document.getElementById('doc-downloads').textContent = (doc.SoLuotTai || 0).toLocaleString();
@@ -601,7 +612,9 @@ function renderComments(comments) {
         }
 
         const dateObj = new Date(comment.NgayBinhLuan);
-        const dateStr = dateObj.toLocaleString('vi-VN');
+        const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
+        const dateOnlyStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
+        const dateHtml = `<i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${timeStr} <span style="margin: 0 4px; color: #D1D5DB;">|</span> <i class="fa-regular fa-calendar" style="margin-right: 4px;"></i>${dateOnlyStr}`;
         const userInitial = escapeHTML(comment.TenNguoiBinhLuan).trim().split(' ').pop().charAt(0).toUpperCase();
 
         const isAuthor = comment.VaiTro === 'GiaoVien' || comment.VaiTro === 'Admin';
@@ -618,7 +631,7 @@ function renderComments(comments) {
             <div class="comment-content">
               <div class="comment-header">
                 <span class="comment-author">${escapeHTML(comment.TenNguoiBinhLuan)}${authorSuffix}</span>
-                <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
+                <span class="comment-time">${dateHtml}</span>
               </div>
               <div class="comment-text">${escapeHTML(comment.NoiDung)}</div>
               <div class="comment-actions">

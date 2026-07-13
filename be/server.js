@@ -160,7 +160,7 @@ app.post('/api/register', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT Email FROM NGUOIDUNG WHERE Email = ?', [email]);
         if (rows.length > 0)
-            return res.status(400).json({ message: 'Email đã được sử dụng.' });
+            return res.status(409).json({ message: 'Email đã được sử dụng.' });
 
         const hashedPassword = await bcrypt.hash(matKhau, 10);
         const [result] = await pool.execute(
@@ -214,4 +214,8 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => logBanner(PORT));
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => logBanner(PORT));
+}
+
+module.exports = app;

@@ -8,6 +8,74 @@ const router = express.Router();
 const { authMiddleware } = require('./middlewares/auth');
 const cloudinary = require('./config/cloudinary');
 
+async function tableExists(conn, tableName) {
+    const [rows] = await conn.execute(
+        `SELECT 1
+         FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+         LIMIT 1`,
+        [tableName]
+    );
+    return rows.length > 0;
+}
+
+async function deleteUserAndRelatedData(conn, maND) {
+    const [docRows] = await conn.execute('SELECT MaTL FROM TAILIEU WHERE MaND_NguoiDang = ?', [maND]);
+    const documentIds = docRows.map(row => row.MaTL);
+
+    if (documentIds.length > 0) {
+        const placeholders = documentIds.map(() => '?').join(',');
+        await conn.execute(`UPDATE BINHLUAN SET MaBL_Cha = NULL WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM BINHLUAN WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM BOOKMARK WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM DANHGIA WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM BAOCAOVIPHAM WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM TAILIEU_NHOM WHERE MaTL IN (${placeholders})`, documentIds);
+        if (await tableExists(conn, 'LICH_SU_TAI')) {
+            await conn.execute(`DELETE FROM LICH_SU_TAI WHERE MaTL IN (${placeholders})`, documentIds);
+        }
+    }
+
+    const [groupRows] = await conn.execute('SELECT MaNhom FROM NHOM WHERE MaND_QuanTri = ?', [maND]);
+    const groupIds = groupRows.map(row => row.MaNhom);
+
+    if (groupIds.length > 0) {
+        const placeholders = groupIds.map(() => '?').join(',');
+        await conn.execute(`DELETE FROM TAILIEU_NHOM WHERE MaNhom IN (${placeholders})`, groupIds);
+        await conn.execute(`DELETE FROM THANHVIEN_NHOM WHERE MaNhom IN (${placeholders})`, groupIds);
+        await conn.execute(`DELETE FROM NHOM WHERE MaNhom IN (${placeholders})`, groupIds);
+    }
+
+    await conn.execute(
+        `UPDATE BINHLUAN
+         SET MaBL_Cha = NULL
+         WHERE MaBL_Cha IN (SELECT MaBL FROM (SELECT MaBL FROM BINHLUAN WHERE MaND = ?) AS user_comments)`,
+        [maND]
+    );
+    await conn.execute('DELETE FROM BINHLUAN WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM BOOKMARK WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM DANHGIA WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM BAOCAOVIPHAM WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM THONGBAO WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM THANHVIEN_NHOM WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM NGUOIDUNG_MONHOC WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM THEODOI WHERE MaND_TheoDoi = ? OR MaND_DuocTheoDoi = ?', [maND, maND]);
+
+    if (await tableExists(conn, 'LICH_SU_TAI')) {
+        await conn.execute('DELETE FROM LICH_SU_TAI WHERE MaND = ?', [maND]);
+    }
+    if (await tableExists(conn, 'AUDIT_LOG')) {
+        await conn.execute('DELETE FROM AUDIT_LOG WHERE MaND_ThucHien = ? OR MaND_BiTacDong = ?', [maND, maND]);
+    }
+
+    if (documentIds.length > 0) {
+        const placeholders = documentIds.map(() => '?').join(',');
+        await conn.execute(`DELETE FROM TAILIEU WHERE MaTL IN (${placeholders})`, documentIds);
+    }
+
+    return conn.execute('DELETE FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+}
+
 function normalizeGioiTinh(value) {
     if (!value) return 'Khác';
 
@@ -93,6 +161,57 @@ router.put('/profile', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Lỗi cập nhật profile:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/profile', authMiddleware, async (req, res) => {
+    const { matKhau } = req.body || {};
+
+    if (!matKhau) {
+        return res.status(400).json({ message: 'Vui lòng nhập mật khẩu để xác nhận xoá tài khoản.' });
+    }
+
+    const pool = req.app.locals.pool;
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        const [userRows] = await conn.execute('SELECT MaND, HoTen, MatKhau, VaiTro, TrangThai FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        if (userRows.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        }
+
+        const user = userRows[0];
+        const isMatch = await bcrypt.compare(matKhau, user.MatKhau);
+        if (!isMatch) {
+            await conn.rollback();
+            return res.status(400).json({ message: 'Mật khẩu xác nhận không chính xác.' });
+        }
+
+        if (user.VaiTro === 'Admin' && user.TrangThai === 'HoatDong') {
+            const [adminCount] = await conn.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong'");
+            if (adminCount[0].total <= 1) {
+                await conn.rollback();
+                return res.status(403).json({ message: 'Không thể xoá Admin cuối cùng của hệ thống.' });
+            }
+        }
+
+        const [result] = await deleteUserAndRelatedData(conn, req.user.MaND);
+        if (result.affectedRows === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy người dùng để xoá.' });
+        }
+
+        await conn.commit();
+        res.status(200).json({ message: `Đã xoá vĩnh viễn tài khoản "${user.HoTen}".` });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi xoá tài khoản người dùng:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi xoá tài khoản.' });
+    } finally {
+        conn.release();
     }
 });
 
@@ -215,6 +334,18 @@ router.post('/profile/avatar', authMiddleware, async (req, res) => {
         res.status(400).json({ message: err.message || 'Lỗi máy chủ.' });
     }
 });
+
+router.delete('/profile/avatar', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        await pool.execute('UPDATE NGUOIDUNG SET AvatarURL = NULL WHERE MaND = ?', [req.user.MaND]);
+        res.status(200).json({ message: 'Đã xoá ảnh đại diện.', avatarURL: null });
+    } catch (err) {
+        console.error('Lỗi xoá avatar:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi xoá ảnh đại diện.' });
+    }
+});
+
 router.get('/my-documents', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;

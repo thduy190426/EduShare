@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { getAssetUrl, getToken, setAvatarForCurrentSession } from '../shared/utils.js';
+import { clearAuthSession, getAssetUrl, getToken, setAvatarForCurrentSession } from '../shared/utils.js';
 
 const token = getToken();
 
@@ -33,6 +33,37 @@ document.addEventListener('DOMContentLoaded', () => {
 let followersList = [];
 let followingList = [];
 let initialProfileState = {};
+let currentProfile = null;
+
+function renderCurrentUserAvatar(profile) {
+    const headerAvatar = document.getElementById('header-avatar');
+    const navAvatar = document.getElementById('nav-avatar');
+    const btnDeleteAvatar = document.getElementById('btn-delete-avatar');
+    if (!headerAvatar || !navAvatar || !profile) return;
+
+    if (profile.AvatarURL) {
+        setAvatarForCurrentSession(profile.AvatarURL);
+        const avatarHtml = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        headerAvatar.innerHTML = avatarHtml;
+        navAvatar.innerHTML = avatarHtml;
+        headerAvatar.style.background = 'transparent';
+        navAvatar.style.background = 'transparent';
+        headerAvatar.style.color = 'transparent';
+        navAvatar.style.color = 'transparent';
+        btnDeleteAvatar?.classList.add('is-visible');
+        return;
+    }
+
+    setAvatarForCurrentSession(null);
+    const initial = profile.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+    headerAvatar.textContent = initial;
+    navAvatar.textContent = initial;
+    headerAvatar.style.background = 'var(--primary-light)';
+    navAvatar.style.background = 'var(--primary-light)';
+    headerAvatar.style.color = 'var(--primary)';
+    navAvatar.style.color = 'var(--primary)';
+    btnDeleteAvatar?.classList.remove('is-visible');
+}
 
 function checkProfileChanges() {
     const currentHoTen = document.getElementById('input-hoten').value;
@@ -124,6 +155,16 @@ window.openFollowModal = function(type) {
     document.getElementById('follow-modal').style.display = 'flex';
 };
 
+window.closeFollowModal = function() {
+    const modal = document.getElementById('follow-modal');
+    if (!modal) return;
+    modal.classList.add('closing');
+    setTimeout(() => {
+        modal.style.display = 'none';
+        modal.classList.remove('closing');
+    }, 250);
+};
+
 async function initProfile() {
     try {
         const res = await fetch(`${API_URL}/users/profile`, {
@@ -133,26 +174,14 @@ async function initProfile() {
         
         const data = await res.json();
         const profile = data.profile;
+        currentProfile = profile;
         
         
         document.getElementById('header-name').textContent = profile.HoTen;
         document.getElementById('header-email').textContent = profile.Email;
         document.getElementById('header-role').textContent = profile.VaiTro === 'SinhVien' ? 'Sinh viên' : profile.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên';
         
-        if (profile.AvatarURL) {
-            setAvatarForCurrentSession(profile.AvatarURL);
-            const avatarHtml = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-            document.getElementById('header-avatar').innerHTML = avatarHtml;
-            document.getElementById('nav-avatar').innerHTML = avatarHtml;
-            document.getElementById('header-avatar').style.background = 'transparent';
-            document.getElementById('nav-avatar').style.background = 'transparent';
-        } else {
-            const initial = profile.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
-            document.getElementById('header-avatar').textContent = initial;
-            document.getElementById('nav-avatar').textContent = initial;
-            document.getElementById('header-avatar').style.background = '';
-            document.getElementById('nav-avatar').style.background = '';
-        }
+        renderCurrentUserAvatar(profile);
 
         
         document.getElementById('input-hoten').value = profile.HoTen;
@@ -269,6 +298,108 @@ async function changePassword() {
         }
     } catch (err) {
         console.error(err);
+    }
+}
+
+async function deleteAccount() {
+    const result = await Swal.fire({
+        title: 'Xoá vĩnh viễn tài khoản?',
+        html: 'Hành động này không thể hoàn tác. Vui lòng nhập mật khẩu để xác nhận.',
+        icon: 'warning',
+        input: 'password',
+        inputPlaceholder: 'Mật khẩu hiện tại',
+        inputAttributes: {
+            autocomplete: 'current-password',
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Xoá vĩnh viễn',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#EF4444',
+        preConfirm: (matKhau) => {
+            if (!matKhau) {
+                Swal.showValidationMessage('Vui lòng nhập mật khẩu để xác nhận.');
+                return false;
+            }
+            return matKhau;
+        }
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        Swal.fire({
+            title: 'Đang xoá tài khoản...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        const res = await fetch(`${API_URL}/users/profile`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ matKhau: result.value })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            Swal.close();
+            Toast.fire({ icon: 'error', title: data.message || 'Không thể xoá tài khoản.' });
+            return;
+        }
+
+        clearAuthSession();
+        await Swal.fire({
+            icon: 'success',
+            title: 'Đã xoá tài khoản',
+            text: data.message || 'Tài khoản của bạn đã được xoá vĩnh viễn.',
+            confirmButtonText: 'Đóng'
+        });
+        window.location.href = '../guest/guestHome.html';
+    } catch (err) {
+        console.error(err);
+        Swal.close();
+        Toast.fire({ icon: 'error', title: 'Không thể xoá tài khoản lúc này.' });
+    }
+}
+
+
+async function deleteAvatar() {
+    if (!currentProfile?.AvatarURL) return;
+
+    const result = await Swal.fire({
+        title: 'Xoá ảnh đại diện?',
+        text: 'Hồ sơ của bạn sẽ quay về ảnh mặc định.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xoá ảnh',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#EF4444'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/users/profile/avatar`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            Toast.fire({ icon: 'error', title: data.message || 'Không thể xoá ảnh đại diện.' });
+            return;
+        }
+
+        currentProfile = { ...currentProfile, AvatarURL: null };
+        renderCurrentUserAvatar(currentProfile);
+        Toast.fire({ icon: 'success', title: data.message || 'Đã xoá ảnh đại diện.' });
+    } catch (err) {
+        console.error(err);
+        Toast.fire({ icon: 'error', title: 'Không thể xoá ảnh đại diện lúc này.' });
     }
 }
 
@@ -506,9 +637,17 @@ async function initNotificationsLegacy() {
                     item.style.fontWeight = '600';
                 }
 
+                const d = new Date(tb.NgayTao);
+                const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+                const dateOnlyStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
                 item.innerHTML = `
                     <div style="font-size: 14px; margin-bottom: 4px;">${tb.NoiDung}</div>
-                    <div style="font-size: 12px; color: #6B7280;">${new Date(tb.NgayTao).toLocaleString('vi-VN')}</div>
+                    <div style="font-size: 12px; color: #6B7280;">
+                        <i class="fa-regular fa-clock" style="margin-right:2px;"></i>${timeStr} 
+                        <span style="margin: 0 4px; color: #D1D5DB;">|</span> 
+                        <i class="fa-regular fa-calendar" style="margin-right:2px;"></i>${dateOnlyStr}
+                    </div>
                 `;
 
                 
@@ -572,6 +711,8 @@ function checkPasswordChanges() {
 
 function setupEventListeners() {
     document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
+    const btnDeleteAccount = document.getElementById('btn-delete-account');
+    if (btnDeleteAccount) btnDeleteAccount.addEventListener('click', deleteAccount);
     
     const btnChangePw = document.getElementById('btn-change-pw');
     btnChangePw.addEventListener('click', changePassword);
@@ -611,7 +752,10 @@ function setupEventListeners() {
     setupTabListeners();
 
     const btnEditAvatar = document.querySelector('.btn-edit-avatar');
+    const btnDeleteAvatar = document.getElementById('btn-delete-avatar');
     const inputAvatar = document.getElementById('input-avatar');
+    if (btnDeleteAvatar) btnDeleteAvatar.addEventListener('click', deleteAvatar);
+
     if (btnEditAvatar && inputAvatar) {
         btnEditAvatar.addEventListener('click', () => {
             inputAvatar.click();
@@ -670,4 +814,3 @@ function setupEventListeners() {
         e.stopPropagation(); 
     });
 }
-

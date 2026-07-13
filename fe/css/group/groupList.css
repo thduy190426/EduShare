@@ -77,9 +77,16 @@ ul { list-style: none; }
 .btn-joined { border: 1px solid var(--border); color: var(--success); background: #F0FDF4; border-color: #BBF7D0; pointer-events: none; }
 
 /* Modal Styles */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center; }
-.modal-content { background: var(--white); width: 100%; max-width: 450px; border-radius: var(--radius-card); padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
-.modal-header { margin-bottom: 20px; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center; opacity: 0; animation: modalFadeIn 0.3s forwards; }
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalFadeOut { from { opacity: 1; } to { opacity: 0; } }
+.modal-overlay.closing { animation: modalFadeOut 0.3s forwards; }
+.modal-content { background: var(--white); width: 100%; max-width: 450px; border-radius: var(--radius-card); padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); transform: scale(0.95); animation: modalScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes modalScaleIn { from { transform: scale(0.95); } to { transform: scale(1); } }
+@keyframes modalScaleOut { from { transform: scale(1); } to { transform: scale(0.95); } }
+.modal-overlay.closing .modal-content { animation: modalScaleOut 0.3s forwards; }
+
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
 .modal-title { font-size: 20px; font-weight: 700; color: var(--text-primary); }
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }

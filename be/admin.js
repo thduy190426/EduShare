@@ -270,9 +270,13 @@ router.put('/users/:maND/status', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
+        const [userRows] = await pool.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        }
+
         if (trangThai === 'BiKhoa') {
-            const [userRows] = await pool.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?', [maND]);
-            if (userRows.length > 0 && userRows[0].VaiTro === 'Admin') {
+            if (userRows[0].VaiTro === 'Admin') {
                 const [adminCount] = await pool.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong'");
                 if (adminCount[0].total <= 1) {
                     return res.status(403).json({ message: 'Không thể khóa Admin cuối cùng của hệ thống.' });
@@ -310,7 +314,11 @@ router.put('/users/:maND/role', adminMiddleware, async (req, res) => {
         const pool = req.app.locals.pool;
 
         const [userRows] = await pool.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?', [maND]);
-        if (userRows.length > 0 && userRows[0].VaiTro === 'Admin' && vaiTro !== 'Admin') {
+        if (userRows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        }
+
+        if (userRows[0].VaiTro === 'Admin' && vaiTro !== 'Admin') {
             const [adminCount] = await pool.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong'");
             if (adminCount[0].total <= 1) {
                 return res.status(403).json({ message: 'Không thể hạ quyền Admin cuối cùng của hệ thống.' });
@@ -368,6 +376,11 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
             JOIN TAILIEU T ON B.MaTL = T.MaTL 
             WHERE B.MaBC = ?
         `, [maBC]);
+
+        if (bcRows.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy báo cáo.' });
+        }
 
         if (quyetDinh === 'ViPham') {
             await conn.execute('UPDATE BAOCAOVIPHAM SET TrangThai = ? WHERE MaBC = ?', ['DaXuLy', maBC]);
@@ -449,7 +462,12 @@ router.put('/subjects/:id', adminMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
-        await pool.execute('UPDATE MONHOC SET TenMonHoc = ?, CapHoc = ?, MoTa = ? WHERE MaMonHoc = ?', [tenMonHoc, capHoc || 'Khac', moTa || '', id]);
+        const [result] = await pool.execute('UPDATE MONHOC SET TenMonHoc = ?, CapHoc = ?, MoTa = ? WHERE MaMonHoc = ?', [tenMonHoc, capHoc || 'Khac', moTa || '', id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy môn học.' });
+        }
+        
         res.status(200).json({ message: 'Cập nhật thành công.' });
     } catch (error) {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -460,7 +478,12 @@ router.delete('/subjects/:id', adminMiddleware, async (req, res) => {
     const id = req.params.id;
     try {
         const pool = req.app.locals.pool;
-        await pool.execute('DELETE FROM MONHOC WHERE MaMonHoc = ?', [id]);
+        const [result] = await pool.execute('DELETE FROM MONHOC WHERE MaMonHoc = ?', [id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy môn học.' });
+        }
+        
         res.status(200).json({ message: 'Đã xóa vĩnh viễn môn học.' });
     } catch (error) {
         console.error(error);

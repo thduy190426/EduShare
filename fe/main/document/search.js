@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentPage = 1;
     let debounceTimer = null;
+    let bookmarkedDocs = new Set();
 
     loadUserProfileNav();
 
@@ -45,15 +46,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     avatarEl.style.background = 'transparent';
                     avatarEl.style.color = 'transparent';
                 } else {
-                    avatarEl.textContent = payload.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
-                }
+                avatarEl.textContent = payload.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                avatarEl.style.background = 'var(--primary-light)';
+                avatarEl.style.color = 'var(--primary)';
+            }
             }
         } catch (e) {
             console.error('Lỗi giải mã token:', e);
         }
     }
 
-    loadSubjectFilters().then(() => fetchDocuments(1));
+    async function fetchBookmarks() {
+        const token = getToken();
+        if (!token) return;
+        try {
+            const res = await fetch(`${API_URL}/users/bookmarks`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.documents) {
+                    data.documents.forEach(doc => bookmarkedDocs.add(doc.MaTL));
+                }
+            }
+        } catch (e) {
+            console.error('Lỗi tải danh sách bookmarks:', e);
+        }
+    }
+
+    Promise.all([loadSubjectFilters(), fetchBookmarks()]).then(() => fetchDocuments(1));
 
 
     if (searchInput) {
@@ -316,7 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="doc-thumb ${thumbClass}">
                             ${thumbHtml}
                             ${officialBadge}
-                            <div class="bookmark-btn"><i class="fa-solid fa-bookmark"></i></div>
+                            <div class="bookmark-btn">
+                                ${bookmarkedDocs.has(doc.MaTL) 
+                                    ? '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>' 
+                                    : '<i class="fa-regular fa-bookmark"></i>'}
+                            </div>
                         </div>
                         <div class="doc-content">
                             <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
@@ -353,9 +378,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             const data = await res.json();
                             if (res.ok) {
                                 if (data.isBookmarked) {
+                                    bookmarkedDocs.add(doc.MaTL);
                                     bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>';
                                     Swal.fire({ title: 'Đã lưu tài liệu', icon: 'success', timer: 1500, showConfirmButton: false });
                                 } else {
+                                    bookmarkedDocs.delete(doc.MaTL);
                                     bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
                                     Swal.fire({ title: 'Đã bỏ lưu', icon: 'info', timer: 1500, showConfirmButton: false });
                                 }

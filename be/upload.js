@@ -42,6 +42,18 @@ const upload = multer({
     }
 });
 
+function buildBooleanSearchQuery(keyword) {
+    if (!keyword || typeof keyword !== 'string') return '';
+
+    return keyword
+        .normalize('NFC')
+        .split(/[^\p{L}\p{N}_]+/u)
+        .map(term => term.trim())
+        .filter(Boolean)
+        .map(term => `${term}*`)
+        .join(' ');
+}
+
 async function notifyActiveAdmins(pool, noiDung, linkDich, excludeUserId = null) {
     try {
         const params = [];
@@ -177,12 +189,14 @@ router.get('/search', async (req, res) => {
         const params = [];
         const countParams = [];
 
-        if (tuKhoa) {
+        const booleanSearchQuery = buildBooleanSearchQuery(tuKhoa);
+
+        if (booleanSearchQuery) {
 
             selectClause += `, MATCH(TL.TenTL, TL.MoTa) AGAINST(? IN BOOLEAN MODE) AS score`;
             whereClause += ` AND MATCH(TL.TenTL, TL.MoTa) AGAINST(? IN BOOLEAN MODE)`;
-            params.push(`*${tuKhoa}*`, `*${tuKhoa}*`);
-            countParams.push(`*${tuKhoa}*`);
+            params.push(booleanSearchQuery, booleanSearchQuery);
+            countParams.push(booleanSearchQuery);
         } else {
             selectClause += `, 0 AS score`;
         }
@@ -235,7 +249,7 @@ router.get('/search', async (req, res) => {
         let orderClause = '';
         if (sapXep === 'PhoBien') {
             orderClause = ` ORDER BY TL.SoLuotTai DESC, TL.MaTL DESC`;
-        } else if (sapXep === 'Relevance' && tuKhoa) {
+        } else if (sapXep === 'Relevance' && booleanSearchQuery) {
             orderClause = ` ORDER BY score DESC, TL.MaTL DESC`;
         } else {
             orderClause = ` ORDER BY TL.MaTL DESC`;

@@ -86,22 +86,24 @@ function renderMySubjectCards() {
         const card = document.createElement('div');
         card.className = 'my-subject-card';
         card.innerHTML = `
-            <div class="my-subject-icon"><i class="fa-solid fa-book"></i></div>
-            <div class="my-subject-info">
-                <h3>${escapeHTML(subject.TenMonHoc)}</h3>
-                <div>${escapeHTML(subject.CapHoc || 'Khác')}</div>
-                <div class="my-subject-stats">
-                    <span><i class="fa-solid fa-file-lines"></i> ${Number(subject.SoTaiLieu || 0)} tài liệu</span>
-                    <span><i class="fa-solid fa-users"></i> ${Number(subject.SoNhom || 0)} nhóm</span>
+            <div class="my-subject-header">
+                <div class="my-subject-icon"><i class="fa-solid fa-book"></i></div>
+                <div class="my-subject-actions">
+                    <button type="button" class="subject-icon-btn" title="Xem tài liệu" data-view-subject="${subject.MaMonHoc}">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <button type="button" class="subject-icon-btn danger" title="Bỏ môn" data-remove-subject="${subject.MaMonHoc}">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
                 </div>
             </div>
-            <div class="my-subject-actions">
-                <button type="button" class="subject-icon-btn" title="Xem tài liệu" data-view-subject="${subject.MaMonHoc}">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-                <button type="button" class="subject-icon-btn danger" title="Bỏ môn" data-remove-subject="${subject.MaMonHoc}">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+            <div class="my-subject-info">
+                <h3>${escapeHTML(subject.TenMonHoc)}</h3>
+                <div class="subject-level">${escapeHTML(subject.CapHoc || 'Khác')}</div>
+            </div>
+            <div class="my-subject-stats">
+                <span class="stat-doc"><i class="fa-solid fa-file-pdf"></i> ${Number(subject.SoTaiLieu || 0)} tài liệu</span>
+                <span class="stat-group"><i class="fa-solid fa-user-group"></i> ${Number(subject.SoNhom || 0)} nhóm</span>
             </div>
         `;
 
@@ -268,6 +270,8 @@ function loadUserProfileNav() {
                 avatarEl.style.color = 'transparent';
             } else {
                 avatarEl.textContent = payload.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                avatarEl.style.background = 'var(--primary-light)';
+                avatarEl.style.color = 'var(--primary)';
             }
         }
     } catch (e) {

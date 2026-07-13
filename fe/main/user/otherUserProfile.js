@@ -53,8 +53,8 @@ function loadUserProfileNav() {
             } else {
                 const initial = payload.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
                 avatarEl.textContent = initial;
-                avatarEl.style.background = '';
-                avatarEl.style.color = '';
+                avatarEl.style.background = 'var(--primary-light)';
+                avatarEl.style.color = 'var(--primary)';
             }
         }
     } catch (e) {

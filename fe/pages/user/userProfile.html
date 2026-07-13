@@ -49,6 +49,8 @@
     </div>
   </nav>
 
+
+
   <div class="main-layout">
 
     <aside id="app-sidebar" class="sidebar"></aside>
@@ -59,6 +61,9 @@
         <div class="profile-avatar-container">
           <div class="profile-avatar" id="header-avatar">U</div>
           <div class="btn-edit-avatar" title="Thay đổi ảnh đại diện"><i class="fa-solid fa-camera"></i></div>
+          <button type="button" class="btn-delete-avatar" id="btn-delete-avatar" title="Xoá ảnh đại diện" aria-label="Xoá ảnh đại diện">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
           <input type="file" id="input-avatar" accept="image/png, image/jpeg, image/jpg, image/webp"
             style="display: none;">
         </div>
@@ -82,63 +87,45 @@
         </div>
       </div>
 
-
       <div class="form-card">
         <h2 class="card-title">Thông tin cá nhân</h2>
         <form>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Họ và tên</label>
-              <div class="input-icon-wrapper">
-                <i class="fa-solid fa-user input-icon"></i>
-                <input type="text" id="input-hoten" class="form-control">
-              </div>
+              <label class="form-label"><i class="fa-solid fa-user" style="margin-right: 6px;"></i> Họ và tên</label>
+              <input type="text" id="input-hoten" class="form-control">
             </div>
             <div class="form-group">
-              <label class="form-label" title="Email không thể thay đổi">Email</label>
-              <div class="input-icon-wrapper">
-                <i class="fa-solid fa-envelope input-icon"></i>
-                <input type="email" id="input-email" class="form-control" disabled>
-              </div>
+              <label class="form-label" title="Email không thể thay đổi"><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Email</label>
+              <input type="email" id="input-email" class="form-control" disabled>
             </div>
           </div>
           <div class="form-row" style="margin-top: 15px;">
             <div class="form-group">
-              <label class="form-label">Tuổi</label>
-              <div class="input-icon-wrapper">
-                <i class="fa-solid fa-cake-candles input-icon"></i>
-                <input type="number" id="input-tuoi" class="form-control" min="1" max="150" placeholder="Nhập tuổi của bạn">
-              </div>
+              <label class="form-label"><i class="fa-solid fa-cake-candles" style="margin-right: 6px;"></i> Tuổi</label>
+              <input type="number" id="input-tuoi" class="form-control" min="1" max="150" placeholder="Nhập tuổi của bạn">
             </div>
             <div class="form-group">
-              <label class="form-label">Giới tính</label>
-              <div class="input-icon-wrapper">
-                <i class="fa-solid fa-venus-mars input-icon"></i>
-                <select id="input-gioitinh" class="form-control">
-                  <option value="Khac">Khác</option>
-                  <option value="Nam">Nam</option>
-                  <option value="Nu">Nữ</option>
-                </select>
-              </div>
+              <label class="form-label"><i class="fa-solid fa-venus-mars" style="margin-right: 6px;"></i> Giới tính</label>
+              <select id="input-gioitinh" class="form-control">
+                <option value="Khac">Khác</option>
+                <option value="Nam">Nam</option>
+                <option value="Nu">Nữ</option>
+              </select>
             </div>
           </div>
           <div class="form-row" style="margin-top: 15px;">
             <div class="form-group" style="width: 100%;">
-              <label class="form-label">Địa chỉ</label>
-              <div class="input-icon-wrapper">
-                <i class="fa-solid fa-location-dot input-icon"></i>
-                <input type="text" id="input-diachi" class="form-control" placeholder="Nhập địa chỉ của bạn">
-              </div>
+              <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ</label>
+              <input type="text" id="input-diachi" class="form-control" placeholder="Nhập địa chỉ của bạn">
             </div>
           </div>
 
           <div class="form-actions">
-            <button type="button" id="btn-save-profile" class="btn-primary"><i class="fa-solid fa-floppy-disk"
-                style="margin-right: 6px;"></i> Lưu thay đổi</button>
+            <button type="button" id="btn-save-profile" class="btn-primary"><i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Lưu thay đổi</button>
           </div>
         </form>
       </div>
-
 
       <div class="form-card">
         <div class="collapsible-header" id="btn-toggle-pwd">
@@ -205,19 +192,31 @@
         </div>
       </div>
 
+
+      <div class="form-card danger-zone">
+        <div class="danger-zone-info">
+          <h2 class="card-title">Xoá tài khoản</h2>
+          <p>Sau khi xoá, tài khoản và dữ liệu liên quan sẽ bị xoá vĩnh viễn khỏi hệ thống.</p>
+        </div>
+        <button type="button" id="btn-delete-account" class="btn-danger">
+          <i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Xoá tài khoản
+        </button>
+      </div>
+
     </main>
   </div>
 
   <!-- Follow Modal -->
   <div id="follow-modal" class="modal-overlay"
-    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center;">
+    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center;"
+    onclick="if(event.target === this) { window.closeFollowModal && window.closeFollowModal(); }">
     <div class="modal-content"
       style="background: var(--white); width: 100%; max-width: 450px; border-radius: var(--radius-card); padding: 24px; max-height: 80vh; display: flex; flex-direction: column;">
       <div class="modal-header"
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
         <h2 class="modal-title" id="follow-modal-title" style="font-size: 20px; font-weight: 700; margin: 0;">Danh sách
         </h2>
-        <span onclick="document.getElementById('follow-modal').style.display='none'"
+        <span onclick="window.closeFollowModal && window.closeFollowModal()"
           style="cursor: pointer; font-size: 24px; color: var(--text-secondary);">&times;</span>
       </div>
       <div id="follow-list-container"
