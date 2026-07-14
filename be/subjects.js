@@ -71,6 +71,65 @@ router.get('/available', authMiddleware, async (req, res) => {
     }
 });
 
+router.post('/suggestions', authMiddleware, async (req, res) => {
+    if (req.user.VaiTro !== 'GiaoVien') {
+        return res.status(403).json({ message: 'Chỉ Giáo viên mới có thể đề xuất môn học mới.' });
+    }
+
+    const tenMonHoc = (req.body.tenMonHoc || '').trim();
+    const capHoc = (req.body.capHoc || 'Khac').trim();
+    const moTa = (req.body.moTa || '').trim();
+    const lyDo = (req.body.lyDo || '').trim();
+
+    if (!tenMonHoc) {
+        return res.status(400).json({ message: 'Tên môn học bắt buộc.' });
+    }
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [existingSubjects] = await pool.execute(
+            'SELECT MaMonHoc, TenMonHoc FROM MONHOC WHERE LOWER(TenMonHoc) = LOWER(?) AND TrangThai = "HoatDong" LIMIT 1',
+            [tenMonHoc]
+        );
+
+        if (existingSubjects.length > 0) {
+            return res.status(409).json({ message: 'Môn học này đã tồn tại trên hệ thống.' });
+        }
+
+        const [pendingSuggestions] = await pool.execute(
+            'SELECT MaDeXuat FROM DEXUAT_MONHOC WHERE LOWER(TenMonHoc) = LOWER(?) AND TrangThai = "ChoDuyet" LIMIT 1',
+            [tenMonHoc]
+        );
+
+        if (pendingSuggestions.length > 0) {
+            return res.status(409).json({ message: 'Môn học này đã có đề xuất đang chờ duyệt.' });
+        }
+
+        const [result] = await pool.execute(
+            `INSERT INTO DEXUAT_MONHOC (TenMonHoc, CapHoc, MoTa, LyDo, MaND_DeXuat)
+             VALUES (?, ?, ?, ?, ?)`,
+            [tenMonHoc, capHoc || 'Khac', moTa || null, lyDo || null, req.user.MaND]
+        );
+
+        const [admins] = await pool.execute(
+            'SELECT MaND FROM NGUOIDUNG WHERE VaiTro = "Admin" AND TrangThai = "HoatDong"'
+        );
+
+        for (const admin of admins) {
+            await pool.execute(
+                'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                [admin.MaND, 'HeThong', `Giáo viên vừa đề xuất môn học mới: "${tenMonHoc}".`, '../admin/adminSubjects.html']
+            );
+        }
+
+        res.status(201).json({ message: 'Đã gửi đề xuất môn học. Vui lòng chờ Admin duyệt.', id: result.insertId });
+    } catch (error) {
+        console.error('Lỗi API POST /subjects/suggestions:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi gửi đề xuất môn học.' });
+    }
+});
+
 router.post('/:maMonHoc/follow', authMiddleware, async (req, res) => {
     const maMonHoc = parseId(req.params.maMonHoc);
     if (!maMonHoc) return res.status(400).json({ message: 'Môn học không hợp lệ.' });

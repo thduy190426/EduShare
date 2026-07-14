@@ -61,8 +61,10 @@ async function run() {
         `);
         await pool.execute("ALTER TABLE NGUOIDUNG MODIFY COLUMN GioiTinh ENUM('Nam', 'Nu', 'Khac') DEFAULT 'Khac'");
         console.log('Normalized NGUOIDUNG.GioiTinh enum');
+        await addColumnIfMissing('NGUOIDUNG', 'NgayTao', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
         await addColumnIfMissing('MONHOC', 'NgayTao', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
         await addColumnIfMissing('MONHOC', 'NgayCapNhat', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+        await pool.execute("ALTER TABLE MONHOC MODIFY COLUMN TrangThai ENUM('HoatDong', 'TamAn', 'DaXoa') DEFAULT 'HoatDong'");
         await createTableIfMissing('NGUOIDUNG_MONHOC', `
             CREATE TABLE NGUOIDUNG_MONHOC (
                 MaND INT NOT NULL,
@@ -71,6 +73,25 @@ async function run() {
                 PRIMARY KEY (MaND, MaMonHoc),
                 FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND),
                 FOREIGN KEY (MaMonHoc) REFERENCES MONHOC(MaMonHoc)
+            )
+        `);
+        await createTableIfMissing('DEXUAT_MONHOC', `
+            CREATE TABLE DEXUAT_MONHOC (
+                MaDeXuat INT AUTO_INCREMENT PRIMARY KEY,
+                TenMonHoc VARCHAR(255) NOT NULL,
+                CapHoc VARCHAR(100) DEFAULT 'Khac',
+                MoTa TEXT,
+                LyDo TEXT,
+                MaND_DeXuat INT NOT NULL,
+                TrangThai ENUM('ChoDuyet', 'DaDuyet', 'TuChoi') DEFAULT 'ChoDuyet',
+                LyDoTuChoi TEXT DEFAULT NULL,
+                MaMonHocDaTao INT DEFAULT NULL,
+                MaND_Duyet INT DEFAULT NULL,
+                NgayDeXuat DATETIME DEFAULT CURRENT_TIMESTAMP,
+                NgayDuyet DATETIME DEFAULT NULL,
+                FOREIGN KEY (MaND_DeXuat) REFERENCES NGUOIDUNG(MaND),
+                FOREIGN KEY (MaMonHocDaTao) REFERENCES MONHOC(MaMonHoc),
+                FOREIGN KEY (MaND_Duyet) REFERENCES NGUOIDUNG(MaND)
             )
         `);
     } finally {

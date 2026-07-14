@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { clearAuthSession, getAssetUrl, getToken, setAvatarForCurrentSession } from '../shared/utils.js';
+import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession } from '../shared/utils.js';
 
 const token = getToken();
 
@@ -131,7 +131,7 @@ window.openFollowModal = function(type) {
             const avatarHtml = user.AvatarURL 
                 ? `<img src="${getAssetUrl(user.AvatarURL)}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` 
                 : `<div style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:white; display:flex; justify-content:center; align-items:center; font-weight:bold;">${user.HoTen.trim().split(' ').pop().charAt(0).toUpperCase()}</div>`;
-                
+
             const roleStr = user.VaiTro === 'SinhVien' ? 'Sinh viên' : (user.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên');
             
             const item = document.createElement('div');
@@ -448,9 +448,11 @@ async function fetchMyDocuments() {
                   <div>
                     <div class="doc-title">${doc.TenTL}</div>
                     <div class="doc-meta">
-                      <span>Môn: ${doc.TenMonHoc || 'Không xác định'}</span>
+                      <span>Môn học: ${doc.TenMonHoc || 'Không xác định'}</span>
                       <span>•</span>
                       <span>${doc.SoLuotTai || 0} lượt tải</span>
+                      <span>•</span>
+                      <span><i class="fa-solid fa-star" style="color:#F59E0B; margin-right:4px;"></i>${formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia)}</span>
                       <span>•</span>
                       <span style="color:${statusColor}; font-weight:500;">${statusText}</span>
                     </div>
@@ -501,6 +503,8 @@ async function fetchBookmarks() {
                       <span>Người đăng: ${doc.TenNguoiDang}</span>
                       <span>•</span>
                       <span>Môn: ${doc.TenMonHoc || 'Không xác định'}</span>
+                      <span>•</span>
+                      <span><i class="fa-solid fa-star" style="color:#F59E0B; margin-right:4px;"></i>${formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia)}</span>
                       <span>•</span>
                       <span style="color:var(--text-secondary);">Lưu ngày: ${dateStr}</span>
                     </div>
@@ -627,7 +631,7 @@ async function initNotificationsLegacy() {
         } else {
             data.notifications.forEach(tb => {
                 if (!tb.DaDoc) unreadCount++;
-                
+
                 const item = document.createElement('div');
                 item.style.padding = '12px 16px';
                 item.style.borderBottom = '1px solid #E5E7EB';
@@ -755,46 +759,89 @@ function setupEventListeners() {
     const btnDeleteAvatar = document.getElementById('btn-delete-avatar');
     const inputAvatar = document.getElementById('input-avatar');
     if (btnDeleteAvatar) btnDeleteAvatar.addEventListener('click', deleteAvatar);
+    let cropper = null;
+    const cropModal = document.getElementById('crop-modal');
+    const imageToCrop = document.getElementById('image-to-crop');
+    const btnCancelCrop = document.getElementById('btn-cancel-crop');
+    const btnSaveCrop = document.getElementById('btn-save-crop');
 
     if (btnEditAvatar && inputAvatar) {
         btnEditAvatar.addEventListener('click', () => {
+            inputAvatar.value = '';
             inputAvatar.click();
         });
 
-        inputAvatar.addEventListener('change', async (e) => {
+        inputAvatar.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            const formData = new FormData();
-            formData.append('avatar', file);
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                imageToCrop.src = event.target.result;
+                if (cropModal) cropModal.style.display = 'flex';
 
-            try {
-                Swal.fire({
-                    title: 'Đang tải lên...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading()
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(imageToCrop, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
                 });
-
-                const res = await fetch(`${API_URL}/users/profile/avatar`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                const data = await res.json();
-                
-                if (res.ok) {
-                    Toast.fire({ icon: 'success', title: data.message });
-                    initProfile();
-                } else {
-                    Toast.fire({ icon: 'error', title: data.message });
-                }
-            } catch (err) {
-                console.error(err);
-                Toast.fire({ icon: 'error', title: 'Không thể tải lên ảnh đại diện.' });
-            } finally {
-                inputAvatar.value = '';
-            }
+            };
+            reader.readAsDataURL(file);
         });
+
+        if (btnCancelCrop) {
+            btnCancelCrop.addEventListener('click', () => {
+                if (cropModal) cropModal.style.display = 'none';
+                if (cropper) { cropper.destroy(); cropper = null; }
+                inputAvatar.value = '';
+            });
+        }
+
+        if (btnSaveCrop) {
+            btnSaveCrop.addEventListener('click', () => {
+                if (!cropper) return;
+
+                const canvas = cropper.getCroppedCanvas({
+                    width: 400,
+                    height: 400,
+                });
+
+                canvas.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('avatar', blob, 'avatar.png');
+
+                    try {
+                        if (cropModal) cropModal.style.display = 'none';
+                        Swal.fire({
+                            title: 'Đang tải ảnh lên...',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+
+                        const res = await fetch(`${API_URL}/users/profile/avatar`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            body: formData
+                        });
+                        const data = await res.json();
+
+                        if (res.ok) {
+                            Toast.fire({ icon: 'success', title: data.message });
+                            initProfile();
+                        } else {
+                            Toast.fire({ icon: 'error', title: data.message });
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        Toast.fire({ icon: 'error', title: 'Không thể tải lên ảnh đại diện.' });
+                    } finally {
+                        if (cropper) { cropper.destroy(); cropper = null; }
+                        inputAvatar.value = '';
+                    }
+                }, 'image/png');
+            });
+        }
     }
 
     

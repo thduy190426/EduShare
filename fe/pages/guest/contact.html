@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liên hệ — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/guest/guestHome.css">
+  <link rel="stylesheet" href="../../css/guest/policy.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<body>
+  
+  <nav class="navbar">
+    <div class="container">
+      <a href="guestHome.html" class="logo">
+        <i class="fa-solid fa-book"></i> EduShare
+      </a>
+      <div class="nav-links">
+        <a href="guestHome.html">Trang chủ</a>
+        <a href="../document/searchResults.html">Tài liệu</a>
+        <a href="../group/groupList.html">Nhóm học tập</a>
+        <a href="#">Hướng dẫn</a>
+      </div>
+      <div class="nav-actions">
+        <a href="../auth/login.html" class="btn btn-ghost">Đăng nhập</a>
+        <a href="../auth/register.html" class="btn btn-primary">Đăng ký</a>
+      </div>
+    </div>
+  </nav>
+
+  <style>
+    @media (max-width: 768px) {
+      .contact-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    #contactForm input:focus, #contactForm textarea:focus {
+      border-color: var(--primary-color) !important;
+    }
+  </style>
+
+  <header class="policy-header">
+    <div class="container">
+      <h1>Liên hệ</h1>
+      <p>Chúng tôi luôn sẵn sàng lắng nghe và hỗ trợ bạn</p>
+    </div>
+  </header>
+
+  <main class="policy-container">
+    <div class="policy-content contact-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+      <div class="contact-info">
+        <h2>Thông tin liên hệ</h2>
+        <p>Nếu bạn có bất kỳ câu hỏi, góp ý hay cần hỗ trợ, đừng ngần ngại liên hệ với đội ngũ EduShare. Chúng tôi sẽ phản hồi bạn trong thời gian sớm nhất.</p>
+        
+        <div style="margin-top: 30px;">
+          <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <i class="fa-solid fa-location-dot" style="font-size: 24px; color: var(--primary-color); width: 40px;"></i>
+            <div>
+              <strong style="color: var(--text-color);">Địa chỉ:</strong><br>
+              Tòa nhà EduShare, Khu Công Nghệ Cao, Quận 9, TP. Hồ Chí Minh
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <i class="fa-solid fa-envelope" style="font-size: 24px; color: var(--primary-color); width: 40px;"></i>
+            <div>
+              <strong style="color: var(--text-color);">Email hỗ trợ:</strong><br>
+              <a href="mailto:support@edushare.vn" style="color: inherit; text-decoration: none;">support@edushare.vn</a>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: center; margin-bottom: 20px;">
+            <i class="fa-solid fa-phone" style="font-size: 24px; color: var(--primary-color); width: 40px;"></i>
+            <div>
+              <strong style="color: var(--text-color);">Hotline:</strong><br>
+              1900 1234 (Giờ hành chính)
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <h3>Kết nối với chúng tôi</h3>
+          <div style="display: flex; gap: 15px; margin-top: 15px;">
+            <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: var(--text-color); font-size: 1.2rem; text-decoration: none; transition: background 0.3s;"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: var(--text-color); font-size: 1.2rem; text-decoration: none; transition: background 0.3s;"><i class="fa-brands fa-twitter"></i></a>
+            <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: var(--text-color); font-size: 1.2rem; text-decoration: none; transition: background 0.3s;"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="#" style="width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: var(--text-color); font-size: 1.2rem; text-decoration: none; transition: background 0.3s;"><i class="fa-brands fa-instagram"></i></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-form" style="background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+        <h2 style="margin-top: 0; margin-bottom: 20px;">Gửi tin nhắn cho chúng tôi</h2>
+        <form id="contactForm" style="display: flex; flex-direction: column; gap: 15px;">
+          <div>
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #334155;"><i class="fa-solid fa-user" style="color: var(--primary-color); margin-right: 6px;"></i>Họ và tên</label>
+            <input type="text" placeholder="Nhập tên của bạn" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.2s;" required>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #334155;"><i class="fa-solid fa-envelope" style="color: var(--primary-color); margin-right: 6px;"></i>Email liên hệ</label>
+            <input type="email" placeholder="example@email.com" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.2s;" required>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #334155;"><i class="fa-solid fa-circle-info" style="color: var(--primary-color); margin-right: 6px;"></i>Chủ đề</label>
+            <input type="text" placeholder="Bạn cần hỗ trợ về vấn đề gì?" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.2s;" required>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 500; margin-bottom: 8px; color: #334155;"><i class="fa-solid fa-pen" style="color: var(--primary-color); margin-right: 6px;"></i>Nội dung tin nhắn</label>
+            <textarea placeholder="Mô tả chi tiết vấn đề của bạn..." rows="4" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; resize: vertical; transition: border-color 0.2s;" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 10px; padding: 14px; font-size: 16px; border: none; cursor: pointer; border-radius: 8px; font-weight: 600;" onclick="event.preventDefault(); alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất.'); document.getElementById('contactForm').reset();"><i class="fa-solid fa-paper-plane" style="margin-right: 8px;"></i>Gửi tin nhắn</button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <a href="guestHome.html" class="logo">
+            <i class="fa-solid fa-book"></i> EduShare
+          </a>
+          <p class="footer-desc">Nền tảng chia sẻ tài liệu học tập lớn nhất dành cho học sinh, sinh viên và giảng viên tại Việt Nam.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Về chúng tôi</h4>
+          <div class="footer-links">
+            <a href="about.html">Giới thiệu</a>
+            <a href="terms.html">Điều khoản dịch vụ</a>
+            <a href="privacy.html">Chính sách bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Hỗ trợ</h4>
+          <div class="footer-links">
+            <a href="helpCenter.html">Trung tâm trợ giúp</a>
+            <a href="guide.html">Hướng dẫn đăng tài liệu</a>
+            <a href="copyright.html">Quy định bản quyền</a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>Cộng đồng</h4>
+          <div class="footer-links">
+            <a href="forum.html">Diễn đàn</a>
+            <a href="../group/groupList.html">Nhóm học tập</a>
+            <a href="blog.html">Blog</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 EduShare. Tất cả các quyền được bảo lưu.
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

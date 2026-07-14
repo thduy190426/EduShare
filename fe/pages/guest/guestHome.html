@@ -17,10 +17,10 @@
         <i class="fa-solid fa-book"></i> EduShare
       </a>
       <div class="nav-links">
-        <a href="guestHome.html">Trang chủ</a>
-        <a href="../document/searchResults.html">Tài liệu</a>
-        <a href="../group/groupList.html">Nhóm học tập</a>
-        <a href="#">Hướng dẫn</a>
+        <a href="guestHome.html" onclick="requireLogin(event)">Trang chủ</a>
+        <a href="../document/searchResults.html" onclick="requireLogin(event)">Tài liệu</a>
+        <a href="../group/groupList.html" onclick="requireLogin(event)">Nhóm học tập</a>
+        <a href="#" onclick="requireLogin(event)">Hướng dẫn</a>
       </div>
       <div class="nav-actions">
         <a href="../auth/login.html" class="btn btn-ghost">Đăng nhập</a>
@@ -63,7 +63,7 @@
   <section class="container" id="documents">
     <div class="section-header">
       <h2 class="section-title">Tài liệu nổi bật</h2>
-      <a href="#" class="section-link">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
+      <a href="#" class="section-link" onclick="requireLogin(event)">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
     </div>
     
     <div class="doc-grid" id="homeDocGrid">
@@ -75,42 +75,11 @@
   <section class="container">
     <div class="section-header">
       <h2 class="section-title">Môn học phổ biến</h2>
-      <a href="#" class="section-link">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
+      <a href="#" class="section-link" onclick="requireLogin(event)">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
     </div>
 
-    <div class="subject-grid">
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-ruler-combined"></i></div>
-        <div class="subject-name">Toán Đại Cương</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-magnet"></i></div>
-        <div class="subject-name">Vật Lý Đại Cương</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-laptop"></i></div>
-        <div class="subject-name">Lập Trình Python</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-floppy-disk"></i></div>
-        <div class="subject-name">Cơ Sở Dữ Liệu</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-book"></i></div>
-        <div class="subject-name">Ngữ Văn 12</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-flask"></i></div>
-        <div class="subject-name">Hóa Học 11</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-earth-americas"></i></div>
-        <div class="subject-name">Địa Lý 12</div>
-      </div>
-      <div class="subject-card">
-        <div class="subject-icon"><i class="fa-solid fa-bullhorn"></i>️</div>
-        <div class="subject-name">Tiếng Anh</div>
-      </div>
+    <div class="subject-grid" id="homeSubjectGrid">
+      <!-- Môn học sẽ được render từ DB -->
     </div>
   </section>
 
@@ -125,26 +94,26 @@
         <div class="footer-col">
           <h4>Về chúng tôi</h4>
           <div class="footer-links">
-            <a href="#">Giới thiệu</a>
+            <a href="about.html">Giới thiệu</a>
             <a href="terms.html">Điều khoản dịch vụ</a>
             <a href="privacy.html">Chính sách bảo mật</a>
-            <a href="#">Liên hệ</a>
+            <a href="contact.html">Liên hệ</a>
           </div>
         </div>
         <div class="footer-col">
           <h4>Hỗ trợ</h4>
           <div class="footer-links">
-            <a href="#">Trung tâm trợ giúp</a>
-            <a href="#">Hướng dẫn đăng tài liệu</a>
-            <a href="#">Quy định bản quyền</a>
+            <a href="helpCenter.html">Trung tâm trợ giúp</a>
+            <a href="guide.html">Hướng dẫn đăng tài liệu</a>
+            <a href="copyright.html">Quy định bản quyền</a>
           </div>
         </div>
         <div class="footer-col">
           <h4>Cộng đồng</h4>
           <div class="footer-links">
-            <a href="#">Diễn đàn</a>
-            <a href="#">Nhóm học tập</a>
-            <a href="#">Blog</a>
+            <a href="forum.html">Diễn đàn</a>
+            <a href="../group/groupList.html">Nhóm học tập</a>
+            <a href="blog.html">Blog</a>
           </div>
         </div>
       </div>
@@ -154,7 +123,24 @@
     </div>
   </footer>
 
-  <script type="module" src="../../main/user/home.js"></script>
+  <script type="module" src="../../main/guest/home.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    function requireLogin(event) {
+      event.preventDefault();
+      Swal.fire({
+        icon: 'info',
+        title: 'Yêu cầu đăng nhập',
+        text: 'Vui lòng đăng nhập để tiếp tục sử dụng tính năng này!',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1500,
+        timerProgressBar: true
+      }).then(() => {
+        window.location.href = '../auth/login.html';
+      });
+    }
+  </script>
 </body>
 </html>

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hồ sơ cá nhân — EduShare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
   <link rel="stylesheet" href="../../css/user/userProfile.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml"
@@ -92,21 +93,21 @@
         <form>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-user" style="margin-right: 6px;"></i> Họ và tên</label>
+              <label class="form-label"><i class="fa-solid fa-user" style="margin-right: 6px;"></i> Họ và tên: </label>
               <input type="text" id="input-hoten" class="form-control">
             </div>
             <div class="form-group">
-              <label class="form-label" title="Email không thể thay đổi"><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Email</label>
+              <label class="form-label" title="Email không thể thay đổi"><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Email: </label>
               <input type="email" id="input-email" class="form-control" disabled>
             </div>
           </div>
           <div class="form-row" style="margin-top: 15px;">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-cake-candles" style="margin-right: 6px;"></i> Tuổi</label>
+              <label class="form-label"><i class="fa-solid fa-cake-candles" style="margin-right: 6px;"></i> Tuổi: </label>
               <input type="number" id="input-tuoi" class="form-control" min="1" max="150" placeholder="Nhập tuổi của bạn">
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-venus-mars" style="margin-right: 6px;"></i> Giới tính</label>
+              <label class="form-label"><i class="fa-solid fa-venus-mars" style="margin-right: 6px;"></i> Giới tính: </label>
               <select id="input-gioitinh" class="form-control">
                 <option value="Khac">Khác</option>
                 <option value="Nam">Nam</option>
@@ -116,7 +117,7 @@
           </div>
           <div class="form-row" style="margin-top: 15px;">
             <div class="form-group" style="width: 100%;">
-              <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ</label>
+              <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ: </label>
               <input type="text" id="input-diachi" class="form-control" placeholder="Nhập địa chỉ của bạn">
             </div>
           </div>
@@ -196,7 +197,7 @@
       <div class="form-card danger-zone">
         <div class="danger-zone-info">
           <h2 class="card-title">Xoá tài khoản</h2>
-          <p>Sau khi xoá, tài khoản và dữ liệu liên quan sẽ bị xoá vĩnh viễn khỏi hệ thống.</p>
+          <p>Sau khi xoá, tài khoản và dữ liệu liên quan sẽ bị xoá vĩnh viễn khỏi hệ thống và không thể khôi phục.</p>
         </div>
         <button type="button" id="btn-delete-account" class="btn-danger">
           <i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Xoá tài khoản
@@ -206,7 +207,6 @@
     </main>
   </div>
 
-  <!-- Follow Modal -->
   <div id="follow-modal" class="modal-overlay"
     style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center;"
     onclick="if(event.target === this) { window.closeFollowModal && window.closeFollowModal(); }">
@@ -221,11 +221,27 @@
       </div>
       <div id="follow-list-container"
         style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px;">
-        <!-- Danh sách user sẽ được render ở đây -->
       </div>
     </div>
   </div>
 
+  <!-- Crop Modal -->
+  <div id="crop-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="modal-content"
+      style="background: var(--white); width: 100%; max-width: 500px; border-radius: var(--radius-card); padding: 24px; display: flex; flex-direction: column; align-items: center;">
+      <h2 style="margin-top: 0; margin-bottom: 20px; font-size: 20px;">Chỉnh sửa ảnh đại diện</h2>
+      <div style="width: 100%; max-height: 400px; overflow: hidden; display: flex; justify-content: center; background: #f0f0f0;">
+        <img id="image-to-crop" style="max-width: 100%; display: block;">
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 24px; width: 100%; justify-content: flex-end;">
+        <button type="button" id="btn-cancel-crop" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 500;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
+        <button type="button" id="btn-save-crop" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 500;"><i class="fa-solid fa-crop-simple" style="margin-right: 6px;"></i> Cắt & Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   <script type="module" src="../../main/user/userProfile.js"></script>
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

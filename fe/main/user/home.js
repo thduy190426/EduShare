@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
@@ -478,7 +478,7 @@ function renderHomeDocuments(documents) {
                     </div>
                     <div class="doc-stats">
                         <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>
-                        <span><i class="fa-solid fa-star" style="color: #F59E0B; margin-right: 4px;"></i> ${parseFloat(doc.DiemDanhGia || 0).toFixed(1)}</span>
+                        <span><i class="fa-solid fa-star" style="color: #F59E0B; margin-right: 4px;"></i> ${formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia)}</span>
                     </div>
                 </div>
             </div>

@@ -398,7 +398,8 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
 
         const [rows] = await pool.execute(`
             SELECT T.*, TN.NgayChiaSe, N.HoTen AS TenNguoiDang, N.AvatarURL, MH.TenMonHoc,
-                   (SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = T.MaTL) AS DiemDanhGia
+                   COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = T.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = T.MaTL) AS SoDanhGia
             FROM TAILIEU_NHOM TN
             JOIN TAILIEU T ON TN.MaTL = T.MaTL
             LEFT JOIN NGUOIDUNG N ON T.MaND_NguoiDang = N.MaND

@@ -78,6 +78,12 @@ export const escapeHTML = (str) => {
     });
 };
 
+export const formatRatingSummary = (average, count) => {
+    const ratingCount = Number(count || 0);
+    const ratingAverage = Number.parseFloat(average || 0).toFixed(1);
+    return `${ratingAverage} (${ratingCount.toLocaleString('vi-VN')} đánh giá)`;
+};
+
 export const showToast = (icon, title) => {
     if (typeof Swal !== 'undefined') {
         const Toast = Swal.mixin({

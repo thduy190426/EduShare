@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
 
 let currentMaTL = null;
 const token = getToken();
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (payload) {
                 if (payload.VaiTro === 'GiaoVien' || payload.VaiTro === 'Admin') {
                     const btnVerify = document.getElementById('btn-verify');
-                    if (btnVerify) btnVerify.style.display = 'block'; 
+                    if (btnVerify) btnVerify.style.display = 'flex';
                 }
                 
                 const navUserName = document.getElementById('navUserName');
@@ -85,19 +85,19 @@ async function fetchDocumentDetails() {
 
         const data = await response.json();
         renderDocumentInfo(data.document);
-        renderComments(data.comments);
+        renderComments(data.comments, data.document.MaND_NguoiDang);
         fetchRelatedDocuments();
 
         const icon = document.getElementById('bookmark-icon');
         const text = document.getElementById('bookmark-text');
         if (data.isBookmarked && icon && text) {
             icon.className = 'fa-solid fa-bookmark';
-            text.textContent = 'Đã lưu Bookmark';
+            text.textContent = 'Đã lưu';
         }
 
         const ratingHint = document.querySelector('.rating-count');
         if (data.hasRated) {
-            lockRatingUI();
+            lockRatingUI(`${Number(data.document.SoDanhGia || 0).toLocaleString('vi-VN')} lượt đánh giá`);
         } else if (token && !data.hasDownloaded && ratingHint) {
             ratingHint.textContent = 'Tải tài liệu xuống trước khi đánh giá';
         }
@@ -154,7 +154,7 @@ function renderRelatedDocuments(documents) {
             thumbClass = 'related-thumb-doc';
         }
 
-        const rating = parseFloat(doc.DiemDanhGia || 0).toFixed(1);
+        const rating = formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia);
         const downloads = (doc.SoLuotTai || 0).toLocaleString('vi-VN');
         const officialBadge = doc.LaTaiLieuChinhThuc
             ? '<span class="related-official"><i class="fa-solid fa-check"></i></span>'
@@ -220,6 +220,8 @@ function renderDocumentInfo(doc) {
     
     const avgScore = doc.DiemDanhGia ? parseFloat(doc.DiemDanhGia).toFixed(1) : '0.0';
     document.getElementById('doc-rating-score').textContent = avgScore;
+    const ratingHint = document.querySelector('.rating-count');
+    if (ratingHint) ratingHint.textContent = `${Number(doc.SoDanhGia || 0).toLocaleString('vi-VN')} lượt đánh giá`;
     updateStarUI(Math.round(avgScore));
 
     
@@ -285,7 +287,7 @@ function renderDocumentInfo(doc) {
             btnVerify.style.backgroundColor = '#F3F4F6'; 
             btnVerify.style.color = '#374151';
             btnVerify.style.borderColor = '#D1D5DB';
-            document.getElementById('verify-text').textContent = 'Xác thực chất lượng';
+            document.getElementById('verify-text').textContent = 'Xác thực';
             if (verifyIcon) verifyIcon.className = 'fa-solid fa-certificate';
         }
     }
@@ -310,7 +312,7 @@ function updateStarUI(score) {
     });
 }
 
-function lockRatingUI() {
+function lockRatingUI(message = 'Bạn đã đánh giá tài liệu này.') {
     hasSubmittedRating = true;
     const stars = document.querySelectorAll('#doc-rating-stars i');
     stars.forEach(star => {
@@ -318,7 +320,7 @@ function lockRatingUI() {
         star.style.opacity = '0.75';
     });
     const ratingHint = document.querySelector('.rating-count');
-    if (ratingHint) ratingHint.textContent = 'Bạn đã đánh giá tài liệu này.';
+    if (ratingHint) ratingHint.textContent = message;
 }
 
 function setupEventListeners() {
@@ -515,8 +517,9 @@ function setupEventListeners() {
                 if (res.ok) {
                     const newScore = parseFloat(data.average).toFixed(1);
                     document.getElementById('doc-rating-score').textContent = newScore;
+                    const ratingHint = document.querySelector('.rating-count');
                     updateStarUI(Math.round(newScore));
-                    lockRatingUI();
+                    lockRatingUI(`${Number(data.count || 0).toLocaleString('vi-VN')} lượt đánh giá`);
                     Swal.fire('Cảm ơn bạn đã đánh giá.');
                 } else {
                     Swal.fire(data.message);
@@ -586,7 +589,7 @@ async function submitComment(noiDung, maBL_Cha) {
 }
 
 
-function renderComments(comments) {
+function renderComments(comments, documentOwnerId) {
     const listEl = document.getElementById('comments-list');
     listEl.innerHTML = '';
     
@@ -617,14 +620,14 @@ function renderComments(comments) {
         const dateHtml = `<i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${timeStr} <span style="margin: 0 4px; color: #D1D5DB;">|</span> <i class="fa-regular fa-calendar" style="margin-right: 4px;"></i>${dateOnlyStr}`;
         const userInitial = escapeHTML(comment.TenNguoiBinhLuan).trim().split(' ').pop().charAt(0).toUpperCase();
 
-        const isAuthor = comment.VaiTro === 'GiaoVien' || comment.VaiTro === 'Admin';
+        const isAuthor = Number(comment.MaND) === Number(documentOwnerId);
         let avatarHtml = `<div class="comment-avatar" style="${isAuthor ? 'background:#FEE2E2; color:#EF4444' : ''}">${userInitial}</div>`;
         
         if (comment.AvatarURL) {
             avatarHtml = `<div class="comment-avatar" style="background:transparent; color:transparent; padding:0;"><img src="${getAssetUrl(comment.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
         }
 
-        const authorSuffix = isAuthor ? ' (Tác giả/Admin)' : '';
+        const authorSuffix = isAuthor ? ' (Tác giả)' : '';
 
         item.innerHTML = `
             ${avatarHtml}

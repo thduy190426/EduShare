@@ -102,18 +102,25 @@
           <div class="rating-count" style="font-size:12px; margin-top:5px; color:#6b7280;">Bấm vào sao để đánh giá</div>
         </div>
         
-        <button class="btn btn-download" id="btn-download">
+        <button class="btn btn-download" id="btn-download" style="width: 100%; border-radius: 8px;">
           <span><i class="fa-solid fa-download"></i></span> Tải xuống
         </button>
-        <button class="btn btn-bookmark" id="btn-bookmark">
-          <span><i class="fa-regular fa-bookmark" id="bookmark-icon"></i></span> <span id="bookmark-text">Lưu vào Bookmark</span>
-        </button>
-        <button class="btn btn-bookmark" id="btn-report" style="color: var(--danger); background: #FEF2F2; border: 1px solid #FCA5A5;">
-          <span><i class="fa-solid fa-flag"></i></span> Báo cáo vi phạm
-        </button>
-        <button class="btn btn-bookmark" id="btn-verify" style="display: none; background: #F3F4F6; border: 1px solid #D1D5DB; color: #374151;">
-          <span><i class="fa-solid fa-certificate" id="verify-icon"></i></span> <span id="verify-text">Xác thực chất lượng</span>
-        </button>
+        <div class="action-buttons-row" style="display: flex; gap: 8px; margin-top: 12px;">
+          <button class="btn" id="btn-bookmark" title="Lưu vào Bookmark" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); gap: 6px; transition: all 0.2s;">
+            <i class="fa-regular fa-bookmark" id="bookmark-icon" style="font-size: 18px;"></i>
+            <span id="bookmark-text" style="font-size: 12px; font-weight: 500; text-align: center;">Lưu</span>
+          </button>
+          
+          <button class="btn" id="btn-report" title="Báo cáo vi phạm" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid #FCA5A5; border-radius: 8px; background: #FEF2F2; cursor: pointer; color: var(--danger); gap: 6px; transition: all 0.2s;">
+            <i class="fa-solid fa-flag" style="font-size: 18px;"></i>
+            <span style="font-size: 12px; font-weight: 500; text-align: center;">Báo cáo</span>
+          </button>
+
+          <button class="btn" id="btn-verify" title="Xác thực chất lượng" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid #D1D5DB; border-radius: 8px; background: #F3F4F6; cursor: pointer; color: #374151; gap: 6px; transition: all 0.2s;">
+            <i class="fa-solid fa-certificate" id="verify-icon" style="font-size: 18px;"></i>
+            <span id="verify-text" style="font-size: 12px; font-weight: 500; text-align: center;">Xác thực</span>
+          </button>
+        </div>
       </div>
 
       <div class="related-card">

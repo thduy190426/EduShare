@@ -107,7 +107,7 @@ router.get('/users', adminMiddleware, async (req, res) => {
         const { search, role, status, sort } = req.query;
         const pool = req.app.locals.pool;
 
-        let sql = 'SELECT MaND, HoTen, Email, VaiTro, TrangThai, AvatarURL FROM NGUOIDUNG WHERE MaND <> ?';
+        let sql = 'SELECT MaND, HoTen, Email, VaiTro, TrangThai, AvatarURL, NgayTao FROM NGUOIDUNG WHERE MaND <> ?';
         const params = [req.user.MaND];
 
         if (search) {
@@ -432,12 +432,35 @@ router.get('/subjects', adminMiddleware, async (req, res) => {
             SELECT MH.*, COUNT(TL.MaTL) AS SoTaiLieu
             FROM MONHOC MH
             LEFT JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc AND TL.TrangThaiKiemDuyet = 'DaDuyet'
-            WHERE MH.TrangThai = "HoatDong"
+            WHERE MH.TrangThai IN ('HoatDong', 'TamAn')
             GROUP BY MH.MaMonHoc
             ORDER BY MH.TenMonHoc ASC
         `);
         res.status(200).json({ subjects: rows });
     } catch (error) {
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/subjects/:id/status', adminMiddleware, async (req, res) => {
+    const id = req.params.id;
+    const { trangThai } = req.body;
+
+    if (trangThai !== 'HoatDong' && trangThai !== 'TamAn') {
+        return res.status(400).json({ message: 'Trạng thái không hợp lệ.' });
+    }
+
+    try {
+        const pool = req.app.locals.pool;
+        const [result] = await pool.execute('UPDATE MONHOC SET TrangThai = ? WHERE MaMonHoc = ?', [trangThai, id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy môn học.' });
+        }
+        
+        res.status(200).json({ message: `Đã ${trangThai === 'TamAn' ? 'ẩn' : 'hiện'} môn học thành công.` });
+    } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
@@ -511,6 +534,153 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Lỗi API /stats/overview:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/subject-suggestions', adminMiddleware, async (req, res) => {
+    try {
+        const status = req.query.status || 'ChoDuyet';
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT
+                DX.MaDeXuat,
+                DX.TenMonHoc,
+                DX.CapHoc,
+                DX.MoTa,
+                DX.LyDo,
+                DX.TrangThai,
+                DX.LyDoTuChoi,
+                DX.MaMonHocDaTao,
+                DX.NgayDeXuat,
+                DX.NgayDuyet,
+                ND.HoTen AS TenNguoiDeXuat,
+                ND.Email AS EmailNguoiDeXuat,
+                AD.HoTen AS TenNguoiDuyet
+            FROM DEXUAT_MONHOC DX
+            JOIN NGUOIDUNG ND ON DX.MaND_DeXuat = ND.MaND
+            LEFT JOIN NGUOIDUNG AD ON DX.MaND_Duyet = AD.MaND
+            WHERE DX.TrangThai = ?
+            ORDER BY DX.NgayDeXuat DESC
+        `, [status]);
+
+        res.status(200).json({ suggestions: rows });
+    } catch (error) {
+        console.error('Lỗi API GET /admin/subject-suggestions:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/subject-suggestions/:id/approve', adminMiddleware, async (req, res) => {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ message: 'Đề xuất không hợp lệ.' });
+    }
+
+    const conn = await req.app.locals.pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const [suggestions] = await conn.execute(
+            'SELECT * FROM DEXUAT_MONHOC WHERE MaDeXuat = ? FOR UPDATE',
+            [id]
+        );
+
+        if (suggestions.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy đề xuất.' });
+        }
+
+        const suggestion = suggestions[0];
+        if (suggestion.TrangThai !== 'ChoDuyet') {
+            await conn.rollback();
+            return res.status(400).json({ message: 'Đề xuất này đã được xử lý.' });
+        }
+
+        const [existingSubjects] = await conn.execute(
+            'SELECT MaMonHoc FROM MONHOC WHERE LOWER(TenMonHoc) = LOWER(?) AND TrangThai = "HoatDong" LIMIT 1',
+            [suggestion.TenMonHoc]
+        );
+
+        let maMonHoc = existingSubjects[0]?.MaMonHoc;
+        if (!maMonHoc) {
+            const [insertResult] = await conn.execute(
+                'INSERT INTO MONHOC (TenMonHoc, CapHoc, MoTa) VALUES (?, ?, ?)',
+                [suggestion.TenMonHoc, suggestion.CapHoc || 'Khac', suggestion.MoTa || '']
+            );
+            maMonHoc = insertResult.insertId;
+        }
+
+        await conn.execute(
+            `UPDATE DEXUAT_MONHOC
+             SET TrangThai = 'DaDuyet', MaMonHocDaTao = ?, MaND_Duyet = ?, NgayDuyet = NOW(), LyDoTuChoi = NULL
+             WHERE MaDeXuat = ?`,
+            [maMonHoc, req.user.MaND, id]
+        );
+
+        await conn.execute(
+            'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+            [suggestion.MaND_DeXuat, 'HeThong', `Đề xuất môn học "${suggestion.TenMonHoc}" đã được duyệt.`, '../user/userHome.html']
+        );
+
+        await conn.commit();
+        res.status(200).json({ message: 'Đã duyệt đề xuất và tạo môn học.', maMonHoc });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API approve subject suggestion:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    } finally {
+        conn.release();
+    }
+});
+
+router.post('/subject-suggestions/:id/reject', adminMiddleware, async (req, res) => {
+    const id = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ message: 'Đề xuất không hợp lệ.' });
+    }
+
+    const lyDoTuChoi = (req.body.lyDoTuChoi || '').trim();
+    const conn = await req.app.locals.pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        const [suggestions] = await conn.execute(
+            'SELECT * FROM DEXUAT_MONHOC WHERE MaDeXuat = ? FOR UPDATE',
+            [id]
+        );
+
+        if (suggestions.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy đề xuất.' });
+        }
+
+        const suggestion = suggestions[0];
+        if (suggestion.TrangThai !== 'ChoDuyet') {
+            await conn.rollback();
+            return res.status(400).json({ message: 'Đề xuất này đã được xử lý.' });
+        }
+
+        await conn.execute(
+            `UPDATE DEXUAT_MONHOC
+             SET TrangThai = 'TuChoi', LyDoTuChoi = ?, MaND_Duyet = ?, NgayDuyet = NOW()
+             WHERE MaDeXuat = ?`,
+            [lyDoTuChoi || null, req.user.MaND, id]
+        );
+
+        await conn.execute(
+            'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+            [suggestion.MaND_DeXuat, 'HeThong', `Đề xuất môn học "${suggestion.TenMonHoc}" đã bị từ chối.`, '../document/uploadDocument.html']
+        );
+
+        await conn.commit();
+        res.status(200).json({ message: 'Đã từ chối đề xuất môn học.' });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API reject subject suggestion:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    } finally {
+        conn.release();
     }
 });
 

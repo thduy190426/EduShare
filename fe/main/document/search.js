@@ -1,9 +1,10 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
+    const levelSelect = document.getElementById('levelSelect');
     const subjectSearch = document.getElementById('subjectSearch');
     const subjectFilters = document.getElementById('subjectFilters');
     let subjectCheckboxes = document.querySelectorAll('input[name="maMonHoc"]');
@@ -74,7 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    Promise.all([loadSubjectFilters(), fetchBookmarks()]).then(() => fetchDocuments(1));
+    Promise.all([loadSubjectFilters(), fetchBookmarks(), loadLevelFilters()]).then(() => {
+        checkFilterState();
+        fetchDocuments(1);
+    });
 
 
     if (searchInput) {
@@ -84,11 +88,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetchDocuments(1);
             }
         });
+        searchInput.addEventListener('input', checkFilterState);
+    }
+
+    function checkFilterState() {
+        if (!btnClearFilter) return;
+
+        let isDefault = true;
+
+        if (searchInput && searchInput.value.trim() !== '') isDefault = false;
+        if (sortSelect && sortSelect.value !== 'MoiNhat') isDefault = false;
+        if (levelSelect && levelSelect.value !== '') isDefault = false;
+        if (subjectSearch && subjectSearch.value.trim() !== '') isDefault = false;
+        if (officialOnly && officialOnly.checked) isDefault = false;
+        if (fromDate && fromDate.value !== '') isDefault = false;
+        if (toDate && toDate.value !== '') isDefault = false;
+        if (authorInput && authorInput.value.trim() !== '') isDefault = false;
+
+        const hasSubject = Array.from(subjectCheckboxes).some(cb => cb.checked);
+        if (hasSubject) isDefault = false;
+
+        const hasFile = Array.from(fileTypeCheckboxes).some(cb => cb.checked);
+        if (hasFile) isDefault = false;
+
+        if (isDefault) {
+            btnClearFilter.disabled = true;
+            btnClearFilter.style.opacity = '0.5';
+            btnClearFilter.style.cursor = 'not-allowed';
+        } else {
+            btnClearFilter.disabled = false;
+            btnClearFilter.style.opacity = '1';
+            btnClearFilter.style.cursor = 'pointer';
+        }
     }
 
 
     const handleFilterChange = () => {
         currentPage = 1;
+        checkFilterState();
         fetchDocuments(1);
     };
 
@@ -98,19 +135,26 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (sortSelect) sortSelect.addEventListener('change', handleFilterChange);
+    if (levelSelect) levelSelect.addEventListener('change', handleFilterChange);
     subjectCheckboxes.forEach(cb => cb.addEventListener('change', handleFilterChange));
     fileTypeCheckboxes.forEach(cb => cb.addEventListener('change', handleFilterChange));
     if (officialOnly) officialOnly.addEventListener('change', handleFilterChange);
     if (fromDate) fromDate.addEventListener('change', handleFilterChange);
     if (toDate) toDate.addEventListener('change', handleFilterChange);
     if (authorInput) authorInput.addEventListener('input', handleDebouncedFilterChange);
-    if (subjectSearch) subjectSearch.addEventListener('input', filterSubjectOptions);
+    if (subjectSearch) {
+        subjectSearch.addEventListener('input', () => {
+            filterSubjectOptions();
+            checkFilterState();
+        });
+    }
 
 
     if (btnClearFilter) {
         btnClearFilter.addEventListener('click', () => {
             if (searchInput) searchInput.value = '';
             if (sortSelect) sortSelect.value = 'MoiNhat';
+            if (levelSelect) levelSelect.value = '';
             if (subjectSearch) subjectSearch.value = '';
             if (officialOnly) officialOnly.checked = false;
             if (fromDate) fromDate.value = '';
@@ -143,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (officialOnly && officialOnly.checked) chips.push({ type: 'official', label: 'Chính thống' });
+        if (levelSelect && levelSelect.value) chips.push({ type: 'level', value: levelSelect.value, label: `Cấp bậc: ${levelSelect.value}` });
         if (fromDate && fromDate.value) chips.push({ type: 'fromDate', label: `Từ ${fromDate.value}` });
         if (toDate && toDate.value) chips.push({ type: 'toDate', label: `Đến ${toDate.value}` });
         if (authorInput && authorInput.value.trim()) chips.push({ type: 'author', label: `Người đăng: ${authorInput.value.trim()}` });
@@ -171,6 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (type === 'file') {
                 const checkbox = Array.from(fileTypeCheckboxes).find(cb => cb.value === value);
                 if (checkbox) checkbox.checked = false;
+            } else if (type === 'level' && levelSelect) {
+                levelSelect.value = '';
             } else if (type === 'official' && officialOnly) {
                 officialOnly.checked = false;
             } else if (type === 'fromDate' && fromDate) {
@@ -225,6 +272,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function loadLevelFilters() {
+        if (!levelSelect) return;
+        try {
+            const response = await fetch(`${API_URL}/documents/levels`);
+            if (response.ok) {
+                const data = await response.json();
+                const levels = data.levels || [];
+                levelSelect.innerHTML = '<option value="">Tất cả cấp bậc</option>';
+                levels.forEach(level => {
+                    const option = document.createElement('option');
+                    option.value = level;
+                    option.textContent = level;
+                    levelSelect.appendChild(option);
+                });
+                const initialLevel = initialParams.get('capHoc');
+                if (initialLevel) levelSelect.value = initialLevel;
+            }
+        } catch (error) {
+            console.error('Lỗi tải cấp bậc:', error);
+        }
+    }
 
     async function fetchDocuments(page = 1) {
         currentPage = page;
@@ -236,6 +304,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sortSelect && sortSelect.value) {
             queryParams.append('sapXep', sortSelect.value);
+        }
+
+        if (levelSelect && levelSelect.value) {
+            queryParams.append('capHoc', levelSelect.value);
         }
 
         const selectedSubjects = Array.from(subjectCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
@@ -357,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                                 <div class="doc-stats">
                                     <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>
-                                    <span><i class="fa-solid fa-star" style="color: #F59E0B; margin-right: 4px;"></i> ${parseFloat(doc.DiemDanhGia || 0).toFixed(1)}</span>
+                                    <span><i class="fa-solid fa-star" style="color: #F59E0B; margin-right: 4px;"></i> ${formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia)}</span>
                                 </div>
                             </div>
                         </div>

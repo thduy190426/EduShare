@@ -202,7 +202,32 @@
         </button>
       </div>
 
-      
+      <div class="table-card" style="margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--border);">
+          <h3 style="margin: 0; font-size: 18px; color: var(--text-primary);">
+            <i class="fa-solid fa-lightbulb" style="margin-right: 8px; color: var(--primary);"></i> Đề xuất môn học chờ duyệt
+          </h3>
+          <button class="btn-add-subject" style="padding: 9px 14px; font-size: 13px;" onclick="fetchSubjectSuggestions()">
+            <i class="fa-solid fa-rotate"></i> Làm mới
+          </button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="18%">Tên môn học</th>
+              <th width="12%">Cấp học</th>
+              <th width="20%">Người đề xuất</th>
+              <th width="25%">Lý do</th>
+              <th width="15%">Ngày đề xuất</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="subject-suggestion-table-body">
+          </tbody>
+        </table>
+      </div>
+
+
       <div class="table-card">
         <table class="data-table">
           <thead>

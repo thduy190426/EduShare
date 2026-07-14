@@ -1,5 +1,5 @@
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast } from "../shared/utils.js";
+import { getToken, showToast, escapeHTML } from "../shared/utils.js";
 
 let currentRejectId = null;
 let currentTabStatus = 'ChoDuyet';
@@ -130,6 +130,9 @@ function renderDocuments(documents, status) {
         `;
     } else if (status === 'DaDuyet') {
         statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--success);"></span><span class="status-badge status-approved" style="color:var(--success); background:#ecfdf5; padding:4px 8px; border-radius:4px; font-weight:500;">Đã duyệt</span></div>`;
+        actionBtnsHtml += `
+            <button class="btn-action btn-delete-doc" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="Xóa vĩnh viễn" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}"><i class="fa-solid fa-trash"></i></button>
+        `;
     } else if (status === 'TuChoi') {
         statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--danger);"></span><span class="status-badge status-rejected" style="color:var(--danger); background:#fef2f2; padding:4px 8px; border-radius:4px; font-weight:500;">Từ chối</span></div><div style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width: 150px; white-space: normal;" title="${doc.LyDoTuChoi || ''}">Lý do: ${doc.LyDoTuChoi || 'Không rõ'}</div>`;
     }
@@ -139,7 +142,11 @@ function renderDocuments(documents, status) {
         const d = new Date(doc.NgayDang);
         const day = String(d.getDate()).padStart(2, '0');
         const month = String(d.getMonth() + 1).padStart(2, '0');
-        dateStr = `${day}/${month}/${d.getFullYear()}`;
+        const year = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        dateStr = `${hh}:${mm}:${ss} <span style="color:var(--border); margin: 0 4px;">|</span> ${day}/${month}/${year}`;
     }
 
     let avatarHtml = '';
@@ -222,6 +229,29 @@ function renderDocuments(documents, status) {
       }
     });
   });
+
+  const deleteBtns = tbody.querySelectorAll(".btn-delete-doc");
+  deleteBtns.forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const id = e.currentTarget.getAttribute("data-id");
+      const title = e.currentTarget.getAttribute("data-title");
+      if (
+        (
+          await Swal.fire({
+            title: "Xóa vĩnh viễn?",
+            html: `Bạn có chắc chắn muốn xóa vĩnh viễn tài liệu <b>${escapeHTML(title)}</b> không?<br><br><span style="color:var(--danger)">Cảnh báo: Hành động này sẽ xóa file và toàn bộ đánh giá, bình luận liên quan. Không thể hoàn tác!</span>`,
+            icon: "error",
+            showCancelButton: true,
+            confirmButtonText: "Đồng ý xóa",
+            confirmButtonColor: "#EF4444",
+            cancelButtonText: "Hủy",
+          })
+        ).isConfirmed
+      ) {
+        deleteDocument(id);
+      }
+    });
+  });
 }
 
 async function reviewDocument(maTL, quyetDinh, lyDoTuChoi = "") {
@@ -246,6 +276,30 @@ async function reviewDocument(maTL, quyetDinh, lyDoTuChoi = "") {
     }
   } catch (error) {
     console.error("Lỗi khi duyệt/từ chối tài liệu:", error);
+    showToast("error", "Lỗi hệ thống.");
+  }
+}
+
+async function deleteDocument(maTL) {
+  const token = getToken();
+  try {
+    const response = await fetch(`${API_URL}/documents/${maTL}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast("success", result.message || "Đã xóa tài liệu thành công.");
+      await fetchDocuments(currentTabStatus);
+    } else {
+      showToast("error", result.message || "Lỗi khi xóa tài liệu.");
+    }
+  } catch (error) {
+    console.error("Lỗi khi xóa tài liệu:", error);
     showToast("error", "Lỗi hệ thống.");
   }
 }

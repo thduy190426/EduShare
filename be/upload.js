@@ -96,6 +96,22 @@ router.get('/subjects', async (req, res) => {
     }
 });
 
+router.get('/levels', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT DISTINCT MH.CapHoc
+            FROM MONHOC MH
+            JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc
+            WHERE TL.TrangThaiKiemDuyet = "DaDuyet" AND MH.CapHoc IS NOT NULL AND MH.CapHoc != ''
+            ORDER BY MH.CapHoc ASC
+        `);
+        res.status(200).json({ levels: rows.map(r => r.CapHoc) });
+    } catch (error) {
+        console.error('Lỗi API /documents/levels:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách cấp bậc.' });
+    }
+});
 
 router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
     upload.single('fileUpload')(req, res, async function (err) {
@@ -177,7 +193,8 @@ router.get('/search', async (req, res) => {
                 TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
                 ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc,
-                (SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL) AS DiemDanhGia
+                COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
         `;
         let fromClause = `
             FROM TAILIEU TL
@@ -304,7 +321,8 @@ router.get('/:maTL/related', async (req, res) => {
                 TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                 TL.MaND_NguoiDang, ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 COALESCE(MH.TenMonHoc, 'Khong xac dinh') AS TenMonHoc,
-                COALESCE(ROUND(AVG(DG.SoSao), 1), 0) AS DiemDanhGia
+                COALESCE(ROUND(AVG(DG.SoSao), 1), 0) AS DiemDanhGia,
+                COUNT(DG.MaND) AS SoDanhGia
             FROM TAILIEU TL
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
@@ -344,7 +362,8 @@ router.get('/:maTL', async (req, res) => {
 
         const [rows] = await pool.execute(`
             SELECT TL.*, ND.HoTen AS TenNguoiDang, ND.AvatarURL, COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc,
-                   (SELECT AVG(SoSao) FROM DANHGIA WHERE MaTL = TL.MaTL) AS DiemDanhGia
+                   COALESCE((SELECT AVG(SoSao) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM TAILIEU TL
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
@@ -513,9 +532,9 @@ router.post('/:maTL/rate', authMiddleware, rateLimiter, async (req, res) => {
         await pool.execute('INSERT INTO DANHGIA (MaND, MaTL, SoSao) VALUES (?, ?, ?)', [maND, maTL, soSao]);
 
 
-        const [avgRows] = await pool.execute('SELECT AVG(SoSao) AS average FROM DANHGIA WHERE MaTL = ?', [maTL]);
+        const [avgRows] = await pool.execute('SELECT AVG(SoSao) AS average, COUNT(*) AS count FROM DANHGIA WHERE MaTL = ?', [maTL]);
 
-        res.status(200).json({ message: 'Đánh giá thành công.', average: avgRows[0].average });
+        res.status(200).json({ message: 'Đánh giá thành công.', average: avgRows[0].average, count: avgRows[0].count });
     } catch (error) {
         console.error('Lỗi rate:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -730,6 +749,8 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
         await pool.execute('DELETE FROM BOOKMARK WHERE MaTL = ?', [maTL]);
         await pool.execute('DELETE FROM DANHGIA WHERE MaTL = ?', [maTL]);
         await pool.execute('DELETE FROM BAOCAOVIPHAM WHERE MaTL = ?', [maTL]);
+        await pool.execute('DELETE FROM TAILIEU_NHOM WHERE MaTL = ?', [maTL]);
+        await pool.execute('DELETE FROM LICH_SU_TAI WHERE MaTL = ?', [maTL]);
 
         await pool.execute('DELETE FROM TAILIEU WHERE MaTL = ?', [maTL]);
 

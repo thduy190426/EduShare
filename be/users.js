@@ -361,7 +361,9 @@ router.get('/my-documents', authMiddleware, async (req, res) => {
                 TL.NgayDang,
                 TL.LaTaiLieuChinhThuc,
                 TL.LyDoTuChoi,
-                MH.TenMonHoc
+                MH.TenMonHoc,
+                COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM TAILIEU TL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             WHERE TL.MaND_NguoiDang = ?
@@ -380,7 +382,9 @@ router.get('/bookmarks', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
-            SELECT TL.*, MH.TenMonHoc, B.NgayLuu, ND.HoTen AS TenNguoiDang
+            SELECT TL.*, MH.TenMonHoc, B.NgayLuu, ND.HoTen AS TenNguoiDang,
+                   COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM BOOKMARK B
             JOIN TAILIEU TL ON B.MaTL = TL.MaTL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
@@ -403,7 +407,8 @@ router.get('/:maND/documents', authMiddleware, async (req, res) => {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
             SELECT TL.*, MH.TenMonHoc,
-                   (SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL) AS DiemDanhGia
+                   COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM TAILIEU TL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             WHERE TL.MaND_NguoiDang = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
@@ -505,7 +510,9 @@ router.get('/download-history', authMiddleware, async (req, res) => {
         const [rows] = await pool.execute(`
             SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, 
                    TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc,
-                   MH.TenMonHoc, LST.NgayTai AS NgayTai
+                   MH.TenMonHoc, LST.NgayTai AS NgayTai,
+                   COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM LICH_SU_TAI LST
             JOIN TAILIEU TL ON LST.MaTL = TL.MaTL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc

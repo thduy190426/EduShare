@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { getToken, showToast } from '../shared/utils.js';
+import { escapeHTML, getAssetUrl, getToken, showToast } from '../shared/utils.js';
 
 
 const token = getToken();
@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchUsers();
 
     ['input-search', 'filter-role', 'filter-status', 'filter-sort'].forEach(id => {
-        document.getElementById(id)?.addEventListener(id === 'input-search' ? 'input' : 'change', fetchUsers);
+        document.getElementById(id)?.addEventListener(id === 'input-search' ? 'input' : 'change', () => {
+            fetchUsers();
+            updateClearFilterButton();
+        });
     });
 
     document.getElementById('btn-clear-filter')?.addEventListener('click', () => {
@@ -23,8 +26,34 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('filter-status').value = '';
         document.getElementById('filter-sort').value = 'newest';
         fetchUsers();
+        updateClearFilterButton();
     });
+
+    updateClearFilterButton();
 });
+
+function updateClearFilterButton() {
+    const filters = getUserFilters();
+    const btn = document.getElementById('btn-clear-filter');
+    if (!btn) return;
+    
+    const hasFilter = filters.search !== '' || filters.role !== '' || filters.status !== '' || filters.sort !== 'newest';
+    if (hasFilter) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        btn.style.color = 'var(--secondary)';
+        btn.style.borderColor = 'var(--secondary)';
+        btn.style.background = 'var(--primary-light)';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+        btn.style.color = 'var(--text-secondary)';
+        btn.style.borderColor = 'var(--border)';
+        btn.style.background = '#F8FAFC';
+    }
+}
 
 function getUserFilters() {
     return {
@@ -75,10 +104,12 @@ function renderUsers(users) {
     users.forEach(user => {
         const tr = document.createElement('tr');
         
-        const initial = user.HoTen.charAt(0).toUpperCase();
-        let avatarHtml = `<div class="user-initial">${initial}</div>`;
+        const userName = user.HoTen || '';
+        const userEmail = user.Email || '';
+        const initial = userName.charAt(0).toUpperCase();
+        let avatarHtml = `<div class="user-initial">${escapeHTML(initial)}</div>`;
         if (user.AvatarURL && user.AvatarURL !== 'null') {
-            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${API_URL.replace('/api', '')}${user.AvatarURL}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" /></div>`;
+            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${escapeHTML(getAssetUrl(user.AvatarURL))}" alt="${escapeHTML(userName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" /></div>`;
         }
 
         let roleBadgeClass = 'role-student';
@@ -91,12 +122,24 @@ function renderUsers(users) {
         const statusText = isActive ? 'Hoạt động' : 'Bị khóa';
         const toggleStatusBtnText = isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
 
-        let maskedEmail = user.Email;
-        if (user.Email && user.Email.includes('@')) {
-            const parts = user.Email.split('@');
+        let maskedEmail = userEmail;
+        if (userEmail && userEmail.includes('@')) {
+            const parts = userEmail.split('@');
             const nameLen = parts[0].length;
             const keepLen = Math.min(3, Math.max(1, Math.ceil(nameLen / 3)));
             maskedEmail = parts[0].substring(0, keepLen) + '******@' + parts[1];
+        }
+
+        let joinDate = 'N/A';
+        if (user.NgayTao) {
+            const d = new Date(user.NgayTao);
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            const ss = String(d.getSeconds()).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mo = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            joinDate = `${hh}:${mm}:${ss} <span style="color:var(--border); margin: 0 4px;">|</span> ${dd}/${mo}/${yyyy}`;
         }
 
         tr.innerHTML = `
@@ -104,17 +147,18 @@ function renderUsers(users) {
                 <div class="user-cell">
                   ${avatarHtml}
                   <div>
-                    <div class="user-name">${user.HoTen}</div>
+                    <div class="user-name">${escapeHTML(userName)}</div>
                   </div>
                 </div>
             </td>
             <td><span class="role-badge ${roleBadgeClass}">${roleName}</span></td>
-            <td class="email-cell" data-full="${user.Email}" data-masked="${maskedEmail}">
-                <span class="email-text">${maskedEmail}</span>
+            <td class="email-cell" data-full="${escapeHTML(userEmail)}" data-masked="${escapeHTML(maskedEmail)}">
+                <span class="email-text">${escapeHTML(maskedEmail)}</span>
                 <button title="Hiện/ẩn Email" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); margin-left: 6px;" onclick="toggleEmail(this)">
                     <i class="fa-solid fa-eye"></i>
                 </button>
             </td>
+            <td><span style="color: var(--text-secondary); font-size: 13px; font-weight: 500;">${joinDate}</span></td>
             <td><span class="${statusClass}"><span class="status-dot"></span>${statusText}</span></td>
             <td>
               <div class="action-cell">
@@ -124,7 +168,10 @@ function renderUsers(users) {
                     <option value="Admin" ${user.VaiTro === 'Admin' ? 'selected' : ''}>Admin</option>
                 </select>
                 <button class="btn-action ${isActive ? 'btn-lock' : 'btn-unlock'}" onclick="toggleStatus(${user.MaND}, '${isActive ? 'BiKhoa' : 'HoatDong'}')">
-                    ${isActive ? '<i class="fa-solid fa-lock"></i> Khóa' : '<i class="fa-solid fa-unlock"></i> Mở khóa'}
+                    ${isActive ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-unlock"></i>'}
+                </button>
+                <button class="btn-action btn-delete" onclick="deleteUser(${user.MaND}, '${escapeHTML(userName)}')">
+                    <i class="fa-solid fa-trash"></i>
                 </button>
               </div>
             </td>
@@ -196,5 +243,40 @@ window.toggleEmail = (btn) => {
         textSpan.textContent = cell.getAttribute('data-masked');
         icon.classList.remove('fa-eye-slash');
         icon.classList.add('fa-eye');
+    }
+};
+
+window.deleteUser = async (maND, userName) => {
+    const confirmDelete = await Swal.fire({
+        title: 'Xóa vĩnh viễn?',
+        html: `Bạn có chắc chắn muốn xóa vĩnh viễn người dùng <b>${userName}</b> không?<br><br><span style="color:var(--danger)">Cảnh báo: Hành động này sẽ xóa toàn bộ tài liệu, nhóm, bình luận và dữ liệu liên quan do người này tạo. Hành động này không thể hoàn tác!</span>`,
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Đồng ý xóa',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (!confirmDelete.isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/users/${maND}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast('success', data.message || 'Đã xóa người dùng vĩnh viễn!');
+            fetchUsers();
+        } else {
+            showToast('error', data.message || 'Lỗi khi xóa người dùng.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('error', 'Lỗi hệ thống khi xóa người dùng.');
     }
 };

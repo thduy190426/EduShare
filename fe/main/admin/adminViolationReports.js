@@ -1,7 +1,6 @@
 import { API_URL } from '../shared/config.js';
 import { getAssetUrl, getToken, showToast } from '../shared/utils.js';
 
-
 const token = getToken();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -72,7 +71,8 @@ function renderReports(reports) {
         } else {
              actionHtml = `
                 <div class="report-actions">
-                    <button class="btn btn-outline" onclick="window.open('../document/documentDetails.html?id=${report.MaTL}', '_blank')"><i class="fa-solid fa-eye"></i> Xem tài liệu</button>
+                    <button class="btn btn-outline" onclick="window.open('../document/documentDetails.html?id=${report.MaTL}', '_blank')"><i class="fa-solid fa-eye"></i></button>
+                    <button class="btn btn-danger-outline" onclick="deleteReport(${report.MaBC})"><i class="fa-solid fa-trash"></i></button>
                     <span>Trạng thái: ${statusBadge}</span>
                 </div>
             `;
@@ -136,3 +136,25 @@ window.reviewReport = async (maBC, quyetDinh) => {
     }
 };
 
+window.deleteReport = async (maBC) => {
+    if (!(await Swal.fire({ title: 'Xác nhận xóa', text: 'Bạn có chắc chắn muốn xóa vĩnh viễn báo cáo này không?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Đồng ý', cancelButtonText: 'Hủy' })).isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/reports/${maBC}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (res.ok) {
+            showToast('success', 'Đã xóa báo cáo thành công!');
+            fetchReports();
+        } else {
+            const data = await res.json();
+            showToast('error', data.message || 'Không thể xóa báo cáo.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('error', 'Lỗi hệ thống.');
+    }
+};
