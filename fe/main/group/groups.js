@@ -73,6 +73,9 @@ let currentPage = 1;
 let currentLimit = 12;
 let selectedKickMember = null;
 let contextMenuMember = null;
+let selectedRemoveDoc = null;
+let bookmarkedDocs = new Set();
+let currentContextDoc = null;
 
 async function fetchSubjectsForModal() {
     try {
@@ -183,7 +186,7 @@ async function initGroupList() {
             }
             
             btnConfirmCreate.disabled = true;
-            btnConfirmCreate.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:4px;"></i> Đang xử lý...';
+            btnConfirmCreate.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:4px;"></i>&nbsp; Đang xử lý...';
             try {
                 const res = await fetch(`${API_URL}/groups`, {
                     method: 'POST',
@@ -227,7 +230,7 @@ async function initGroupList() {
             }
 
             btnConfirmEdit.disabled = true;
-            btnConfirmEdit.textContent = 'Đang xử lý...';
+            btnConfirmEdit.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:4px;"></i> Đang xử lý...';
             try {
                 const res = await fetch(`${API_URL}/groups/${id}`, {
                     method: 'PUT',
@@ -260,6 +263,8 @@ async function initGroupList() {
 
 window.fetchGroups = async function(page = 1) {
     currentPage = page;
+    const titleEl = document.getElementById('main-group-title');
+    if (titleEl) titleEl.textContent = 'Tất cả các nhóm';
     const grid = document.getElementById('group-grid');
     if (grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải danh sách nhóm...</p></div>';
     
@@ -287,6 +292,8 @@ window.fetchGroups = async function(page = 1) {
 
 window.fetchMyGroups = async function(page = 1) {
     currentPage = page;
+    const titleEl = document.getElementById('main-group-title');
+    if (titleEl) titleEl.textContent = 'Nhóm của tôi';
     const grid = document.getElementById('group-grid');
     if (grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải nhóm của bạn...</p></div>';
 
@@ -514,7 +521,7 @@ function renderGroups(groups, gridId = 'group-grid') {
         if (g.IsMember) {
             actionButton = `<button class="btn-primary" style="flex:1;" onclick="window.location.href='groupDetails.html?id=${g.MaNhom}'"><i class="fa-solid fa-arrow-right-to-bracket" style="margin-right: 5px;"></i> Xem nhóm</button>`;
         } else {
-            actionButton = `<button class="btn-primary" style="flex:1;" id="btn-join-${g.MaNhom}" onclick="window.joinGroup(${g.MaNhom})"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
+            actionButton = `<button class="btn-primary" style="flex:1;" onclick="window.joinGroup(${g.MaNhom}, this)"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
         }
 
         div.innerHTML = `
@@ -535,11 +542,10 @@ function renderGroups(groups, gridId = 'group-grid') {
         grid.appendChild(div);
     });
 }
-window.joinGroup = async (maNhom) => {
-    const btnJoin = document.getElementById(`btn-join-${maNhom}`);
-    if (btnJoin) {
-        btnJoin.disabled = true;
-        btnJoin.textContent = 'Đang gửi...';
+window.joinGroup = async (maNhom, btnElement) => {
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang xử lý...';
     }
     try {
         const res = await fetch(`${API_URL}/groups/${maNhom}/join`, {
@@ -564,9 +570,9 @@ window.joinGroup = async (maNhom) => {
         console.error(err);
         Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra' });
     } finally {
-        if (btnJoin) {
-            btnJoin.disabled = false;
-            btnJoin.textContent = 'Tham gia';
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = '<i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia';
         }
     }
 };
@@ -591,8 +597,27 @@ async function initGroupDetails() {
     await fetchSubjectsForModal();
     await fetchGroupInfo();
     await fetchGroupMembers();
+    await fetchBookmarks();
     await fetchGroupDocuments();
     initGroupDetailControls();
+
+    async function fetchBookmarks() {
+        if (!token) return;
+        try {
+            const res = await fetch(`${API_URL}/users/bookmarks`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.documents) {
+                    bookmarkedDocs.clear();
+                    data.documents.forEach(doc => bookmarkedDocs.add(doc.MaTL));
+                }
+            }
+        } catch (e) {
+            console.error('Lỗi tải danh sách bookmarks:', e);
+        }
+    }
 
     const btnLeaveGroup = document.getElementById('btn-leave-group');
     if (btnLeaveGroup) {
@@ -645,49 +670,110 @@ async function initGroupDetails() {
                         }
                     }
                 } else {
-                    const result = await Swal.fire({
-                        title: 'Xác nhận rời nhóm',
-                        text: 'Bạn là thành viên duy nhất. Nhóm sẽ ngừng hoạt động sau khi bạn rời đi.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Rời nhóm',
-                        cancelButtonText: 'Hủy'
-                    });
-                    if (result.isConfirmed) {
+                    const message = 'Bạn là thành viên duy nhất. Nhóm sẽ ngừng hoạt động sau khi bạn rời đi.';
+                    openLeaveGroupModal(message, () => {
                         executeLeaveGroup();
-                    }
+                    });
                     return;
                 }
-            }
-
-            const result = await Swal.fire({
-                title: 'Xác nhận',
-                text: 'Bạn có chắc chắn muốn rời nhóm này?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Rời nhóm',
-                cancelButtonText: 'Hủy'
-            });
-
-            if (result.isConfirmed) {
-                executeLeaveGroup();
+            } else {
+                const message = 'Bạn có chắc chắn muốn rời nhóm này?';
+                openLeaveGroupModal(message, () => {
+                    executeLeaveGroup();
+                });
             }
         });
     }
 
+    function openLeaveGroupModal(message, confirmCallback) {
+        const modal = document.getElementById('leaveGroupModal');
+        const msgEl = document.getElementById('leave-group-msg');
+        if (!modal || !msgEl) return;
+
+        msgEl.textContent = message;
+        
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            modal.style.opacity = '1';
+            const content = modal.querySelector('.modal-content');
+            if (content) content.style.transform = 'scale(1)';
+        }, 10);
+
+        const btnConfirm = document.getElementById('btn-confirm-leave-group');
+        const btnCancel = document.getElementById('btn-cancel-leave-group');
+
+        const newConfirm = btnConfirm.cloneNode(true);
+        btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+
+        const newCancel = btnCancel.cloneNode(true);
+        btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+        const closeModal = () => {
+            modal.style.opacity = '0';
+            const content = modal.querySelector('.modal-content');
+            if (content) content.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        };
+
+        newConfirm.addEventListener('click', async () => {
+            newConfirm.disabled = true;
+            newConfirm.style.opacity = '0.7';
+            newConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang xử lý...';
+            
+            await confirmCallback();
+            
+            closeModal();
+        });
+
+        newCancel.addEventListener('click', closeModal);
+    }
+
     
     const shareModal = document.getElementById('shareDocModal');
-    document.getElementById('btn-share-doc').addEventListener('click', async () => {
-        shareModal.style.display = 'flex';
-        await loadMyDocumentsForShare();
-    });
+    const selectDoc = document.getElementById('select-doc-to-share');
+    const btnConfirmShare = document.getElementById('btn-confirm-share');
+
+    if (document.getElementById('btn-share-doc')) {
+        document.getElementById('btn-share-doc').addEventListener('click', async () => {
+            if (btnConfirmShare) {
+                btnConfirmShare.disabled = true;
+                btnConfirmShare.style.opacity = '0.5';
+                btnConfirmShare.style.cursor = 'not-allowed';
+            }
+            shareModal.style.display = 'flex';
+            await loadMyDocumentsForShare();
+        });
+    }
+
+    if (selectDoc) {
+        selectDoc.addEventListener('change', () => {
+            const maTL = selectDoc.value;
+            let alreadyInGroup = false;
+            
+            if (maTL && window.currentGroupDocs) {
+                alreadyInGroup = window.currentGroupDocs.some(d => String(d.MaTL) === String(maTL));
+            }
+
+            if (maTL && !alreadyInGroup) {
+                btnConfirmShare.disabled = false;
+                btnConfirmShare.style.opacity = '1';
+                btnConfirmShare.style.cursor = 'pointer';
+            } else {
+                btnConfirmShare.disabled = true;
+                btnConfirmShare.style.opacity = '0.5';
+                btnConfirmShare.style.cursor = 'not-allowed';
+            }
+        });
+    }
     
     document.getElementById('btn-cancel-share').addEventListener('click', () => {
         window.closeModalWithAnimation(shareModal);
     });
     
-    document.getElementById('btn-confirm-share').addEventListener('click', async () => {
-        const maTL = document.getElementById('select-doc-to-share').value;
+    btnConfirmShare.addEventListener('click', async () => {
+        const maTL = selectDoc.value;
         if (!maTL) {
             Swal.fire('Vui lòng chọn tài liệu.');
             return;
@@ -887,7 +973,7 @@ function initGroupDetailControls() {
             }
 
             btnConfirmKickMember.disabled = true;
-            btnConfirmKickMember.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý';
+            btnConfirmKickMember.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;></i> Đang xử lý';
             try {
                 const res = await fetch(`${API_URL}/groups/${currentGroupId}/members/${selectedKickMember.MaND}`, {
                     method: 'DELETE',
@@ -930,6 +1016,79 @@ function initGroupDetailControls() {
             memberPanel.classList.toggle('is-expanded', !expanded);
         });
     }
+
+    const removeDocModal = document.getElementById('removeDocModal');
+    const btnCloseRemoveDoc = document.getElementById('btn-close-remove-doc');
+    const btnCancelRemoveDoc = document.getElementById('btn-cancel-remove-doc');
+    const btnConfirmRemoveDoc = document.getElementById('btn-confirm-remove-doc');
+
+    if (btnCloseRemoveDoc && removeDocModal) {
+        btnCloseRemoveDoc.addEventListener('click', () => window.closeModalWithAnimation(removeDocModal));
+    }
+    if (btnCancelRemoveDoc && removeDocModal) {
+        btnCancelRemoveDoc.addEventListener('click', () => window.closeModalWithAnimation(removeDocModal));
+    }
+    if (removeDocModal) {
+        removeDocModal.addEventListener('click', (e) => {
+            if (e.target === removeDocModal) window.closeModalWithAnimation(removeDocModal);
+        });
+    }
+
+    if (btnConfirmRemoveDoc) {
+        btnConfirmRemoveDoc.addEventListener('click', async () => {
+            if (!selectedRemoveDoc) return;
+
+            const reasonInput = document.getElementById('remove-doc-reason');
+            const reason = reasonInput.value.trim();
+
+            btnConfirmRemoveDoc.disabled = true;
+            btnConfirmRemoveDoc.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;></i> Đang xử lý';
+            try {
+                const res = await fetch(`${API_URL}/groups/${currentGroupId}/documents/${selectedRemoveDoc.MaTL}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ lyDo: reason })
+                });
+                const data = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    window.closeModalWithAnimation(removeDocModal);
+                    selectedRemoveDoc = null;
+                    if (reasonInput) reasonInput.value = '';
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công',
+                        text: `Đã xóa tài liệu khỏi nhóm.`
+                    });
+                    await fetchGroupDocuments();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Lỗi', text: data.message || 'Không thể xóa tài liệu.' });
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra.' });
+            } finally {
+                btnConfirmRemoveDoc.disabled = false;
+                btnConfirmRemoveDoc.innerHTML = '<i class="fa-solid fa-trash"></i> Xác nhận xoá';
+            }
+        });
+    }
+
+    window.openRemoveDocModal = (doc) => {
+        if (!removeDocModal) return;
+        selectedRemoveDoc = doc;
+        const msg = document.getElementById('remove-doc-message');
+        if (msg) {
+            msg.innerHTML = `Bạn sắp xóa tài liệu <strong>${escapeHTML(doc.TenTL)}</strong> khỏi nhóm.`;
+        }
+        if (document.getElementById('remove-doc-reason')) {
+            document.getElementById('remove-doc-reason').value = '';
+        }
+        removeDocModal.style.display = 'flex';
+    };
 }
 
 async function fetchGroupInfo() {
@@ -986,7 +1145,7 @@ async function fetchGroupInfo() {
 
         const createDate = new Date(group.NgayTao);
         const formattedCreateDate = `${String(createDate.getDate()).padStart(2, '0')}/${String(createDate.getMonth() + 1).padStart(2, '0')}/${createDate.getFullYear()}`;
-        document.getElementById('group-date').innerHTML = `<i class="fa-solid fa-calendar"></i> Ngày tạo: ${formattedCreateDate}`;
+        document.getElementById('group-date').innerHTML = `<i class="fa-solid fa-calendar" style="margin-right: 6px;"></i> Ngày tạo: ${formattedCreateDate}`;
 
     } catch (err) {
         console.error(err);
@@ -1180,7 +1339,8 @@ async function fetchGroupDocuments() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        const docs = data.documents || [];
+        window.currentGroupDocs = data.documents || [];
+        const docs = window.currentGroupDocs;
         
         const grid = document.getElementById('doc-grid');
         
@@ -1207,6 +1367,7 @@ async function fetchGroupDocuments() {
             if (doc.LoaiFile === 'PDF') { iconClass = 'fa-file-pdf'; thumbClass = 'thumb-pdf'; }
             
             const officialBadge = doc.LaTaiLieuChinhThuc ? `<div class="badge-official"><i class="fa-solid fa-check"></i> Tài liệu chính thống</div>` : '';
+            const premiumBadge = doc.LaTaiLieuDocQuyen ? `<div class="badge-premium" style="position: absolute; top: 12px; left: 12px; z-index: 10; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #FDE68A;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 4px;"></i> PREMIUM (${doc.GiaXu || 0} Xu)</div>` : '';
             
             const userInitial = doc.TenNguoiDang ? escapeHTML(doc.TenNguoiDang).trim().split(' ').pop().charAt(0).toUpperCase() : '?';
             let avatarHtml = `<div class="avatar-sm">${userInitial}</div>`;
@@ -1227,13 +1388,27 @@ async function fetchGroupDocuments() {
                 postDateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
             }
 
+            const isGroupAdmin = currentGroupInfo && String(currentUserId) === String(currentGroupInfo.MaND_QuanTri);
+            
             const a = document.createElement('a');
             a.href = `../document/documentDetails.html?id=${doc.MaTL}`;
             a.className = `doc-card ${doc.LaTaiLieuChinhThuc ? 'official' : ''}`;
+            if (doc.TrangThaiNhom === 'An') {
+                a.style.opacity = '0.65';
+                a.style.filter = 'grayscale(50%)';
+            }
+            
             a.innerHTML = `
                 <div class="doc-thumb ${thumbClass}">
                     ${thumbHtml}
                     ${officialBadge}
+                    ${premiumBadge}
+                    ${doc.TrangThaiNhom === 'An' ? '<div class="badge-official" style="background: var(--warning); top: 10px; right: 10px; left: auto;"><i class="fa-solid fa-eye-slash"></i> Đang ẩn</div>' : ''}
+                    <div class="bookmark-btn">
+                        ${bookmarkedDocs.has(doc.MaTL) 
+                            ? '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>' 
+                            : '<i class="fa-regular fa-bookmark"></i>'}
+                    </div>
                 </div>
                 <div class="doc-content">
                     <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1250,10 +1425,43 @@ async function fetchGroupDocuments() {
                         <div class="doc-stats">
                             <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>
                             <span><i class="fa-solid fa-star" style="color: #F59E0B; margin-right: 4px;"></i> ${formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia)}</span>
+                            <button class="btn-context-menu" type="button" style="background:transparent; border:none; color:#6B7280; cursor:pointer; padding:4px;"><i class="fa-solid fa-ellipsis-vertical"></i></button>
                         </div>
                     </div>
                 </div>
             `;
+            
+            const bookmarkBtn = a.querySelector('.bookmark-btn');
+            bookmarkBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const token = getToken();
+                if (!token) return Swal.fire('Vui lòng đăng nhập để lưu tài liệu.');
+
+                try {
+                    const res = await fetch(`${API_URL}/documents/${doc.MaTL}/bookmark`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        if (data.isBookmarked) {
+                            bookmarkedDocs.add(doc.MaTL);
+                            bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>';
+                            Swal.fire({ title: 'Đã lưu tài liệu', icon: 'success', timer: 1500, showConfirmButton: false });
+                        } else {
+                            bookmarkedDocs.delete(doc.MaTL);
+                            bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
+                            Swal.fire({ title: 'Đã bỏ lưu', icon: 'info', timer: 1500, showConfirmButton: false });
+                        }
+                    } else {
+                        Swal.fire(data.message);
+                    }
+                } catch (err) {
+                    console.error('Lỗi khi lưu bookmark:', err);
+                }
+            });
+
             const authorEl = a.querySelector('.js-author-link');
             if (authorEl && authorEl.dataset.userId) {
                 authorEl.style.cursor = 'pointer';
@@ -1263,6 +1471,17 @@ async function fetchGroupDocuments() {
                     window.location.href = getUserProfileUrl(authorEl.dataset.userId);
                 });
             }
+            
+            const btnContextMenu = a.querySelector('.btn-context-menu');
+            const showContext = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                showDocContextMenu(e, doc, isGroupAdmin);
+            };
+            
+            if (btnContextMenu) btnContextMenu.addEventListener('click', showContext);
+            a.addEventListener('contextmenu', showContext);
+
             grid.appendChild(a);
         });
 
@@ -1270,6 +1489,100 @@ async function fetchGroupDocuments() {
         console.error(err);
     }
 }
+
+function showDocContextMenu(event, doc, isGroupAdmin) {
+    const menu = document.getElementById('docContextMenu');
+    if (!menu) return;
+    
+    hideMemberContextMenu();
+    hideDocContextMenu();
+    
+    currentContextDoc = doc;
+    
+    const btnToggleStatus = document.getElementById('btn-doc-toggle-status');
+    const btnRemove = document.getElementById('btn-doc-remove');
+    
+    if (isGroupAdmin) {
+        btnToggleStatus.style.display = 'block';
+        btnToggleStatus.innerHTML = doc.TrangThaiNhom === 'Hien' 
+            ? '<i class="fa-solid fa-eye-slash" style="margin-right: 8px;"></i> Ẩn tài liệu'
+            : '<i class="fa-solid fa-eye" style="margin-right: 8px;"></i> Hiện tài liệu';
+        
+        btnRemove.style.display = 'block';
+    } else {
+        btnToggleStatus.style.display = 'none';
+        btnRemove.style.display = 'none';
+    }
+
+    menu.style.display = 'block';
+    
+    const menuWidth = menu.offsetWidth || 150;
+    const menuHeight = menu.offsetHeight || 120;
+    
+    let x = event.clientX;
+    let y = event.clientY;
+    
+    if (x + menuWidth > window.innerWidth) x -= menuWidth;
+    if (y + menuHeight > window.innerHeight) y -= menuHeight;
+    
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+}
+
+function hideDocContextMenu() {
+    currentContextDoc = null;
+    const menu = document.getElementById('docContextMenu');
+    if (menu) menu.style.display = 'none';
+}
+
+document.addEventListener('click', () => {
+    hideMemberContextMenu();
+    hideDocContextMenu();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnDocView = document.getElementById('btn-doc-view');
+    const btnDocToggleStatus = document.getElementById('btn-doc-toggle-status');
+    const btnDocRemove = document.getElementById('btn-doc-remove');
+    
+    if (btnDocView) {
+        btnDocView.addEventListener('click', () => {
+            if (currentContextDoc) {
+                window.location.href = `../document/documentDetails.html?id=${currentContextDoc.MaTL}`;
+            }
+        });
+    }
+    
+    if (btnDocToggleStatus) {
+        btnDocToggleStatus.addEventListener('click', async () => {
+            if (!currentContextDoc) return;
+            try {
+                const res = await fetch(`${API_URL}/groups/${currentGroupId}/documents/${currentContextDoc.MaTL}/toggle-status`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
+                    fetchGroupDocuments();
+                } else {
+                    Swal.fire('Lỗi', data.message, 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Lỗi', 'Đã xảy ra lỗi khi cập nhật trạng thái', 'error');
+            }
+        });
+    }
+    
+    if (btnDocRemove) {
+        btnDocRemove.addEventListener('click', () => {
+            if (currentContextDoc) {
+                window.openRemoveDocModal(currentContextDoc);
+            }
+        });
+    }
+});
 
 async function loadMyDocumentsForShare() {
     try {
@@ -1286,10 +1599,14 @@ async function loadMyDocumentsForShare() {
         select.innerHTML = '<option value="">Chọn tài liệu của bạn</option>';
         if (approvedDocuments.length > 0) {
             approvedDocuments.forEach(doc => {
-                
-                if (doc.TrangThaiKiemDuyet === 'DaDuyet') {
-                    select.innerHTML += `<option value="${doc.MaTL}">${doc.TenTL}</option>`;
+                let extraText = '';
+                if (window.currentGroupDocs) {
+                    const isAlreadyShared = window.currentGroupDocs.some(d => String(d.MaTL) === String(doc.MaTL));
+                    if (isAlreadyShared) {
+                        extraText = ' (Đã chia sẻ trong nhóm)';
+                    }
                 }
+                select.innerHTML += `<option value="${doc.MaTL}">${doc.TenTL}${extraText}</option>`;
             });
         } else {
             select.innerHTML = '<option value="">Chưa có tài liệu.</option>';

@@ -1,7 +1,44 @@
 import { API_URL } from '../shared/config.js';
-import { isValidEmail } from '../shared/utils.js';
+import { isValidEmail, isValidName } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    const fetchSchoolsAndMajors = async () => {
+        try {
+            const [schoolRes, majorRes] = await Promise.all([
+                fetch(`${API_URL}/truonghoc`),
+                fetch(`${API_URL}/khoanganh`)
+            ]);
+            if (schoolRes.ok && majorRes.ok) {
+                const schoolData = await schoolRes.json();
+                const majorData = await majorRes.json();
+                
+                const schoolSelect = document.getElementById('registerSchool');
+                const majorSelect = document.getElementById('registerMajor');
+                
+                if (schoolSelect) {
+                    schoolData.truongHoc.forEach(school => {
+                        const option = document.createElement('option');
+                        option.value = school.TenTruong;
+                        option.textContent = school.TenTruong;
+                        schoolSelect.appendChild(option);
+                    });
+                }
+                
+                if (majorSelect) {
+                    majorData.khoaNganh.forEach(major => {
+                        const option = document.createElement('option');
+                        option.value = major.TenKhoa;
+                        option.textContent = major.TenKhoa;
+                        majorSelect.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Lỗi khi tải danh sách trường/khoa:', error);
+        }
+    };
+    fetchSchoolsAndMajors();
+
     const registerForm = document.getElementById('registerForm');
     
     const registerSubmitBtn = registerForm?.querySelector('button[type="submit"]');
@@ -20,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const xacNhanMatKhau = document.getElementById('registerConfirmPassword')?.value || '';
         const agreeTerms = document.getElementById('registerAgreeTerms')?.checked || false;
         
-        if (hoTen.length >= 2 && isValidEmail(email) && matKhau.length >= 6 && matKhau === xacNhanMatKhau && agreeTerms) {
+        if (isValidName(hoTen) && isValidEmail(email) && matKhau.length >= 6 && matKhau === xacNhanMatKhau && agreeTerms) {
             registerSubmitBtn.disabled = false;
             registerSubmitBtn.style.opacity = '1';
             registerSubmitBtn.style.cursor = 'pointer';
@@ -79,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 teacher: 'GiaoVien'
             };
             const vaiTro = roleMap[selectedRole];
+            
+            const truongHoc = document.getElementById('registerSchool')?.value.trim() || '';
+            const khoaNganh = document.getElementById('registerMajor')?.value.trim() || '';
 
             const Toast = Swal.mixin({
                 toast: true,
@@ -92,8 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            if (hoTen.length < 2) {
-                Toast.fire({ icon: 'warning', title: 'Họ tên phải có ít nhất 2 ký tự.' });
+            if (!isValidName(hoTen)) {
+                Toast.fire({ icon: 'warning', title: 'Họ tên không hợp lệ (2-50 ký tự, không chứa số hoặc ký tự đặc biệt).' });
                 return;
             }
             if (!isValidEmail(email)) {
@@ -120,27 +160,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = '0.5';
                 submitBtn.style.cursor = 'not-allowed';
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i>Đang xử lý...';
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i>&nbsp; Đang xử lý...';
 
-                const response = await fetch(`${API_URL}/register`, {
+                const response = await fetch(`${API_URL}/register/send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ hoTen, email, matKhau, vaiTro })
+                    body: JSON.stringify({ hoTen, email })
                 });
 
                 const data = await response.json();
 
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+                submitBtn.innerHTML = originalText;
+
                 if (!response.ok) {
-                    submitBtn.disabled = false;
-                    submitBtn.style.opacity = '1';
-                    submitBtn.style.cursor = 'pointer';
-                    submitBtn.innerHTML = originalText;
-                    Toast.fire({ icon: 'error', title: data.message || 'Đăng ký thất bại' });
+                    Toast.fire({ icon: 'error', title: data.message || 'Lỗi gửi mã OTP' });
                 } else {
-                    Toast.fire({ icon: 'success', title: 'Đăng ký thành công! Đang chuyển hướng...' });
+                    Toast.fire({ icon: 'success', title: data.message || 'Mã OTP đã được gửi' });
+                    
+                    const matKhau = document.getElementById('registerPassword').value;
+                    const selectedRole = document.querySelector('input[name="role"]:checked')?.value || 'student';
+                    const roleMap = { student: 'SinhVien', teacher: 'GiaoVien' };
+                    const vaiTro = roleMap[selectedRole];
+                    const truongHoc = document.getElementById('registerSchool')?.value.trim() || '';
+                    const khoaNganh = document.getElementById('registerMajor')?.value.trim() || '';
+
+                    const registerData = { hoTen, email, matKhau, vaiTro, truongHoc, khoaNganh };
+                    sessionStorage.setItem('registerData', JSON.stringify(registerData));
+
                     setTimeout(() => {
-                        window.location.href = 'login.html';
-                    }, 1500);
+                        window.location.href = 'register-verify.html';
+                    }, 1000);
                 }
             } catch (error) {
                 console.error(error);

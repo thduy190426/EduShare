@@ -24,11 +24,10 @@ describe('User Profile API', () => {
         const token = generateTestToken({ MaND: 1 });
 
         mockPoolExecute(app, (query, params) => {
-            // Xác thực token ở authMiddleware
             if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) {
                 return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             }
-            // Lấy profile
+
             if (query.includes('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi FROM NGUOIDUNG')) {
                 return Promise.resolve([[{
                     MaND: 1, HoTen: 'Test User', Email: 'test@example.com', VaiTro: 'SinhVien'

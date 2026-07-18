@@ -163,7 +163,6 @@ async function openSubjectPicker() {
         modalBody.innerHTML = `<div class="subject-picker-list">${options}</div>`;
         modalOverlay.classList.add('active');
 
-        // Close functions
         const closeModal = () => modalOverlay.classList.remove('active');
         
         if (btnClose) {
@@ -176,7 +175,6 @@ async function openSubjectPicker() {
             }
         };
 
-        // Handle selection
         const items = modalBody.querySelectorAll('.subject-picker-item');
         items.forEach(item => {
             item.addEventListener('click', async () => {
@@ -461,6 +459,7 @@ function renderHomeDocuments(documents) {
             <div class="doc-thumb ${thumbClass}">
                 ${thumbHtml}
                 ${doc.LaTaiLieuChinhThuc ? '<div class="badge-official"><i class="fa-solid fa-check"></i> Tài liệu chính thống</div>' : ''}
+                ${doc.LaTaiLieuDocQuyen ? `<div class="badge-premium" style="position: absolute; top: 12px; left: 12px; z-index: 10; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #FDE68A;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 4px;"></i> PREMIUM (${doc.GiaXu || 0} Xu)</div>` : ''}
             </div>
             <div class="doc-content">
                 <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">

@@ -1,5 +1,5 @@
 :root { --sidebar-width: 260px; }
-.sidebar { width: var(--sidebar-width); background: var(--white); border-right: 1px solid var(--border); height: calc(100vh - var(--header-height)); position: fixed; left: 0; padding: 24px 16px 0 16px; overflow-y: auto; overflow-x: hidden; z-index: 90; display: flex; flex-direction: column; contain: layout paint; }
+.sidebar { width: var(--sidebar-width); background: var(--white); border-right: 1px solid var(--border); height: calc(100vh - var(--header-height)); position: fixed; top: var(--header-height); left: 0; padding: 24px 16px 0 16px; overflow-y: auto; overflow-x: hidden; z-index: 90; display: flex; flex-direction: column; contain: layout paint; }
 .sidebar-animated .sidebar { transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
 .sidebar-animated body .content-area { transition: margin-left 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
 .sidebar-animated .navbar .logo { transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1); }

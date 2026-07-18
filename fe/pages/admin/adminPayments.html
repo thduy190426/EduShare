@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kiểm duyệt tài liệu — EduShare Admin</title>
+  <title>Quản lý nạp xu — EduShare Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/admin/adminModeration.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -40,7 +40,7 @@
     <main class="content-area">
       
       <div class="page-header">
-        <h1 class="page-title">Kiểm duyệt tài liệu</h1>
+        <h1 class="page-title">Quản lý Nạp EduCoin</h1>
       </div>
 
       <div class="tabs-container">
@@ -55,16 +55,15 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th width="35%"><i class="fa-solid fa-file-lines" style="margin-right: 6px;"></i> Tên tài liệu</th>
-              <th><i class="fa-solid fa-user-pen" style="margin-right: 6px;"></i> Người đăng</th>
-              <th><i class="fa-solid fa-book-open" style="margin-right: 6px;"></i> Môn học</th>
-              <th><i class="fa-solid fa-calendar-plus" style="margin-right: 6px;"></i> Ngày đăng</th>
-              <th><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Trạng thái</th>
-              <th><i class="fa-solid fa-gears" style="margin-right: 6px;"></i> Hành động</th>
+              <th width="30%"><i class="fa-solid fa-user" style="margin-right: 6px;"></i> Người nạp</th>
+              <th width="25%"><i class="fa-solid fa-money-bill" style="margin-right: 6px;"></i> Số tiền / Xu</th>
+              <th width="20%"><i class="fa-solid fa-calendar" style="margin-right: 6px;"></i> Ngày tạo</th>
+              <th width="15%"><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i> Trạng thái</th>
+              <th width="10%" style="text-align: right;"><i class="fa-solid fa-gears" style="margin-right: 6px;"></i> Thao tác</th>
             </tr>
           </thead>
-          <tbody id="pending-documents-tbody">
-            
+          <tbody id="table-body">
+
           </tbody>
         </table>
       </div>
@@ -95,7 +94,7 @@
     </div>
   </div>
 
-  <script type="module" src="../../main/admin/adminModeration.js"></script>
+  <script type="module" src="../../main/admin/adminPayments.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
 </body>

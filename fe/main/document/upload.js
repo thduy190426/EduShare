@@ -64,6 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
         officialFormGroup.style.display = 'block';
     }
 
+    const cbPremium = document.getElementById('laTaiLieuDocQuyen');
+    const giaXuContainer = document.getElementById('giaXuContainer');
+    if (cbPremium && giaXuContainer) {
+        cbPremium.addEventListener('change', function() {
+            if (this.checked) {
+                giaXuContainer.style.display = 'block';
+                document.getElementById('giaXu').required = true;
+            } else {
+                giaXuContainer.style.display = 'none';
+                document.getElementById('giaXu').required = false;
+            }
+        });
+    }
+
     if (currentUserRole === 'GiaoVien') {
         setupSubjectSuggestionUI(subjectSelect, token);
     }
@@ -79,13 +93,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            
             const validExtensions = ['pdf', 'docx', 'pptx'];
             const fileExtension = file.name.split('.').pop().toLowerCase();
             if (!validExtensions.includes(fileExtension)) {
                 Swal.fire('Chỉ cho phép định dạng PDF, DOCX, PPTX.');
                 this.value = ''; 
                 return;
+            }
+
+            const selectedFileType = document.querySelector('input[name="filetype"]:checked')?.value;
+            if (selectedFileType) {
+                if (selectedFileType === 'pdf' && fileExtension !== 'pdf') {
+                    Swal.fire('Bạn đã chọn "Tài liệu PDF" nhưng file tải lên không phải là PDF.');
+                    this.value = ''; 
+                    return;
+                }
+                if (selectedFileType === 'docx' && fileExtension !== 'docx') {
+                    Swal.fire('Bạn đã chọn "Tài liệu Word" nhưng file tải lên không phải là DOCX.');
+                    this.value = ''; 
+                    return;
+                }
+                if (selectedFileType === 'pptx' && fileExtension !== 'pptx') {
+                    Swal.fire('Bạn đã chọn "Tài liệu PowerPoint" nhưng file tải lên không phải là PPTX.');
+                    this.value = ''; 
+                    return;
+                }
             }
 
             
@@ -139,6 +171,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const selectedFileType = document.querySelector('input[name="filetype"]:checked')?.value;
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        if (selectedFileType) {
+            if (selectedFileType === 'pdf' && fileExtension !== 'pdf') {
+                Swal.fire('File tải lên không khớp với loại tài liệu PDF đã chọn.');
+                return;
+            }
+            if (selectedFileType === 'docx' && fileExtension !== 'docx') {
+                Swal.fire('File tải lên không khớp với loại tài liệu Word đã chọn.');
+                return;
+            }
+            if (selectedFileType === 'pptx' && fileExtension !== 'pptx') {
+                Swal.fire('File tải lên không khớp với loại tài liệu PowerPoint đã chọn.');
+                return;
+            }
+        }
+
         
         const token = getToken();
         if (!token) {
@@ -159,6 +208,12 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('laTaiLieuChinhThuc', 'true');
         }
 
+        const cbPremium = document.getElementById('laTaiLieuDocQuyen');
+        if (cbPremium && cbPremium.checked) {
+            formData.append('laTaiLieuDocQuyen', 'true');
+            formData.append('giaXu', document.getElementById('giaXu').value);
+        }
+
         try {
             
             const response = await fetch(`${API_URL}/documents/upload`, {
@@ -173,7 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (response.ok) {
-                Swal.fire('Tải lên tài liệu thành công! Tài liệu đang chờ kiểm duyệt.');
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công!',
+                    text: 'Tải lên tài liệu thành công! Tài liệu đang chờ admin kiểm duyệt.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
                 window.location.href = 'myDocuments.html';
             } else {
                 Swal.fire(`Lỗi: ${data.message || 'Tải lên thất bại'}`);

@@ -97,7 +97,7 @@ function normalizeGioiTinh(value) {
 router.get('/profile', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
 
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
@@ -110,7 +110,9 @@ router.get('/profile', authMiddleware, async (req, res) => {
 
 
 router.put('/profile', authMiddleware, async (req, res) => {
-    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi } = req.body;
+    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh } = req.body;
+    const normalizedTruongHoc = typeof truongHoc === 'string' && truongHoc.trim() !== '' ? truongHoc.trim() : null;
+    const normalizedKhoaNganh = typeof khoaNganh === 'string' && khoaNganh.trim() !== '' ? khoaNganh.trim() : null;
     const normalizedHoTen = typeof hoTen === 'string' ? hoTen.trim() : '';
     const normalizedTuoi = tuoi === undefined || tuoi === '' ? null : Number(tuoi);
     const normalizedGioiTinh = normalizeGioiTinh(gioiTinh);
@@ -143,11 +145,11 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(matKhauMoi, saltRounds);
-            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ? WHERE MaND = ?', [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, maND]);
+            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ? WHERE MaND = ?', [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, maND]);
         } else {
             await pool.execute(
-                'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ? WHERE MaND = ?',
-                [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, maND]
+                'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ? WHERE MaND = ?',
+                [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, maND]
             );
         }
 
@@ -389,7 +391,7 @@ router.get('/bookmarks', authMiddleware, async (req, res) => {
             JOIN TAILIEU TL ON B.MaTL = TL.MaTL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
-            WHERE B.MaND = ?
+            WHERE B.MaND = ? AND TL.TrangThaiHienThi = 'Hien'
             ORDER BY B.NgayLuu DESC
         `, [req.user.MaND]);
 
@@ -411,7 +413,7 @@ router.get('/:maND/documents', authMiddleware, async (req, res) => {
                    (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM TAILIEU TL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
-            WHERE TL.MaND_NguoiDang = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
+            WHERE TL.MaND_NguoiDang = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'
             ORDER BY TL.NgayDang DESC
         `, [maND_Khac]);
 
@@ -431,7 +433,7 @@ router.get('/:maND/profile', authMiddleware, async (req, res) => {
         const pool = req.app.locals.pool;
 
 
-        const [userRows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
+        const [userRows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, TruongHoc, KhoaNganh FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
         if (userRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
 
@@ -462,12 +464,10 @@ router.post('/:maND/follow', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-
         const [targetUser] = await pool.execute('SELECT MaND FROM NGUOIDUNG WHERE MaND = ?', [maND_DuocTheoDoi]);
         if (targetUser.length === 0) {
             return res.status(404).json({ message: 'Người dùng không tồn tại.' });
         }
-
 
         const [followRows] = await pool.execute(
             'SELECT * FROM THEODOI WHERE MaND_TheoDoi = ? AND MaND_DuocTheoDoi = ?',
@@ -475,22 +475,31 @@ router.post('/:maND/follow', authMiddleware, async (req, res) => {
         );
 
         if (followRows.length > 0) {
-
             await pool.execute(
                 'DELETE FROM THEODOI WHERE MaND_TheoDoi = ? AND MaND_DuocTheoDoi = ?',
                 [maND_TheoDoi, maND_DuocTheoDoi]
             );
+
+            await pool.execute(
+                'DELETE FROM THONGBAO WHERE MaND = ? AND LinkDich = ? AND NoiDung LIKE ?',
+                [maND_DuocTheoDoi, `../user/otherUserProfile.html?id=${maND_TheoDoi}`, '%đã bắt đầu theo dõi bạn%']
+            );
+
             return res.status(200).json({ message: 'Đã hủy theo dõi.', isFollowing: false });
         } else {
-
             await pool.execute(
                 'INSERT INTO THEODOI (MaND_TheoDoi, MaND_DuocTheoDoi) VALUES (?, ?)',
                 [maND_TheoDoi, maND_DuocTheoDoi]
             );
 
-
             const [myInfo] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND_TheoDoi]);
             const tenNguoiTheoDoi = myInfo[0].HoTen;
+
+            await pool.execute(
+                'DELETE FROM THONGBAO WHERE MaND = ? AND LinkDich = ? AND NoiDung LIKE ?',
+                [maND_DuocTheoDoi, `../user/otherUserProfile.html?id=${maND_TheoDoi}`, '%đã bắt đầu theo dõi bạn%']
+            );
+
             await pool.execute(
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [maND_DuocTheoDoi, 'HeThong', `${tenNguoiTheoDoi} đã bắt đầu theo dõi bạn.`, `../user/otherUserProfile.html?id=${maND_TheoDoi}`]
@@ -574,6 +583,44 @@ router.get('/my-reports', authMiddleware, async (req, res) => {
         res.status(200).json({ reports: rows });
     } catch (error) {
         console.error('Lỗi lấy báo cáo:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/purchased-documents', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, 
+                   TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.LaTaiLieuDocQuyen, TL.GiaXu,
+                   MH.TenMonHoc, TDM.NgayMua, TDM.GiaXuThoiDiemMua,
+                   COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
+            FROM TAILIEU_DAMUA TDM
+            JOIN TAILIEU TL ON TDM.MaTL = TL.MaTL
+            LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
+            WHERE TDM.MaND = ?
+            ORDER BY TDM.NgayMua DESC
+        `, [req.user.MaND]);
+        res.status(200).json({ documents: rows });
+    } catch (error) {
+        console.error('Lỗi lấy tài liệu đã mua:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/transactions', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT MaLS, LoaiGiaoDich, SoXuThayDoi, MoTa, NgayTao
+            FROM LICH_SU_XU
+            WHERE MaND = ?
+            ORDER BY NgayTao DESC
+        `, [req.user.MaND]);
+        res.status(200).json({ transactions: rows });
+    } catch (error) {
+        console.error('Lỗi lấy lịch sử giao dịch:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

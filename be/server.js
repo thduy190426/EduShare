@@ -4,6 +4,15 @@ const mysql   = require('mysql2/promise');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
 const cors    = require('cors');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
+    }
+});
 
 const RESET   = '\x1b[0m';
 const BOLD    = '\x1b[1m';
@@ -139,6 +148,7 @@ const routes = [
     ['/api/notifications', require('./notifications')],
     ['/api/groups',        require('./groups')],
     ['/api/subjects',      require('./subjects')],
+    ['/api/payment',       require('./payment')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -146,27 +156,92 @@ routes.forEach(([path, handler]) => {
 });
 logger.divider();
 
+app.get('/api/truonghoc', async (req, res) => {
+    try {
+        const [rows] = await pool.execute('SELECT * FROM TRUONGHOC');
+        res.status(200).json({ truongHoc: rows });
+    } catch (err) {
+        logger.error('Fetch truonghoc failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.get('/api/khoanganh', async (req, res) => {
+    try {
+        const [rows] = await pool.execute('SELECT * FROM KHOANGANH');
+        res.status(200).json({ khoaNganh: rows });
+    } catch (err) {
+        logger.error('Fetch khoanganh failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.post('/api/register/send-otp', async (req, res) => {
+    const { email, hoTen } = req.body;
+    if (!email || !hoTen) return res.status(400).json({ message: 'Vui lòng cung cấp email và họ tên.' });
+
+    try {
+        const [rows] = await pool.execute('SELECT Email FROM NGUOIDUNG WHERE Email = ?', [email]);
+        if (rows.length > 0) {
+            return res.status(409).json({ message: 'Email đã được sử dụng.' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+
+        await pool.execute(
+            'INSERT INTO REGISTER_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
+            [email, otp, expiresAt, otp, expiresAt]
+        );
+
+        const mailOptions = {
+            from: `"EduShare Support" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Mã OTP Đăng Ký Tài Khoản',
+            html: generateOTPRegisterEmail(hoTen, otp)
+        };
+
+        await transporter.sendMail(mailOptions);
+        logger.success(`Register OTP sent to ${email}`);
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
+    } catch (err) {
+        logger.error('Send register OTP failed', err);
+        res.status(500).json({ message: 'Lỗi khi gửi email. Vui lòng thử lại sau.' });
+    }
+});
+
 app.post('/api/register', async (req, res) => {
-    const { hoTen, email, matKhau, vaiTro } = req.body;
+    const { hoTen, email, matKhau, vaiTro, truongHoc, khoaNganh, otp } = req.body;
     const allowedRoles   = ['SinhVien', 'GiaoVien'];
     const normalizedRole = allowedRoles.includes(vaiTro) ? vaiTro : 'SinhVien';
 
-    if (!hoTen || !email || !matKhau)
-        return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
+    if (!hoTen || !email || !matKhau || !otp)
+        return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin và mã OTP.' });
 
     if (vaiTro && !allowedRoles.includes(vaiTro))
         return res.status(400).json({ message: 'Vai trò tài khoản không hợp lệ.' });
 
     try {
+        const [otpRows] = await pool.execute('SELECT * FROM REGISTER_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+        if (otpRows.length === 0) {
+            return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+        }
+
+        if (new Date() > new Date(otpRows[0].ExpiresAt)) {
+            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+        }
+
         const [rows] = await pool.execute('SELECT Email FROM NGUOIDUNG WHERE Email = ?', [email]);
         if (rows.length > 0)
             return res.status(409).json({ message: 'Email đã được sử dụng.' });
 
         const hashedPassword = await bcrypt.hash(matKhau, 10);
         const [result] = await pool.execute(
-            'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro) VALUES (?, ?, ?, ?)',
-            [hoTen, email, hashedPassword, normalizedRole]
+            'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro, TruongHoc, KhoaNganh) VALUES (?, ?, ?, ?, ?, ?)',
+            [hoTen, email, hashedPassword, normalizedRole, truongHoc || null, khoaNganh || null]
         );
+
+        await pool.execute('DELETE FROM REGISTER_OTP WHERE Email = ?', [email]);
 
         logger.success(`New user registered — id: ${result.insertId}  role: ${normalizedRole}`);
         res.status(201).json({ message: 'Đăng ký thành công.', maND: result.insertId });
@@ -210,6 +285,230 @@ app.post('/api/login', async (req, res) => {
 
     } catch (err) {
         logger.error('Login failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+const generateOTPRegisterEmail = (hoTen, otp) => {
+    return `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng ký tài khoản - EduShare</title>
+  <style type="text/css">
+    body {
+      margin: 0; padding: 0; background: #F8FAFC; font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
+    }
+    table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    .container { width: 100%; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; }
+    .header { padding: 40px 32px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; color: #4F46E5; }
+    .content { padding: 0 32px 40px; color: #1E293B; }
+    .content p { font-size: 15px; line-height: 1.6; margin-bottom: 20px; color: #334155; }
+    .otp-box { background: #EEF2FF; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; border: 1px dashed #4F46E5; }
+    .otp-code { font-size: 32px; font-weight: 700; color: #4F46E5; letter-spacing: 4px; }
+    .footer { padding: 24px 32px; background: #F8FAFC; text-align: center; border-top: 1px solid #E2E8F0; }
+    .footer p { font-size: 13px; color: #64748B; line-height: 1.5; margin: 0; }
+    @media only screen and (max-width: 600px) {
+      .container { border-radius: 0; }
+      .header { padding: 30px 20px 15px; }
+      .content { padding: 0 20px 30px; }
+    }
+  </style>
+</head>
+<body>
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" align="center" bgcolor="#F8FAFC" style="padding: 40px 0;">
+    <tbody>
+      <tr>
+        <td valign="top" align="center">
+          <table class="container" cellspacing="0" cellpadding="0" border="0">
+            <tbody>
+              <tr>
+                <td class="header">
+                  <h1>EduShare</h1>
+                </td>
+              </tr>
+              <tr>
+                <td class="content">
+                  <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Xin chào, ${hoTen}!</h2>
+                  <p>Cảm ơn bạn đã đăng ký tài khoản tại EduShare. Để hoàn tất quá trình đăng ký, vui lòng sử dụng mã xác thực OTP dưới đây:</p>
+                  
+                  <div class="otp-box">
+                    <div class="otp-code">${otp}</div>
+                  </div>
+                  
+                  <p>Mã xác thực này sẽ <strong>hết hạn sau 10 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
+                  
+                  <p style="margin-top: 32px; margin-bottom: 0;">Trân trọng,<br><strong style="color: #4F46E5;">Đội ngũ EduShare</strong></p>
+                </td>
+              </tr>
+              <tr>
+                <td class="footer">
+                  <p>© 2026 EduShare. Nền tảng chia sẻ tài liệu học tập lớn nhất Việt Nam.</p>
+                  <p>Hỗ trợ: support@edushare.com</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>`;
+};
+
+const generateOTPResetEmail = (hoTen, otp) => {
+    return `<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khôi phục mật khẩu - EduShare</title>
+  <style type="text/css">
+    body {
+      margin: 0; padding: 0; background: #F8FAFC; font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
+    }
+    table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    .container { width: 100%; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; }
+    .header { padding: 40px 32px 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 28px; font-weight: 700; color: #4F46E5; }
+    .content { padding: 0 32px 40px; color: #1E293B; }
+    .content p { font-size: 15px; line-height: 1.6; margin-bottom: 20px; color: #334155; }
+    .otp-box { background: #EEF2FF; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; border: 1px dashed #4F46E5; }
+    .otp-code { font-size: 32px; font-weight: 700; color: #4F46E5; letter-spacing: 4px; }
+    .footer { padding: 24px 32px; background: #F8FAFC; text-align: center; border-top: 1px solid #E2E8F0; }
+    .footer p { font-size: 13px; color: #64748B; line-height: 1.5; margin: 0; }
+    @media only screen and (max-width: 600px) {
+      .container { border-radius: 0; }
+      .header { padding: 30px 20px 15px; }
+      .content { padding: 0 20px 30px; }
+    }
+  </style>
+</head>
+<body>
+  <table width="100%" cellspacing="0" cellpadding="0" border="0" align="center" bgcolor="#F8FAFC" style="padding: 40px 0;">
+    <tbody>
+      <tr>
+        <td valign="top" align="center">
+          <table class="container" cellspacing="0" cellpadding="0" border="0">
+            <tbody>
+              <tr>
+                <td class="header">
+                  <h1>EduShare</h1>
+                </td>
+              </tr>
+              <tr>
+                <td class="content">
+                  <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Xin chào, ${hoTen}!</h2>
+                  <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản EduShare của bạn. Dưới đây là mã xác thực OTP để hoàn tất quá trình thiết lập lại mật khẩu:</p>
+                  
+                  <div class="otp-box">
+                    <div class="otp-code">${otp}</div>
+                  </div>
+                  
+                  <p>Mã xác thực này sẽ <strong>hết hạn sau 10 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai để đảm bảo an toàn cho tài khoản của bạn.</p>
+                  
+                  <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn được an toàn.</p>
+                  
+                  <p style="margin-top: 32px; margin-bottom: 0;">Trân trọng,<br><strong style="color: #4F46E5;">Đội ngũ EduShare</strong></p>
+                </td>
+              </tr>
+              <tr>
+                <td class="footer">
+                  <p>© 2026 EduShare. Nền tảng chia sẻ tài liệu học tập lớn nhất Việt Nam.</p>
+                  <p>Hỗ trợ: support@edushare.com</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>`;
+};
+
+app.post('/api/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Vui lòng cung cấp email.' });
+
+    try {
+        const [rows] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Email không tồn tại trong hệ thống.' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+
+        await pool.execute(
+            'INSERT INTO RESET_PASSWORD_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
+            [email, otp, expiresAt, otp, expiresAt]
+        );
+
+        const mailOptions = {
+            from: `"EduShare Support" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Mã OTP Khôi Phục Mật Khẩu',
+            html: generateOTPResetEmail(rows[0].HoTen, otp)
+        };
+
+        await transporter.sendMail(mailOptions);
+        logger.success(`OTP sent to ${email}`);
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
+
+    } catch (err) {
+        logger.error('Forgot password failed', err);
+        res.status(500).json({ message: 'Lỗi khi gửi email. Vui lòng thử lại sau.' });
+    }
+});
+
+app.post('/api/verify-otp', async (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ message: 'Vui lòng cung cấp email và mã OTP.' });
+
+    try {
+        const [rows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+        if (rows.length === 0) {
+            return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+        }
+
+        if (new Date() > new Date(rows[0].ExpiresAt)) {
+            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+        }
+
+        res.status(200).json({ message: 'Mã OTP hợp lệ.' });
+    } catch (err) {
+        logger.error('Verify OTP failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
+
+    try {
+        const [rows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+        if (rows.length === 0) {
+            return res.status(400).json({ message: 'Yêu cầu không hợp lệ. Vui lòng thử lại quá trình quên mật khẩu.' });
+        }
+
+        if (new Date() > new Date(rows[0].ExpiresAt)) {
+            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.execute('UPDATE NGUOIDUNG SET MatKhau = ? WHERE Email = ?', [hashedPassword, email]);
+        await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);
+        
+        logger.success(`Password reset for ${email}`);
+        res.status(200).json({ message: 'Mật khẩu đã được đặt lại thành công.' });
+    } catch (err) {
+        logger.error('Reset password failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

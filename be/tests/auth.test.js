@@ -34,13 +34,12 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
     });
 
     it('Nên đăng nhập thành công và trả về token hợp lệ', async () => {
-        // Giả lập database trả về user
         mockPoolExecute(app, (query, params) => {
             if (query.includes('SELECT * FROM NGUOIDUNG WHERE Email = ?')) {
                 return Promise.resolve([[{ 
                     MaND: 1, 
                     Email: 'success@example.com', 
-                    MatKhau: 'hashed_password', // Mật khẩu đã băm
+                    MatKhau: 'hashed_password',
                     VaiTro: 'SinhVien',
                     TrangThai: 'HoatDong'
                 }]]);
@@ -48,7 +47,6 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
             return Promise.resolve([[]]);
         });
 
-        // Giả lập bcrypt.compare trả về true
         jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
 
         const response = await request(app)

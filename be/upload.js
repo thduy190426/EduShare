@@ -4,6 +4,8 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
+const libre = require('libreoffice-convert');
+libre.convertAsync = require('util').promisify(libre.convert);
 
 const router = express.Router();
 const { authMiddleware, teacherMiddleware } = require('./middlewares/auth');
@@ -103,7 +105,7 @@ router.get('/levels', async (req, res) => {
             SELECT DISTINCT MH.CapHoc
             FROM MONHOC MH
             JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc
-            WHERE TL.TrangThaiKiemDuyet = "DaDuyet" AND MH.CapHoc IS NOT NULL AND MH.CapHoc != ''
+            WHERE TL.TrangThaiKiemDuyet = "DaDuyet" AND TL.TrangThaiHienThi = 'Hien' AND MH.CapHoc IS NOT NULL AND MH.CapHoc != ''
             ORDER BY MH.CapHoc ASC
         `);
         res.status(200).json({ levels: rows.map(r => r.CapHoc) });
@@ -139,23 +141,38 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
             laTaiLieuChinhThuc = true;
         }
 
+        let laTaiLieuDocQuyen = req.body.laTaiLieuDocQuyen === 'true';
+        let giaXu = parseInt(req.body.giaXu) || 0;
+        if (!laTaiLieuDocQuyen) giaXu = 0;
+
         if (!tenTL || !maMonHoc) {
             return res.status(400).json({ message: 'Vui lòng cung cấp đủ tên tài liệu và mã môn học.' });
         }
 
         const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
         const fileURL = `/uploads/${req.file.filename}`;
+        let previewURL = null;
 
         try {
-
-
+            if (loaiFile === 'pptx' || loaiFile === 'ppt') {
+                try {
+                    const pptxBuf = fs.readFileSync(req.file.path);
+                    const pdfBuf = await libre.convertAsync(pptxBuf, '.pdf', undefined);
+                    const pdfFileName = `${path.parse(req.file.filename).name}.pdf`;
+                    const pdfPath = path.join(__dirname, 'public/uploads/previews/', pdfFileName);
+                    fs.writeFileSync(pdfPath, pdfBuf);
+                    previewURL = `/uploads/previews/${pdfFileName}`;
+                } catch (convErr) {
+                    console.error('Lỗi convert pptx sang pdf:', convErr);
+                }
+            }
 
             const pool = req.app.locals.pool;
 
             await pool.execute(
-                `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc) 
-                 VALUES (?, ?, ?, ?, ?, ?, 'ChoDuyet', ?)`,
-                [tenTL, moTa || null, fileURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc]
+                `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?)`,
+                [tenTL, moTa || null, fileURL, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu]
             );
 
             await notifyActiveAdmins(
@@ -189,8 +206,9 @@ router.get('/search', async (req, res) => {
 
         let selectClause = `
             SELECT 
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.LoaiFile, 
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
                 TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
+                TL.LaTaiLieuDocQuyen, TL.GiaXu,
                 ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc,
                 COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
@@ -201,7 +219,7 @@ router.get('/search', async (req, res) => {
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
         `;
-        let whereClause = ` WHERE TL.TrangThaiKiemDuyet = 'DaDuyet'`;
+        let whereClause = ` WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'`;
 
         const params = [];
         const countParams = [];
@@ -306,7 +324,7 @@ router.get('/:maTL/related', async (req, res) => {
         const [currentRows] = await pool.execute(
             `SELECT MaMonHoc, LoaiFile
              FROM TAILIEU
-             WHERE MaTL = ? AND TrangThaiKiemDuyet = 'DaDuyet'`,
+             WHERE MaTL = ? AND TrangThaiKiemDuyet = 'DaDuyet' AND TrangThaiHienThi = 'Hien'`,
             [maTL]
         );
 
@@ -317,7 +335,7 @@ router.get('/:maTL/related', async (req, res) => {
         const currentDoc = currentRows[0];
         const [relatedDocs] = await pool.execute(`
             SELECT
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.LoaiFile,
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile,
                 TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                 TL.MaND_NguoiDang, ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 COALESCE(MH.TenMonHoc, 'Khong xac dinh') AS TenMonHoc,
@@ -327,11 +345,11 @@ router.get('/:maTL/related', async (req, res) => {
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             LEFT JOIN DANHGIA DG ON DG.MaTL = TL.MaTL
-            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet'
+            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'
               AND TL.MaTL <> ?
               AND TL.MaMonHoc = ?
             GROUP BY
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.LoaiFile,
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile,
                 TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                 TL.MaND_NguoiDang, ND.HoTen, ND.AvatarURL, MH.TenMonHoc
             ORDER BY
@@ -357,7 +375,7 @@ router.get('/:maTL', async (req, res) => {
         const pool = req.app.locals.pool;
 
 
-        await pool.execute('UPDATE TAILIEU SET SoLuotXem = SoLuotXem + 1 WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet"', [maTL]);
+        await pool.execute('UPDATE TAILIEU SET SoLuotXem = SoLuotXem + 1 WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND TrangThaiHienThi = "Hien"', [maTL]);
 
 
         const [rows] = await pool.execute(`
@@ -367,7 +385,7 @@ router.get('/:maTL', async (req, res) => {
             FROM TAILIEU TL
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
-            WHERE TL.MaTL = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
+            WHERE TL.MaTL = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'
         `, [maTL]);
 
         if (rows.length === 0) {
@@ -388,6 +406,7 @@ router.get('/:maTL', async (req, res) => {
         let isBookmarked = false;
         let hasRated = false;
         let hasDownloaded = false;
+        let hasPurchased = false;
         const authHeader = req.header('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const tokenStr = authHeader.split(' ')[1];
@@ -399,12 +418,17 @@ router.get('/:maTL', async (req, res) => {
                 if (ratingRows.length > 0) hasRated = true;
                 const [downloadRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaTL = ? AND MaND = ?', [maTL, decoded.MaND]);
                 if (downloadRows.length > 0) hasDownloaded = true;
+                
+                if (taiLieu.LaTaiLieuDocQuyen) {
+                    const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, decoded.MaND]);
+                    if (purchaseRows.length > 0) hasPurchased = true;
+                }
             } catch (e) {
 
             }
         }
 
-        res.status(200).json({ document: taiLieu, comments, isBookmarked, hasRated, hasDownloaded });
+        res.status(200).json({ document: taiLieu, comments, isBookmarked, hasRated, hasDownloaded, hasPurchased });
     } catch (error) {
         console.error('Lỗi khi lấy chi tiết tài liệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -450,12 +474,12 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
         if (!isAllowed) {
             return res.status(403).json({ message: 'Bạn không có quyền tải tài liệu này.' });
         }
-
-
-        const [historyRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaND = ? AND MaTL = ?', [maND, maTL]);
-        if (historyRows.length === 0) {
-            await pool.execute('INSERT INTO LICH_SU_TAI (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
-            await pool.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
+        
+        if (doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin') {
+            const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, maND]);
+            if (purchaseRows.length === 0) {
+                return res.status(403).json({ message: 'Bạn cần mở khoá tài liệu PREMIUM này trước khi tải.' });
+            }
         }
 
 
@@ -464,12 +488,26 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Không tìm thấy file vật lý trên máy chủ.' });
         }
 
-
         const fileName = `Tailieu_${doc.MaTL}.${doc.LoaiFile}`;
         res.setHeader('X-Download-Filename', encodeURIComponent(fileName));
         res.setHeader('Access-Control-Expose-Headers', 'X-Download-Filename');
         res.type(path.extname(filePath));
-        res.sendFile(filePath);
+        
+        res.sendFile(filePath, async (err) => {
+            if (!err) {
+                try {
+                    const [historyRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaND = ? AND MaTL = ?', [maND, maTL]);
+                    if (historyRows.length === 0) {
+                        await pool.execute('INSERT INTO LICH_SU_TAI (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
+                        await pool.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
+                    }
+                } catch (dbErr) {
+                    console.error('Lỗi khi cập nhật lịch sử tải:', dbErr);
+                }
+            } else {
+                console.error('Lỗi hoặc gián đoạn khi gửi file:', err);
+            }
+        });
 
     } catch (error) {
         console.error('Lỗi khi tải tài liệu:', error);
@@ -514,7 +552,7 @@ router.post('/:maTL/rate', authMiddleware, rateLimiter, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-        const [docs] = await pool.execute('SELECT 1 FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet"', [maTL]);
+        const [docs] = await pool.execute('SELECT 1 FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND TrangThaiHienThi = "Hien"', [maTL]);
         if (docs.length === 0) {
             return res.status(404).json({ message: 'Tài liệu không tồn tại hoặc chưa được duyệt.' });
         }
@@ -554,7 +592,7 @@ router.post('/:maTL/comments', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-        const [docs] = await pool.execute('SELECT 1 FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet"', [maTL]);
+        const [docs] = await pool.execute('SELECT 1 FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND TrangThaiHienThi = "Hien"', [maTL]);
         if (docs.length === 0) {
             return res.status(404).json({ message: 'Tài liệu không tồn tại hoặc chưa được duyệt.' });
         }
@@ -695,9 +733,23 @@ router.put('/:maTL', authMiddleware, (req, res) => {
                 const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
                 const fileURL = `/uploads/${req.file.filename}`;
 
+                let previewURL = null;
+                if (loaiFile === 'pptx' || loaiFile === 'ppt') {
+                    try {
+                        const pptxBuf = fs.readFileSync(req.file.path);
+                        const pdfBuf = await libre.convertAsync(pptxBuf, '.pdf', undefined);
+                        const pdfFileName = `${path.parse(req.file.filename).name}.pdf`;
+                        const pdfPath = path.join(__dirname, 'public/uploads/previews/', pdfFileName);
+                        fs.writeFileSync(pdfPath, pdfBuf);
+                        previewURL = `/uploads/previews/${pdfFileName}`;
+                    } catch (convErr) {
+                        console.error('Lỗi convert pptx sang pdf khi sửa:', convErr);
+                    }
+                }
+
                 await pool.execute(
-                    'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, FileURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
-                    [tenTL, moTa || null, maMonHoc, fileURL, loaiFile, maTL]
+                    'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                    [tenTL, moTa || null, maMonHoc, fileURL, previewURL, loaiFile, maTL]
                 );
 
                 try {
@@ -768,6 +820,69 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
         res.status(200).json({ message: 'Đã xóa tài liệu thành công.' });
     } catch (error) {
         console.error('Lỗi khi xóa tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maTL/buy', authMiddleware, async (req, res) => {
+    const maTL = req.params.maTL;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [docs] = await pool.execute('SELECT MaND_NguoiDang, GiaXu, LaTaiLieuDocQuyen, TenTL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND TrangThaiHienThi = "Hien"', [maTL]);
+        if (docs.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy tài liệu PREMIUM.' });
+        }
+
+        const doc = docs[0];
+        if (!doc.LaTaiLieuDocQuyen) {
+            return res.status(400).json({ message: 'Tài liệu này không phải là tài liệu độc quyền (PREMIUM).' });
+        }
+
+        if (doc.MaND_NguoiDang === maND) {
+            return res.status(400).json({ message: 'Bạn không thể mua tài liệu do chính bạn đăng.' });
+        }
+
+        const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, maND]);
+        if (purchaseRows.length > 0) {
+            return res.status(400).json({ message: 'Bạn đã mua tài liệu này rồi.' });
+        }
+
+        const [userRows] = await pool.execute('SELECT SoDuXu FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (userRows.length === 0) return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+
+        const soDuHienTai = userRows[0].SoDuXu;
+        if (soDuHienTai < doc.GiaXu) {
+            return res.status(400).json({ message: 'Bạn không đủ xu để mua tài liệu này.' });
+        }
+
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        try {
+            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu - ? WHERE MaND = ?', [doc.GiaXu, maND]);
+            
+            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [doc.GiaXu, doc.MaND_NguoiDang]);
+
+            await connection.execute('INSERT INTO TAILIEU_DAMUA (MaND, MaTL, GiaXuThoiDiemMua) VALUES (?, ?, ?)', [maND, maTL, doc.GiaXu]);
+
+            await connection.execute('INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)', [maND, 'MuaTaiLieu', -doc.GiaXu, `Mua tài liệu: ${doc.TenTL}`]);
+
+            await connection.execute('INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)', [doc.MaND_NguoiDang, 'BanTaiLieu', doc.GiaXu, `Bán tài liệu: ${doc.TenTL}`]);
+
+            await connection.commit();
+            res.status(200).json({ message: 'Mua tài liệu thành công!' });
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+
+    } catch (error) {
+        console.error('Lỗi khi mua tài liệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

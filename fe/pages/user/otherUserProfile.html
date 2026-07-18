@@ -1,31 +1,39 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hồ sơ cá nhân — EduShare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/user/userProfile.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
-<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+  <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
+</head>
+
 <body>
-  
-    
+
+
   <nav class="navbar">
     <a href="userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
     <div class="nav-actions">
-      
+
       <div class="notification-container" style="display:none; position: relative; margin-right: 20px;">
-        <div id="btn-notifications" style="cursor:pointer; font-size: 20px; color: var(--text-secondary); position: relative;">
+        <div id="btn-notifications"
+          style="cursor:pointer; font-size: 20px; color: var(--text-secondary); position: relative;">
           <i class="fa-solid fa-bell"></i>
-          <span id="notif-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); color:white; font-size:10px; padding:2px 5px; border-radius:10px;">0</span>
+          <span id="notif-badge"
+            style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); color:white; font-size:10px; padding:2px 5px; border-radius:10px;">0</span>
         </div>
-        <div id="notif-dropdown" style="display:none; position:absolute; top:35px; right:0; width:300px; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; max-height:400px; overflow-y:auto; border: 1px solid #E5E7EB;">
-          <div style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #E5E7EB; background: #F9FAFB;">Thông báo của bạn</div>
+        <div id="notif-dropdown"
+          style="display:none; position:absolute; top:35px; right:0; width:300px; background:white; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:100; max-height:400px; overflow-y:auto; border: 1px solid #E5E7EB;">
+          <div style="padding: 12px 16px; font-weight: 600; border-bottom: 1px solid #E5E7EB; background: #F9FAFB;">
+            Thông báo của bạn</div>
           <div id="notif-list">
-            
+
           </div>
         </div>
       </div>
@@ -46,43 +54,83 @@
   </nav>
 
   <div class="main-layout">
-    
+
     <aside id="app-sidebar" class="sidebar"></aside>
 
-    
+
     <main class="content-area">
-      
-      
+
+
       <div class="profile-header" style="display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; gap: 20px; align-items: center;">
           <div class="profile-avatar-container">
             <div class="profile-avatar" id="header-avatar">U</div>
           </div>
-          
+
           <div class="profile-info">
             <h1 class="profile-name">
               <span id="header-name">Đang tải...</span>
               <span class="role-badge" id="header-role">...</span>
             </h1>
-            <div class="profile-desc">
-              <span><i class="fa-solid fa-envelope"></i> <span id="header-email">...</span></span>
+            <div class="profile-desc" style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px;">
+              <span id="container-school-major" style="display: none; align-items: center; gap: 4px;"><i class="fa-solid fa-graduation-cap"
+                  style="width: 16px; text-align: center; margin-right: 6px;"></i> <span
+                  id="header-school-major"></span></span>
             </div>
           </div>
         </div>
-        
+
         <div>
-          <button id="btn-follow" class="btn-primary" style="padding: 10px 20px; font-weight: 600; min-width: 150px; display: none;">
-            
+          <button id="btn-follow" class="btn-primary"
+            style="padding: 10px 20px; font-weight: 600; min-width: 150px; display: none;">
+
           </button>
         </div>
       </div>
 
-      
+
+      <div class="form-card">
+        <h2 class="card-title">Thông tin người dùng</h2>
+        <form>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-user" style="margin-right: 6px;"></i> Họ và tên: </label>
+              <input type="text" id="view-hoten" class="form-control" disabled>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Email: </label>
+              <input type="email" id="view-email" class="form-control" disabled>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-cake-candles" style="margin-right: 6px;"></i> Tuổi:
+              </label>
+              <input type="text" id="view-tuoi" class="form-control" disabled>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-venus-mars" style="margin-right: 6px;"></i> Giới tính:
+              </label>
+              <input type="text" id="view-gioitinh" class="form-control" disabled>
+            </div>
+          </div>
+          <div class="form-row" style="margin-top: 15px; grid-template-columns: 1fr;">
+            <div class="form-group" style="width: 100%;">
+              <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ:
+              </label>
+              <input type="text" id="view-diachi" class="form-control" disabled>
+            </div>
+          </div>
+        </form>
+      </div>
+
       <div class="form-card">
         <div style="border-bottom: 1px solid #E5E7EB; margin-bottom: 20px;">
-          <h2 class="card-title" style="color: var(--primary); border-bottom: 2px solid var(--primary); display: inline-block; padding-bottom: 10px;"><i class="fa-solid fa-file-lines" style="margin-right: 8px;"></i>Tài liệu đã chia sẻ</h2>
+          <h2 class="card-title" id="shared-docs-title"
+            style="color: var(--primary); border-bottom: 2px solid var(--primary); display: inline-block; padding-bottom: 10px;">
+            <i class="fa-solid fa-file-lines" style="margin-right: 8px;"></i>Tài liệu đã chia sẻ</h2>
         </div>
-        
+
         <div class="doc-list" id="user-docs-container">
           <p>Đang tải tài liệu...</p>
         </div>
@@ -93,8 +141,8 @@
 
   <script type="module" src="../../main/user/otherUserProfile.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
 </body>
-</html>
 
+</html>

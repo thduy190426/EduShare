@@ -77,6 +77,7 @@ async function fetchDocuments(status) {
 
     const data = await response.json();
     renderDocuments(data, status);
+    fetchCounts();
   } catch (error) {
     console.error("Lỗi khi tải danh sách tài liệu:", error);
     showToast("error", "Lỗi hệ thống khi tải dữ liệu.");
@@ -85,16 +86,36 @@ async function fetchDocuments(status) {
   }
 }
 
+async function fetchCounts() {
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    const response = await fetch(`${API_URL}/admin/documents/counts`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const counts = await response.json();
+      const pendingCountTab = document.getElementById("pending-count-tab");
+      const approvedCountTab = document.getElementById("approved-count-tab");
+      const rejectedCountTab = document.getElementById("rejected-count-tab");
+      
+      if (pendingCountTab) pendingCountTab.textContent = counts.ChoDuyet || 0;
+      if (approvedCountTab) approvedCountTab.textContent = counts.DaDuyet || 0;
+      if (rejectedCountTab) rejectedCountTab.textContent = counts.TuChoi || 0;
+    }
+  } catch (error) {
+    console.error("Lỗi khi tải số lượng tài liệu:", error);
+  }
+}
+
 function renderDocuments(documents, status) {
   const tbody = document.getElementById("pending-documents-tbody");
   if (!tbody) return;
 
   tbody.innerHTML = "";
-
-  const tabCount = document.querySelector(".tab-count");
-  if (tabCount && status === 'ChoDuyet') {
-      tabCount.textContent = documents.length;
-  }
 
   if (documents.length === 0) {
     let emptyText = "Không có tài liệu nào chờ duyệt.";
@@ -109,12 +130,23 @@ function renderDocuments(documents, status) {
     const tr = document.createElement("tr");
 
     let icon = "fa-file";
+    let iconColor = "#64748B";
+    let iconBg = "#F1F5F9";
     let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : "";
-    if (loaiFile === "pdf") icon = "fa-file-pdf";
-    else if (loaiFile === "pptx" || loaiFile === "ppt")
-      icon = "fa-chart-column";
-    else if (loaiFile === "docx" || loaiFile === "doc")
-      icon = "fa-pen-to-square";
+    
+    if (loaiFile === "pdf") {
+      icon = "fa-file-pdf";
+      iconColor = "#DC2626";
+      iconBg = "#FEE2E2";
+    } else if (loaiFile === "pptx" || loaiFile === "ppt") {
+      icon = "fa-file-powerpoint";
+      iconColor = "#EA580C";
+      iconBg = "#FFEDD5";
+    } else if (loaiFile === "docx" || loaiFile === "doc") {
+      icon = "fa-file-word";
+      iconColor = "#2563EB";
+      iconBg = "#DBEAFE";
+    }
 
     const tenNguoiDang = doc.TenNguoiDang || "Không xác định";
     const userInitial = tenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase();
@@ -123,18 +155,30 @@ function renderDocuments(documents, status) {
     let actionBtnsHtml = `<button class="btn-action btn-view" title="Xem tài liệu" data-url="${doc.FileURL || ""}"><i class="fa-solid fa-eye"></i></button>`;
 
     if (status === 'ChoDuyet') {
-        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span class="status-badge status-pending" style="color:var(--warning); background:#fffbeb; padding:4px 8px; border-radius:4px; font-weight:500;">Chờ duyệt</span></div>`;
+        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span style="color:var(--warning); font-size:14px; font-weight:600;">Chờ duyệt</span></div>`;
         actionBtnsHtml += `
             <button class="btn-action btn-approve" style="background:#ecfdf5; color:#10b981; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" title="Duyệt" data-id="${doc.MaTL}"><i class="fa-solid fa-check"></i></button>
             <button class="btn-action btn-reject" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" title="Từ chối" data-id="${doc.MaTL}" data-title="${doc.TenTL}"><i class="fa-solid fa-xmark"></i></button>
         `;
     } else if (status === 'DaDuyet') {
-        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--success);"></span><span class="status-badge status-approved" style="color:var(--success); background:#ecfdf5; padding:4px 8px; border-radius:4px; font-weight:500;">Đã duyệt</span></div>`;
+        const isHidden = doc.TrangThaiHienThi === 'An';
+        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;">
+            <span style="width:8px; height:8px; border-radius:50%; background:var(--success);"></span>
+            <span style="color:var(--success); font-size:14px; font-weight:600;">Đã duyệt</span>
+            ${isHidden ? '<span style="background:#f1f5f9; color:#475569; font-size:12px; padding:2px 6px; border-radius:12px; font-weight:500; margin-left:4px;"><i class="fa-solid fa-eye-slash"></i> Đã ẩn</span>' : ''}
+        </div>`;
+        
+        const toggleIcon = isHidden ? 'fa-eye' : 'fa-eye-slash';
+        const toggleTitle = isHidden ? 'Hiện tài liệu' : 'Ẩn tài liệu';
+        const toggleColor = isHidden ? '#10b981' : '#f59e0b';
+        const toggleBg = isHidden ? '#ecfdf5' : '#fef3c7';
+        
         actionBtnsHtml += `
+            <button class="btn-action btn-toggle-visibility" style="background:${toggleBg}; color:${toggleColor}; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="${toggleTitle}" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}" data-status="${doc.TrangThaiHienThi}"><i class="fa-solid ${toggleIcon}"></i></button>
             <button class="btn-action btn-delete-doc" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="Xóa vĩnh viễn" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}"><i class="fa-solid fa-trash"></i></button>
         `;
     } else if (status === 'TuChoi') {
-        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--danger);"></span><span class="status-badge status-rejected" style="color:var(--danger); background:#fef2f2; padding:4px 8px; border-radius:4px; font-weight:500;">Từ chối</span></div><div style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width: 150px; white-space: normal;" title="${doc.LyDoTuChoi || ''}">Lý do: ${doc.LyDoTuChoi || 'Không rõ'}</div>`;
+        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--danger);"></span><span style="color:var(--danger); font-size:14px; font-weight:600;">Từ chối</span></div><div style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width: 150px; white-space: normal;" title="${doc.LyDoTuChoi || ''}">Lý do: ${doc.LyDoTuChoi || 'Không rõ'}</div>`;
     }
 
     let dateStr = '-';
@@ -154,16 +198,16 @@ function renderDocuments(documents, status) {
         const fullUrl = doc.AvatarURL.startsWith('http') ? doc.AvatarURL : 'http://localhost:3000' + doc.AvatarURL;
         avatarHtml = `
             <img src="${fullUrl}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Avatar">
-            <div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; display:none; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${userInitial}</div>
+            <div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:#EFF6FF; color:#2563EB; display:none; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${userInitial}</div>
         `;
     } else {
-        avatarHtml = `<div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${userInitial}</div>`;
+        avatarHtml = `<div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:#EFF6FF; color:#2563EB; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${userInitial}</div>`;
     }
 
-    tr.innerHTML = `
+        tr.innerHTML = `
             <td>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div class="doc-type" style="font-size:11px; font-weight: 600; background: var(--primary-light); color: var(--secondary); padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px;"><i class="fa-solid ${icon}"></i> ${loaiFile.toUpperCase()}</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid ${icon}" style="color: ${iconColor}; font-size: 1.4rem;"></i>
                     <div class="doc-name" style="font-weight:600; color:var(--text-primary); max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${doc.TenTL}">${doc.TenTL}</div>
                 </div>
             </td>
@@ -226,6 +270,33 @@ function renderDocuments(documents, status) {
         window.open("http://localhost:3000" + url, "_blank");
       } else {
         showToast("error", "Không có đường dẫn file.");
+      }
+    });
+  });
+
+  const toggleVisibilityBtns = tbody.querySelectorAll(".btn-toggle-visibility");
+  toggleVisibilityBtns.forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const id = e.currentTarget.getAttribute("data-id");
+      const title = e.currentTarget.getAttribute("data-title");
+      const currentStatus = e.currentTarget.getAttribute("data-status");
+      const isHidden = currentStatus === 'An';
+      
+      const actionText = isHidden ? "hiện" : "ẩn";
+      
+      if (
+        (
+          await Swal.fire({
+            title: `Xác nhận ${actionText} tài liệu`,
+            html: `Bạn có chắc chắn muốn ${actionText} tài liệu <b>${escapeHTML(title)}</b> không?`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Đồng ý",
+            cancelButtonText: "Hủy",
+          })
+        ).isConfirmed
+      ) {
+        toggleDocumentVisibility(id);
       }
     });
   });
@@ -300,6 +371,30 @@ async function deleteDocument(maTL) {
     }
   } catch (error) {
     console.error("Lỗi khi xóa tài liệu:", error);
+    showToast("error", "Lỗi hệ thống.");
+  }
+}
+
+async function toggleDocumentVisibility(maTL) {
+  const token = getToken();
+  try {
+    const response = await fetch(`${API_URL}/admin/documents/${maTL}/toggle-visibility`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast("success", result.message || "Đã thay đổi trạng thái ẩn/hiện.");
+      await fetchDocuments(currentTabStatus);
+    } else {
+      showToast("error", result.message || "Lỗi khi thay đổi trạng thái.");
+    }
+  } catch (error) {
+    console.error("Lỗi khi toggle ẩn/hiện:", error);
     showToast("error", "Lỗi hệ thống.");
   }
 }

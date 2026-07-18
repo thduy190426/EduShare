@@ -356,13 +356,13 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
         }
 
 
-        const [docRows] = await pool.execute('SELECT MaND_NguoiDang, TrangThaiKiemDuyet FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        const [docRows] = await pool.execute('SELECT MaND_NguoiDang, TrangThaiKiemDuyet, TrangThaiHienThi FROM TAILIEU WHERE MaTL = ?', [maTL]);
         if (docRows.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
         }
         const doc = docRows[0];
-        if (doc.MaND_NguoiDang !== maND && doc.TrangThaiKiemDuyet !== 'DaDuyet') {
-            return res.status(403).json({ message: 'Tài liệu chưa được duyệt hoặc bạn không có quyền chia sẻ tài liệu này.' });
+        if (doc.TrangThaiHienThi === 'An' || (doc.MaND_NguoiDang !== maND && doc.TrangThaiKiemDuyet !== 'DaDuyet')) {
+            return res.status(403).json({ message: 'Tài liệu chưa được duyệt, bị ẩn hoặc bạn không có quyền chia sẻ tài liệu này.' });
         }
 
 
@@ -388,30 +388,103 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
+        const [groupCheck] = await pool.execute('SELECT MaND_QuanTri FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        if (groupCheck.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
+        }
+        const isGroupAdmin = groupCheck[0].MaND_QuanTri === req.user.MaND;
 
-        if (req.user.VaiTro !== 'Admin') {
+        if (req.user.VaiTro !== 'Admin' && !isGroupAdmin) {
             const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
             if (memberCheck.length === 0) {
                 return res.status(403).json({ message: 'Bạn không có quyền xem tài liệu của nhóm này.' });
             }
         }
 
-        const [rows] = await pool.execute(`
-            SELECT T.*, TN.NgayChiaSe, N.HoTen AS TenNguoiDang, N.AvatarURL, MH.TenMonHoc,
+        let query = `
+            SELECT T.*, TN.NgayChiaSe, TN.TrangThai AS TrangThaiNhom, N.HoTen AS TenNguoiDang, N.AvatarURL, MH.TenMonHoc,
                    COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = T.MaTL), 0) AS DiemDanhGia,
                    (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = T.MaTL) AS SoDanhGia
             FROM TAILIEU_NHOM TN
             JOIN TAILIEU T ON TN.MaTL = T.MaTL
             LEFT JOIN NGUOIDUNG N ON T.MaND_NguoiDang = N.MaND
             LEFT JOIN MONHOC MH ON T.MaMonHoc = MH.MaMonHoc
-            WHERE TN.MaNhom = ?
-            ORDER BY TN.NgayChiaSe DESC
-        `, [maNhom]);
+            WHERE TN.MaNhom = ? AND T.TrangThaiHienThi = 'Hien'
+        `;
+        const params = [maNhom];
+
+        if (!isGroupAdmin) {
+            query += " AND TN.TrangThai = 'Hien'";
+        }
+
+        query += " ORDER BY TN.NgayChiaSe DESC";
+
+        const [rows] = await pool.execute(query, params);
 
         res.status(200).json({ documents: rows });
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom/documents:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/documents/:maTL/toggle-status', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const maTL = req.params.maTL;
+    const maND = req.user.MaND;
+
+    const pool = req.app.locals.pool;
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        const [groupCheck] = await conn.execute('SELECT MaND_QuanTri, TenNhom FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        if (groupCheck.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
+        }
+        if (groupCheck[0].MaND_QuanTri !== maND) {
+            await conn.rollback();
+            return res.status(403).json({ message: 'Chỉ quản trị viên mới có thể ẩn/hiện tài liệu.' });
+        }
+        const tenNhom = groupCheck[0].TenNhom;
+
+        const [docInGroupCheck] = await conn.execute('SELECT TrangThai FROM TAILIEU_NHOM WHERE MaNhom = ? AND MaTL = ?', [maNhom, maTL]);
+        if (docInGroupCheck.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Tài liệu không tồn tại trong nhóm này.' });
+        }
+        const currentStatus = docInGroupCheck[0].TrangThai;
+        const newStatus = currentStatus === 'Hien' ? 'An' : 'Hien';
+
+        await conn.execute('UPDATE TAILIEU_NHOM SET TrangThai = ? WHERE MaNhom = ? AND MaTL = ?', [newStatus, maNhom, maTL]);
+
+        const [docCheck] = await conn.execute('SELECT TenTL, MaND_NguoiDang FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        if (docCheck.length > 0) {
+            const tenTL = docCheck[0].TenTL;
+            const nguoiDangId = docCheck[0].MaND_NguoiDang;
+            
+            if (String(nguoiDangId) !== String(maND)) {
+                const actionText = newStatus === 'An' ? 'ẩn' : 'hiện lại';
+                const thongBaoMsg = `Tài liệu "${tenTL}" của bạn đã bị quản trị viên ${actionText} trong nhóm "${tenNhom}".`;
+                const linkDich = `/fe/pages/group/groupDetails.html?id=${maNhom}`;
+                
+                await conn.execute(
+                    'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                    [nguoiDangId, 'HeThong', thongBaoMsg, linkDich]
+                );
+            }
+        }
+
+        await conn.commit();
+        res.status(200).json({ message: 'Cập nhật trạng thái tài liệu thành công.', newStatus });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API PUT /groups/:maNhom/documents/:maTL/toggle-status:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    } finally {
+        conn.release();
     }
 });
 
@@ -480,6 +553,67 @@ router.delete('/:maNhom', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/:maNhom/documents/:maTL', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const maTL = req.params.maTL;
+    const maND = req.user.MaND;
+    const { lyDo } = req.body || {};
+
+    const pool = req.app.locals.pool;
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+        const [groupCheck] = await conn.execute('SELECT MaND_QuanTri, TenNhom FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        if (groupCheck.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
+        }
+        if (groupCheck[0].MaND_QuanTri !== maND) {
+            await conn.rollback();
+            return res.status(403).json({ message: 'Chỉ quản trị viên mới có thể xóa tài liệu khỏi nhóm.' });
+        }
+        const tenNhom = groupCheck[0].TenNhom;
+
+        const [docInGroupCheck] = await conn.execute('SELECT * FROM TAILIEU_NHOM WHERE MaNhom = ? AND MaTL = ?', [maNhom, maTL]);
+        if (docInGroupCheck.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Tài liệu không tồn tại trong nhóm này.' });
+        }
+
+        const [docCheck] = await conn.execute('SELECT TenTL, MaND_NguoiDang FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        
+        await conn.execute('DELETE FROM TAILIEU_NHOM WHERE MaNhom = ? AND MaTL = ?', [maNhom, maTL]);
+
+        if (docCheck.length > 0) {
+            const tenTL = docCheck[0].TenTL;
+            const nguoiDangId = docCheck[0].MaND_NguoiDang;
+            
+            if (String(nguoiDangId) !== String(maND)) {
+                let thongBaoMsg = `Tài liệu "${tenTL}" của bạn đã bị quản trị viên ẩn/xóa khỏi nhóm "${tenNhom}".`;
+                if (lyDo && lyDo.trim()) {
+                    thongBaoMsg += ` Lý do: ${lyDo.trim()}`;
+                }
+                const linkDich = `/fe/pages/document/documentDetails.html?id=${maTL}`;
+                
+                await conn.execute(
+                    'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                    [nguoiDangId, 'HeThong', thongBaoMsg, linkDich]
+                );
+            }
+        }
+
+        await conn.commit();
+        res.status(200).json({ message: 'Đã xóa tài liệu khỏi nhóm thành công.' });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API DELETE /groups/:maNhom/documents/:maTL:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    } finally {
+        conn.release();
     }
 });
 

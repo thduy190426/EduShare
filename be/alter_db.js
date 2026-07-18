@@ -47,8 +47,11 @@ async function run() {
         await addColumnIfMissing('TAILIEU', 'LyDoTuChoi', 'TEXT DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'AvatarURL', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'Tuoi', 'INT DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'SoDuXu', 'INT DEFAULT 0');
         await addColumnIfMissing('NGUOIDUNG', 'GioiTinh', "ENUM('Nam', 'Nu', 'Khac') DEFAULT 'Khac'");
         await addColumnIfMissing('NGUOIDUNG', 'DiaChi', 'VARCHAR(255) DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'TruongHoc', 'VARCHAR(255) DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'KhoaNganh', 'VARCHAR(255) DEFAULT NULL');
         await pool.execute('ALTER TABLE NGUOIDUNG MODIFY COLUMN GioiTinh VARCHAR(20) DEFAULT NULL');
         await pool.execute(`
             UPDATE NGUOIDUNG
@@ -91,6 +94,20 @@ async function run() {
                 NgayDuyet DATETIME DEFAULT NULL,
                 FOREIGN KEY (MaND_DeXuat) REFERENCES NGUOIDUNG(MaND),
                 FOREIGN KEY (MaMonHocDaTao) REFERENCES MONHOC(MaMonHoc),
+                FOREIGN KEY (MaND_Duyet) REFERENCES NGUOIDUNG(MaND)
+            )
+        `);
+        await createTableIfMissing('GIAODICH_NAPXU', `
+            CREATE TABLE GIAODICH_NAPXU (
+                MaGD INT AUTO_INCREMENT PRIMARY KEY,
+                MaND INT NOT NULL,
+                SoTien INT NOT NULL,
+                SoXu INT NOT NULL,
+                TrangThai ENUM('ChoDuyet', 'DaDuyet', 'TuChoi') DEFAULT 'ChoDuyet',
+                MaND_Duyet INT DEFAULT NULL,
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                NgayDuyet DATETIME DEFAULT NULL,
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND),
                 FOREIGN KEY (MaND_Duyet) REFERENCES NGUOIDUNG(MaND)
             )
         `);

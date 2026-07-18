@@ -175,8 +175,8 @@ function renderTable() {
         let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
 
         if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; color = '#ef4444'; }
-        else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-chart-column'; color = '#f97316'; }
-        else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-pen-to-square'; color = '#3b82f6'; }
+        else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-file-powerpoint'; color = '#f97316'; }
+        else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-file-word'; color = '#3b82f6'; }
 
         let statusText = '';
         let statusColor = '';
@@ -209,7 +209,7 @@ function renderTable() {
             `;
         } else if (currentTab === 'bookmarks') {
             actionBtns += `
-                <button class="btn-action btn-remove-bookmark" title="Bỏ lưu" data-id="${doc.MaTL}"><i class="fa-solid fa-bookmark-slash" style="color: var(--danger);"></i></button>
+                <button class="btn-action btn-remove-bookmark" title="Bỏ lưu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash-can" style="color: var(--danger);"></i></button>
             `;
         }
 
@@ -219,6 +219,7 @@ function renderTable() {
                     <i class="fa-solid ${icon}" style="color: ${color}; font-size: 1.2rem;"></i>
                     <a href="documentDetails.html?id=${doc.MaTL}" style="color: inherit; text-decoration: none; font-weight: 500;">
                         ${doc.TenTL}
+                        ${doc.LaTaiLieuDocQuyen ? `<span style="margin-left: 8px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM</span>` : ''}
                     </a>
                 </div>
             </td>
@@ -226,7 +227,7 @@ function renderTable() {
             <td>
                 <div style="display:inline-flex; align-items:center; gap:6px;" title="${statusTitle}">
                     <span style="width:8px; height:8px; border-radius:50%; background:${statusColor};"></span>
-                    <span style="background: ${statusBg}; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: ${statusColor}; font-weight: 600;">${statusText}</span>
+                    <span style="font-size: 14px; color: ${statusColor}; font-weight: 600;">${statusText}</span>
                 </div>
             </td>
             <td>${doc.SoLuotTai || 0}</td>
@@ -359,9 +360,9 @@ function openEditModal(doc) {
                 .modern-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: #FFF; }
                 .modern-file-input { width: 100%; padding: 8px; border: 2px dashed #CBD5E1; border-radius: 6px; font-size: 13px; background: #F8FAFC; transition: all 0.2s; cursor: pointer; color: #64748B; box-sizing: border-box; }
                 .modern-file-input:hover { border-color: var(--primary); background: var(--primary-light); }
-                .modern-btn-confirm { background: var(--primary) !important; color: #fff !important; border-radius: 6px !important; padding: 10px 24px !important; font-weight: 600 !important; font-size: 14px !important; transition: all 0.2s !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important; margin-right: 12px !important; border: none !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; }
+                .modern-btn-confirm { background: var(--primary) !important; color: #fff !important; border-radius: 6px !important; padding: 10px 24px !important; font-weight: 600 !important; font-size: 14px !important; transition: all 0.2s !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important; margin: 0 6px !important; border: none !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; }
                 .modern-btn-confirm:not(:disabled):hover { background: #4338CA !important; transform: translateY(-2px) !important; box-shadow: 0 6px 16px rgba(79, 70, 229, 0.35) !important; }
-                .modern-btn-cancel { background: #F1F5F9 !important; color: #475569 !important; border-radius: 6px !important; padding: 10px 24px !important; font-weight: 600 !important; font-size: 14px !important; transition: all 0.2s !important; border: none !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; }
+                .modern-btn-cancel { background: #F1F5F9 !important; color: #475569 !important; border-radius: 6px !important; padding: 10px 24px !important; font-weight: 600 !important; font-size: 14px !important; transition: all 0.2s !important; border: none !important; margin: 0 6px !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; }
                 .modern-btn-cancel:hover { background: #E2E8F0 !important; color: #0F172A !important; }
                 .modern-alert-warning { background: #FFFBEB; border-left: 4px solid #F59E0B; color: #92400E; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; display: flex; gap: 12px; align-items: flex-start; text-align: left; line-height: 1.5; }
                 .modern-alert-danger { background: #FEF2F2; border-left: 4px solid #EF4444; color: #991B1B; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; display: flex; gap: 12px; align-items: flex-start; text-align: left; line-height: 1.5; }
@@ -390,6 +391,7 @@ function openEditModal(doc) {
             </div>
         `,
         showCancelButton: true,
+        reverseButtons: true,
         confirmButtonText: '<i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi',
         cancelButtonText: '<i class="fa-solid fa-xmark"></i> Hủy',
         didOpen: () => {

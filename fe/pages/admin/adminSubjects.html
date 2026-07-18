@@ -45,7 +45,6 @@
 
       
       <style>
-        /* Modal Styles */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -61,9 +60,9 @@
         .modal-container {
             background: white;
             border-radius: 12px;
-            padding: 24px;
+            padding: 32px;
             width: 100%;
-            max-width: 400px;
+            max-width: 600px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             position: relative;
             animation: modalFadeIn 0.3s ease-out;
@@ -170,7 +169,6 @@
             opacity: 0.7;
         }
         
-        /* Modern Add Button */
         .btn-add-subject {
             background: #4F46E5;
             color: white;
@@ -207,7 +205,7 @@
           <h3 style="margin: 0; font-size: 18px; color: var(--text-primary);">
             <i class="fa-solid fa-lightbulb" style="margin-right: 8px; color: var(--primary);"></i> Đề xuất môn học chờ duyệt
           </h3>
-          <button class="btn-add-subject" style="padding: 9px 14px; font-size: 13px;" onclick="fetchSubjectSuggestions()">
+          <button id="btn-refresh-suggestions" class="btn-add-subject" style="padding: 9px 14px; font-size: 13px;" onclick="fetchSubjectSuggestions()">
             <i class="fa-solid fa-rotate"></i> Làm mới
           </button>
         </div>

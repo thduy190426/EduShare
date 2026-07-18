@@ -741,5 +741,4 @@ body {
   user-select: none;
 }
 
-/* Force Inter font everywhere */
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }

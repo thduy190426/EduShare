@@ -3,6 +3,16 @@ import { getAssetUrl, getToken, showToast } from '../shared/utils.js';
 
 const token = getToken();
 
+async function readErrorMessage(res, fallback) {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+        const data = await res.json();
+        return data.message || fallback;
+    }
+
+    return fallback;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
@@ -128,8 +138,8 @@ window.reviewReport = async (maBC, quyetDinh) => {
             showToast('success', 'Xử lý báo cáo thành công!');
             fetchReports();
         } else {
-            const data = await res.json();
-            showToast('error', data.message);
+            const message = await readErrorMessage(res, 'Không thể xử lý báo cáo.');
+            showToast('error', message);
         }
     } catch (err) {
         console.error(err);
@@ -150,8 +160,8 @@ window.deleteReport = async (maBC) => {
             showToast('success', 'Đã xóa báo cáo thành công!');
             fetchReports();
         } else {
-            const data = await res.json();
-            showToast('error', data.message || 'Không thể xóa báo cáo.');
+            const message = await readErrorMessage(res, 'Không thể xóa báo cáo.');
+            showToast('error', message);
         }
     } catch (err) {
         console.error(err);

@@ -385,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-pen-to-square'; thumbClass = 'thumb-docx'; }
 
                     const officialBadge = doc.LaTaiLieuChinhThuc ? `<div class="badge-official"><i class="fa-solid fa-check"></i> Tài liệu chính thống</div>` : '';
+                    const premiumBadge = doc.LaTaiLieuDocQuyen ? `<div class="badge-premium" style="position: absolute; top: 12px; left: 12px; z-index: 10; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #FDE68A;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 4px;"></i> PREMIUM (${doc.GiaXu || 0} Xu)</div>` : '';
 
                     const userInitial = doc.TenNguoiDang ? escapeHTML(doc.TenNguoiDang).trim().split(' ').pop().charAt(0).toUpperCase() : '?';
                     let avatarHtml = `<div class="avatar-sm">${userInitial}</div>`;
@@ -409,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="doc-thumb ${thumbClass}">
                             ${thumbHtml}
                             ${officialBadge}
+                            ${premiumBadge}
                             <div class="bookmark-btn">
                                 ${bookmarkedDocs.has(doc.MaTL) 
                                     ? '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>' 

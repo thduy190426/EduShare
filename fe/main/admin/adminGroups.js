@@ -69,14 +69,14 @@ function renderGroups(groups) {
                 adminAvatarHtml = `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <img src="${fullUrl}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Avatar">
-                        <div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; display:none; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${initial}</div>
+                        <div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:#EFF6FF; color:#2563EB; display:none; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${initial}</div>
                         <span>${group.TenNguoiQuanTri}</span>
                     </div>
                 `;
             } else {
                 adminAvatarHtml = `
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:var(--primary); color:white; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${initial}</div>
+                        <div class="user-initial" style="width:28px; height:28px; border-radius:50%; background:#EFF6FF; color:#2563EB; display:flex; justify-content:center; align-items:center; font-weight:bold; font-size:12px;">${initial}</div>
                         <span>${group.TenNguoiQuanTri}</span>
                     </div>
                 `;

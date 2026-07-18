@@ -2,6 +2,11 @@ export const isValidEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
+export const isValidName = (name) => {
+    const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]{2,50}$/;
+    return nameRegex.test(name.trim());
+};
+
 export const decodeJWT = (token) => {
     try {
         const base64Url = token.split('.')[1];
@@ -100,3 +105,4 @@ export const showToast = (icon, title) => {
         Toast.fire({ icon, title });
     }
 };
+

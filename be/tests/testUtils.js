@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-// Đảm bảo JWT_SECRET được set trong môi trường test
 process.env.JWT_SECRET = 'test_secret_key';
 
 /**

@@ -5,6 +5,17 @@ const token = getToken();
 let currentUserId = null; 
 let isFollowing = false;
 
+function buildEducationText(profile) {
+    const fields = [
+        profile.TruongHoc || 'Chưa cập nhật ',
+        profile.KhoaNganh || 'Chưa cập nhật '
+    ];
+
+    return fields
+        .map(value => (typeof value === 'string' ? value.trim() : ''))
+        .join(' - ');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
@@ -79,13 +90,29 @@ async function fetchUserProfile() {
         isFollowing = data.isFollowing;
 
         document.getElementById('header-name').textContent = profile.HoTen;
-        document.getElementById('header-email').textContent = profile.Email;
         
         let roleName = 'Sinh viên';
         if (profile.VaiTro === 'GiaoVien') roleName = 'Giáo viên';
         if (profile.VaiTro === 'Admin') roleName = 'Admin';
         document.getElementById('header-role').textContent = roleName;
         
+        document.getElementById('view-hoten').value = profile.HoTen || 'Chưa cập nhật';
+        document.getElementById('view-email').value = profile.Email || 'Chưa cập nhật';
+        document.getElementById('view-tuoi').value = profile.Tuoi ? profile.Tuoi : 'Chưa cập nhật';
+        
+        let gioiTinhStr = 'Chưa cập nhật';
+        if (profile.GioiTinh === 'Nam') gioiTinhStr = 'Nam';
+        else if (profile.GioiTinh === 'Nu') gioiTinhStr = 'Nữ';
+        else if (profile.GioiTinh === 'Khac') gioiTinhStr = 'Khác';
+        
+        document.getElementById('view-gioitinh').value = gioiTinhStr;
+        document.getElementById('view-diachi').value = profile.DiaChi || 'Chưa cập nhật';
+
+        const schoolMajorText = buildEducationText(profile);
+        
+        document.getElementById('container-school-major').style.display = 'flex';
+        document.getElementById('header-school-major').textContent = schoolMajorText;
+
         const avatarEl = document.getElementById('header-avatar');
         if (profile.AvatarURL) {
             avatarEl.innerHTML = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
@@ -115,6 +142,11 @@ async function fetchUserDocuments() {
         const data = await res.json();
         const docs = data.documents || [];
         
+        const titleEl = document.getElementById('shared-docs-title');
+        if (titleEl) {
+            titleEl.innerHTML = `<i class="fa-solid fa-file-lines" style="margin-right: 8px;"></i>Tài liệu đã chia sẻ (${docs.length})`;
+        }
+
         const container = document.getElementById('user-docs-container');
         container.innerHTML = '';
         
@@ -165,6 +197,7 @@ async function fetchUserDocuments() {
                 <div class="doc-thumb ${thumbClass}">
                     ${thumbHtml}
                     ${doc.LaTaiLieuChinhThuc ? '<div class="badge-official"><i class="fa-solid fa-check"></i> Tài liệu chính thống</div>' : ''}
+                    ${doc.LaTaiLieuDocQuyen ? `<div class="badge-premium" style="position: absolute; top: 12px; left: 12px; z-index: 10; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #FDE68A;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 4px;"></i> PREMIUM (${doc.GiaXu || 0} Xu)</div>` : ''}
                 </div>
                 <div class="doc-content">
                     <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
@@ -220,7 +253,17 @@ function updateFollowButtonUI() {
     }
 }
 
+let isProcessingFollow = false;
+
 async function toggleFollow() {
+    if (isProcessingFollow) return;
+    
+    const btn = document.getElementById('btn-follow');
+    isProcessingFollow = true;
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.cursor = 'wait';
+
     try {
         const res = await fetch(`${API_URL}/users/${currentUserId}/follow`, {
             method: 'POST',
@@ -236,6 +279,13 @@ async function toggleFollow() {
         }
     } catch (err) {
         console.error('Lỗi khi toggleFollow:', err);
+    } finally {
+        setTimeout(() => {
+            isProcessingFollow = false;
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        }, 2000);
     }
 }
 

@@ -84,7 +84,7 @@ async function fetchDocumentDetails() {
         }
 
         const data = await response.json();
-        renderDocumentInfo(data.document);
+        renderDocumentInfo(data.document, data.hasPurchased);
         renderComments(data.comments, data.document.MaND_NguoiDang);
         fetchRelatedDocuments();
 
@@ -97,7 +97,7 @@ async function fetchDocumentDetails() {
 
         const ratingHint = document.querySelector('.rating-count');
         if (data.hasRated) {
-            lockRatingUI(`${Number(data.document.SoDanhGia || 0).toLocaleString('vi-VN')} lượt đánh giá`);
+            lockRatingUI('Cảm ơn bạn đã đánh giá');
         } else if (token && !data.hasDownloaded && ratingHint) {
             ratingHint.textContent = 'Tải tài liệu xuống trước khi đánh giá';
         }
@@ -159,13 +159,16 @@ function renderRelatedDocuments(documents) {
         const officialBadge = doc.LaTaiLieuChinhThuc
             ? '<span class="related-official"><i class="fa-solid fa-check"></i></span>'
             : '';
+        const premiumBadge = doc.LaTaiLieuDocQuyen
+            ? '<span class="related-official" style="background: #FEF3C7; color: #B45309;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i></span>'
+            : '';
 
         item.innerHTML = `
             <div class="related-thumb ${thumbClass}">
                 <i class="fa-solid ${icon}"></i>
             </div>
             <div class="related-info">
-                <div class="related-name">${escapeHTML(doc.TenTL)} ${officialBadge}</div>
+                <div class="related-name">${escapeHTML(doc.TenTL)} ${officialBadge} ${premiumBadge}</div>
                 <div class="related-meta">${escapeHTML(doc.TenMonHoc || 'Không có môn học')}</div>
                 <div class="related-stats">
                     <span><i class="fa-solid fa-download"></i> ${downloads}</span>
@@ -178,7 +181,7 @@ function renderRelatedDocuments(documents) {
     });
 }
 
-function renderDocumentInfo(doc) {
+function renderDocumentInfo(doc, hasPurchased) {
     document.getElementById('doc-title').textContent = doc.TenTL;
     const authorNameEl = document.getElementById('doc-author-name');
     const authorProfileUrl = getUserProfileUrl(doc.MaND_NguoiDang);
@@ -207,7 +210,6 @@ function renderDocumentInfo(doc) {
         authorAvatarEl.style.color = 'var(--primary)';
     }
     
-    
     const dateObj = new Date(doc.NgayDang);
     const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
     const dateOnlyStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
@@ -234,8 +236,12 @@ function renderDocumentInfo(doc) {
     else if (loaiFile === 'docx' || loaiFile === 'doc') icon = 'fa-pen-to-square';
     
     const previewContainer = document.querySelector('.preview-pages');
-    if (loaiFile === 'pdf') {
-        const fileUrlFull = `http://localhost:3000${doc.FileURL}`;
+    if (previewContainer) {
+        previewContainer.style.background = '';
+        previewContainer.style.border = '';
+    }
+    if (loaiFile === 'pdf' || (doc.PreviewURL && doc.PreviewURL !== 'null')) {
+        const fileUrlFull = `http://localhost:3000${doc.PreviewURL || doc.FileURL}`;
         previewContainer.innerHTML = `<iframe src="${fileUrlFull}#toolbar=0" style="width: 100%; height: 100%; border: none;"></iframe>`;
         previewContainer.style.width = '100%';
         previewContainer.style.height = 'calc(100% - 44px)';
@@ -249,10 +255,8 @@ function renderDocumentInfo(doc) {
         `;
     }
 
-    
     const badgesContainer = document.getElementById('doc-badges');
     badgesContainer.innerHTML = '';
-    
     
     const fileBadge = document.createElement('span');
     fileBadge.className = `badge ${badgeClass}`;
@@ -271,6 +275,84 @@ function renderDocumentInfo(doc) {
         officialBadge.className = 'badge badge-official';
         officialBadge.innerHTML = `<i class="fa-solid fa-check"></i> Tài liệu chính thống`;
         badgesContainer.appendChild(officialBadge);
+    }
+
+    if (doc.LaTaiLieuDocQuyen) {
+        const premiumBadge = document.createElement('span');
+        premiumBadge.className = 'badge';
+        premiumBadge.style.backgroundColor = '#FEF3C7';
+        premiumBadge.style.color = '#B45309';
+        premiumBadge.innerHTML = `<i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM (${doc.GiaXu || 0} Xu)`;
+        badgesContainer.appendChild(premiumBadge);
+    }
+    
+    const btnDownload = document.getElementById('btn-download');
+    if (btnDownload) {
+        if (doc.LaTaiLieuDocQuyen && !hasPurchased) {
+            let isAuthor = false;
+            let isAdmin = false;
+            if (token) {
+                try {
+                    const payload = decodeJWT(token);
+                    if (payload && payload.MaND === doc.MaND_NguoiDang) isAuthor = true;
+                    if (payload && payload.VaiTro === 'Admin') isAdmin = true;
+                } catch(e) {}
+            }
+            if (!isAuthor && !isAdmin) {
+                btnDownload.innerHTML = `<span><i class="fa-solid fa-lock"></i></span> Mở khoá (${doc.GiaXu || 0} Xu)`;
+                btnDownload.style.backgroundColor = '#F59E0B';
+                btnDownload.onclick = async () => {
+                    if (!token) return Swal.fire('Vui lòng đăng nhập để mở khoá tài liệu.');
+                    
+                    const result = await Swal.fire({
+                        title: 'Mở khoá tài liệu',
+                        html: `Bạn có muốn mở khoá tài liệu <b>${doc.TenTL}</b> với giá <b>${doc.GiaXu} Xu</b> không?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Đồng ý',
+                        cancelButtonText: 'Hủy'
+                    });
+
+                    if (result.isConfirmed) {
+                        try {
+                            const res = await fetch(`${API_URL}/documents/${doc.MaTL}/buy`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            const buyData = await res.json();
+                            if (res.ok) {
+                                Swal.fire('Thành công', 'Đã mở khoá tài liệu!', 'success');
+                                fetchDocumentDetails(); 
+                            } else {
+                                Swal.fire('Thất bại', buyData.message, 'error');
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            Swal.fire('Lỗi server', 'Không thể xử lý giao dịch lúc này.', 'error');
+                        }
+                    }
+                };
+                
+                const previewContainer = document.querySelector('.preview-pages');
+                if (previewContainer) {
+                    previewContainer.innerHTML = `
+                      <i class="fa-solid fa-lock" style="font-size: 64px; color: #FCD34D; margin-bottom: 16px;"></i>
+                      <p style="color: #92400E; font-size: 16px; font-weight: 500;">Tài liệu PREMIUM đã bị khóa.</p>
+                      <p style="color: #B45309; font-size: 14px; margin-top: 8px;">Vui lòng mở khoá để xem trước và tải về.</p>
+                    `;
+                    previewContainer.style.background = '#FFFBEB';
+                    previewContainer.style.border = '1px solid #FDE68A';
+                }
+            } else {
+                btnDownload.innerHTML = `<span><i class="fa-solid fa-download"></i></span> Tải xuống`;
+                btnDownload.style.backgroundColor = '';
+                btnDownload.onclick = handleDownload;
+            }
+        } else {
+            btnDownload.innerHTML = `<span><i class="fa-solid fa-download"></i></span> Tải xuống`;
+            btnDownload.style.backgroundColor = '';
+            btnDownload.onclick = handleDownload;
+        }
     }
     
     
@@ -312,7 +394,7 @@ function updateStarUI(score) {
     });
 }
 
-function lockRatingUI(message = 'Bạn đã đánh giá tài liệu này.') {
+function lockRatingUI(message = 'Cảm ơn bạn đã đánh giá') {
     hasSubmittedRating = true;
     const stars = document.querySelectorAll('#doc-rating-stars i');
     stars.forEach(star => {
@@ -348,60 +430,18 @@ function setupEventListeners() {
         });
     }
 
-    
-    document.getElementById('btn-download').addEventListener('click', async () => {
-        if (!token) {
-            Swal.fire('Vui lòng đăng nhập để tải tài liệu.');
-            return;
-        }
-        try {
-            const res = await fetch(`${API_URL}/documents/${currentMaTL}/download`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                
-                let fileName = `Tailieu_${currentMaTL}`;
-                const downloadFileName = res.headers.get('x-download-filename');
-                if (downloadFileName) {
-                    fileName = decodeURIComponent(downloadFileName);
-                }
-                const disposition = res.headers.get('content-disposition');
-                if (!downloadFileName && disposition && disposition.indexOf('filename=') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches[1]) { 
-                        fileName = matches[1].replace(/['"]/g, '');
-                    }
-                }
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-                
-                const countEl = document.getElementById('doc-downloads');
-                countEl.textContent = (parseInt(countEl.textContent.replace(/,/g, '')) + 1).toLocaleString();
-                const ratingHint = document.querySelector('.rating-count');
-                if (ratingHint && !hasSubmittedRating) {
-                    ratingHint.textContent = 'Bấm vào sao để đánh giá.';
-                }
-            } else {
-                const errData = await res.json();
-                Swal.fire(errData.message || 'Lỗi tải xuống hoặc bạn không có quyền tải.');
-            }
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Lỗi kết nối máy chủ.');
-        }
-    });
 
-    
+
+    let isBookmarking = false;
     document.getElementById('btn-bookmark').addEventListener('click', async () => {
         if (!token) return Swal.fire('Vui lòng đăng nhập để lưu tài liệu.');
+        if (isBookmarking) return;
+        
+        isBookmarking = true;
+        const btnBookmark = document.getElementById('btn-bookmark');
+        btnBookmark.style.pointerEvents = 'none';
+        btnBookmark.style.opacity = '0.7';
+
         try {
             const res = await fetch(`${API_URL}/documents/${currentMaTL}/bookmark`, {
                 method: 'POST',
@@ -423,6 +463,12 @@ function setupEventListeners() {
             }
         } catch (err) {
             console.error(err);
+        } finally {
+            setTimeout(() => {
+                isBookmarking = false;
+                btnBookmark.style.pointerEvents = 'auto';
+                btnBookmark.style.opacity = '1';
+            }, 2000);
         }
     });
 
@@ -433,7 +479,9 @@ function setupEventListeners() {
         if (!token) return Swal.fire('Vui lòng đăng nhập để báo cáo.');
         if (isReporting) return;
         
-        const { value: lyDo } = await Swal.fire({
+        isReporting = true;
+        
+        const { value: lyDo, isDismissed } = await Swal.fire({
             title: 'Báo cáo vi phạm',
             input: 'textarea',
             inputLabel: 'Nhập lý do báo cáo vi phạm:',
@@ -447,9 +495,14 @@ function setupEventListeners() {
                 }
             }
         });
-        if (!lyDo || lyDo.trim() === '') return;
+        
+        if (isDismissed || !lyDo || lyDo.trim() === '') {
+            setTimeout(() => {
+                isReporting = false;
+            }, 1000);
+            return;
+        }
 
-        isReporting = true;
         const originalHtml = btnReport.innerHTML;
         btnReport.innerHTML = '<span><i class="fa-solid fa-spinner fa-spin"></i></span> Đang gửi...';
         btnReport.style.pointerEvents = 'none';
@@ -519,7 +572,7 @@ function setupEventListeners() {
                     document.getElementById('doc-rating-score').textContent = newScore;
                     const ratingHint = document.querySelector('.rating-count');
                     updateStarUI(Math.round(newScore));
-                    lockRatingUI(`${Number(data.count || 0).toLocaleString('vi-VN')} lượt đánh giá`);
+                    lockRatingUI('Cảm ơn bạn đã đánh giá');
                     Swal.fire('Cảm ơn bạn đã đánh giá.');
                 } else {
                     Swal.fire(data.message);
@@ -717,4 +770,54 @@ function renderComments(comments, documentOwnerId) {
             });
         });
     });
+}
+
+async function handleDownload() {
+    if (!token) {
+        Swal.fire('Vui lòng đăng nhập để tải tài liệu.');
+        return;
+    }
+    try {
+        const res = await fetch(`${API_URL}/documents/${currentMaTL}/download`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            let fileName = `Tailieu_${currentMaTL}`;
+            const downloadFileName = res.headers.get('x-download-filename');
+            if (downloadFileName) {
+                fileName = decodeURIComponent(downloadFileName);
+            }
+            const disposition = res.headers.get('content-disposition');
+            if (!downloadFileName && disposition && disposition.indexOf('filename=') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) { 
+                    fileName = matches[1].replace(/['"]/g, '');
+                }
+            }
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            
+            const countEl = document.getElementById('doc-downloads');
+            countEl.textContent = (parseInt(countEl.textContent.replace(/,/g, '')) + 1).toLocaleString();
+            const ratingHint = document.querySelector('.rating-count');
+            if (ratingHint && !hasSubmittedRating) {
+                ratingHint.textContent = 'Bấm vào sao để đánh giá.';
+            }
+        } else {
+            const errData = await res.json();
+            Swal.fire(errData.message || 'Lỗi tải xuống hoặc bạn không có quyền tải.');
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Lỗi kết nối máy chủ.');
+    }
 }

@@ -17,7 +17,7 @@ router.get('/my', authMiddleware, async (req, res) => {
                 MH.TenMonHoc,
                 MH.CapHoc,
                 UM.NgayTheoDoi,
-                COUNT(DISTINCT CASE WHEN TL.TrangThaiKiemDuyet = 'DaDuyet' THEN TL.MaTL END) AS SoTaiLieu,
+                COUNT(DISTINCT CASE WHEN TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien' THEN TL.MaTL END) AS SoTaiLieu,
                 COUNT(DISTINCT CASE WHEN N.TrangThai = 'HoatDong' OR N.TrangThai IS NULL THEN N.MaNhom END) AS SoNhom
             FROM NGUOIDUNG_MONHOC UM
             JOIN MONHOC MH ON UM.MaMonHoc = MH.MaMonHoc
@@ -52,7 +52,7 @@ router.get('/available', authMiddleware, async (req, res) => {
                 MH.MaMonHoc,
                 MH.TenMonHoc,
                 MH.CapHoc,
-                COUNT(DISTINCT CASE WHEN TL.TrangThaiKiemDuyet = 'DaDuyet' THEN TL.MaTL END) AS SoTaiLieu,
+                COUNT(DISTINCT CASE WHEN TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien' THEN TL.MaTL END) AS SoTaiLieu,
                 COUNT(DISTINCT CASE WHEN N.TrangThai = 'HoatDong' OR N.TrangThai IS NULL THEN N.MaNhom END) AS SoNhom
             FROM MONHOC MH
             LEFT JOIN NGUOIDUNG_MONHOC UM ON UM.MaMonHoc = MH.MaMonHoc AND UM.MaND = ?

@@ -15,7 +15,6 @@ describe('Admin API', () => {
     });
 
     it('Nên báo lỗi 403 nếu user thường cố truy cập Admin Dashboard', async () => {
-        // Token của SinhVien
         const token = generateTestToken({ MaND: 1, VaiTro: 'SinhVien' }); 
         
         mockPoolExecute(app, (query) => {
@@ -32,7 +31,6 @@ describe('Admin API', () => {
     });
 
     it('Nên trả về danh sách tài liệu duyệt nếu là Admin', async () => {
-        // Token của Admin
         const token = generateTestToken({ MaND: 99, VaiTro: 'Admin' }); 
 
         mockPoolExecute(app, (query) => {

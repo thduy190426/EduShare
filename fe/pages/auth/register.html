@@ -45,7 +45,7 @@
       <div class="auth-form-wrapper">
         <div class="auth-header">
           <h2>Tạo tài khoản mới</h2>
-          <p>Đăng kí tài khoản để trở thành thành viên của EduShare</p>
+          <p>Gia nhập cộng đồng EduShare để cùng nhau kiến tạo và chia sẻ tri thức</p>
         </div>
 
         <form id="registerForm">
@@ -104,11 +104,24 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">Trường / Lớp (Tùy chọn):</label>
-            <div class="input-wrapper">
-              <span class="input-icon"><i class="fa-solid fa-building-columns"></i></span>
-              <input type="text" class="form-control" placeholder="VD: Đại học Bách Khoa Hà Nội">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Trường học (Tùy chọn):</label>
+              <div class="input-wrapper">
+                <span class="input-icon"><i class="fa-solid fa-building-columns"></i></span>
+                <select id="registerSchool" class="form-control">
+                  <option value="">Chọn trường học</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Khoa/Ngành (Tùy chọn):</label>
+              <div class="input-wrapper">
+                <span class="input-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+                <select id="registerMajor" class="form-control">
+                  <option value="">Chọn khoa/ngành</option>
+                </select>
+              </div>
             </div>
           </div>
 

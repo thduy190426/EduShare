@@ -88,6 +88,13 @@ async function fetchSubjects() {
 }
 
 window.fetchSubjectSuggestions = async () => {
+    const btn = document.getElementById('btn-refresh-suggestions');
+    if (btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+    }
+
     try {
         const res = await fetch(`${API_URL}/admin/subject-suggestions?status=ChoDuyet`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -104,6 +111,13 @@ window.fetchSubjectSuggestions = async () => {
     } catch (err) {
         console.error(err);
         showToast('error', 'Không thể tải đề xuất môn học.');
+    } finally {
+        if (btn) {
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Làm mới';
+            }, 1000);
+        }
     }
 };
 

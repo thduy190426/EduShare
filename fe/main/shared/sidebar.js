@@ -1,5 +1,5 @@
 import { API_URL } from './config.js';
-import { decodeJWT, getAssetUrl, getToken, getAvatar, clearAuthSession } from './utils.js';
+import { decodeJWT, getAssetUrl, getToken, getAvatar, clearAuthSession, showToast } from './utils.js';
 
 const SIDEBAR_ITEMS = [
     { label: 'Trang chủ', icon: 'fa-house', href: '../user/userHome.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -8,9 +8,11 @@ const SIDEBAR_ITEMS = [
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
   
     { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], group: 'admin' },
     { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin'], badge: 'pendingDocs', group: 'admin' },
+    { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], group: 'admin' },
     { label: 'Người dùng', icon: 'fa-users-gear', href: '../admin/adminUserManagement.html', roles: ['Admin'], group: 'admin' },
     { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], group: 'admin' },
     { label: 'Quản lý Nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
@@ -73,10 +75,13 @@ async function renderSidebar() {
         html += `</div>`;
     }
 
+    const isInitiallyCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    const toggleIconClass = isInitiallyCollapsed ? 'fa-arrow-right' : 'fa-arrow-left';
+
     html += `
         <div class="menu-group hide-on-tablet-mobile" style="margin-top: auto; padding-top: 24px; border-top: 1px solid var(--border); margin-bottom: 0;">
             <div class="sidebar-toggle" id="btn-toggle-sidebar">
-                <i class="fa-solid fa-bars" style="font-size: 20px;"></i>
+                <i class="fa-solid ${toggleIconClass}" id="icon-toggle-sidebar" style="font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border); background-color: var(--white); color: var(--text-secondary); box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;"></i>
             </div>
             <a href="#" id="btn-logout-sidebar" class="menu-item" style="color: var(--danger);">
                 <span class="menu-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
@@ -96,8 +101,16 @@ async function renderSidebar() {
     if (btnLogout) {
         btnLogout.addEventListener('click', (e) => {
             e.preventDefault();
-            clearAuthSession();
-            window.location.href = '../auth/login.html';
+            try {
+                clearAuthSession();
+                showToast('success', 'Đăng xuất thành công');
+                setTimeout(() => {
+                    window.location.href = '../auth/login.html';
+                }, 1000);
+            } catch (error) {
+                console.error(error);
+                showToast('error', 'Đăng xuất thất bại');
+            }
         });
     }
 
@@ -110,6 +123,17 @@ async function renderSidebar() {
             document.documentElement.classList.toggle('sidebar-collapsed');
             const isCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
             localStorage.setItem('sidebar-collapsed', isCollapsed);
+            
+            const iconEl = document.getElementById('icon-toggle-sidebar');
+            if (iconEl) {
+                if (isCollapsed) {
+                    iconEl.classList.remove('fa-arrow-left', 'fa-bars');
+                    iconEl.classList.add('fa-arrow-right');
+                } else {
+                    iconEl.classList.remove('fa-arrow-right', 'fa-bars');
+                    iconEl.classList.add('fa-arrow-left');
+                }
+            }
         });
     }
 
@@ -270,6 +294,8 @@ function renderNavbarUserProfile() {
         if (roleEl && payload.VaiTro) {
             roleEl.textContent = payload.VaiTro === 'Admin' ? 'Quản trị viên' : (payload.VaiTro === 'GiaoVien' ? 'Giáo viên' : 'Sinh viên');
         }
+        
+
     } catch (e) {
         console.error('Lỗi load user profile navbar:', e);
     }

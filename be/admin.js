@@ -13,7 +13,7 @@ router.get('/documents/list', adminMiddleware, async (req, res) => {
                 TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.LoaiFile, TL.NgayDang,
                 ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 MH.TenMonHoc,
-                TL.TrangThaiKiemDuyet, TL.LyDoTuChoi
+                TL.TrangThaiKiemDuyet, TL.LyDoTuChoi, TL.TrangThaiHienThi
             FROM TAILIEU TL
             LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
@@ -23,6 +23,34 @@ router.get('/documents/list', adminMiddleware, async (req, res) => {
         res.status(200).json(rows);
     } catch (error) {
         console.error('Lỗi khi lấy danh sách kiểm duyệt:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi lấy dữ liệu.' });
+    }
+});
+
+router.get('/documents/counts', adminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT TrangThaiKiemDuyet, COUNT(*) as count 
+            FROM TAILIEU 
+            GROUP BY TrangThaiKiemDuyet
+        `);
+        
+        const counts = {
+            ChoDuyet: 0,
+            DaDuyet: 0,
+            TuChoi: 0
+        };
+        
+        rows.forEach(row => {
+            if (counts[row.TrangThaiKiemDuyet] !== undefined) {
+                counts[row.TrangThaiKiemDuyet] = row.count;
+            }
+        });
+        
+        res.status(200).json(counts);
+    } catch (error) {
+        console.error('Lỗi khi lấy số lượng tài liệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy dữ liệu.' });
     }
 });
@@ -99,6 +127,35 @@ router.put('/documents/:maTL/review', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ trong quá trình xử lý.' });
     } finally {
         conn.release();
+    }
+});
+
+router.put('/documents/:maTL/toggle-visibility', adminMiddleware, async (req, res) => {
+    const maTL = req.params.maTL;
+    
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [rows] = await pool.execute('SELECT TrangThaiHienThi, TrangThaiKiemDuyet FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+        }
+        
+        if (rows[0].TrangThaiKiemDuyet !== 'DaDuyet') {
+            return res.status(400).json({ message: 'Chỉ có thể ẩn/hiện tài liệu đã được duyệt.' });
+        }
+        
+        const newStatus = rows[0].TrangThaiHienThi === 'Hien' ? 'An' : 'Hien';
+        
+        await pool.execute('UPDATE TAILIEU SET TrangThaiHienThi = ? WHERE MaTL = ?', [newStatus, maTL]);
+        
+        res.status(200).json({ 
+            message: newStatus === 'An' ? 'Đã ẩn tài liệu.' : 'Đã hiện tài liệu.',
+            TrangThaiHienThi: newStatus
+        });
+    } catch (error) {
+        console.error('Lỗi khi toggle ẩn/hiện tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 
@@ -422,6 +479,28 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     } finally {
         conn.release();
+    }
+});
+
+router.delete('/reports/:maBC', adminMiddleware, async (req, res) => {
+    const maBC = Number.parseInt(req.params.maBC, 10);
+
+    if (!Number.isInteger(maBC) || maBC <= 0) {
+        return res.status(400).json({ message: 'Báo cáo không hợp lệ.' });
+    }
+
+    try {
+        const pool = req.app.locals.pool;
+        const [result] = await pool.execute('DELETE FROM BAOCAOVIPHAM WHERE MaBC = ?', [maBC]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy báo cáo để xoá.' });
+        }
+
+        res.status(200).json({ message: 'Đã xoá báo cáo thành công.' });
+    } catch (error) {
+        console.error('Lỗi API DELETE /admin/reports/:maBC:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi xoá báo cáo.' });
     }
 });
 

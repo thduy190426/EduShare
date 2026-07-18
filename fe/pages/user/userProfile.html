@@ -75,15 +75,17 @@
             <span class="role-badge" id="header-role">...</span>
           </h1>
           <div class="profile-desc">
-            <span><i class="fa-solid fa-envelope"></i> <span id="header-email">...</span></span>
+            <span><i class="fa-solid fa-envelope" style="width: 16px; text-align: center; margin-right: 6px;"></i> <span id="header-email">...</span></span>
             <span style="margin: 0 10px; color: var(--border);">|</span>
             <span style="cursor:pointer; color: var(--primary);"
-              onclick="window.openFollowModal && window.openFollowModal('followers')"><i class="fa-solid fa-users"></i>
+              onclick="window.openFollowModal && window.openFollowModal('followers')"><i class="fa-solid fa-users " style="width: 16px; text-align: center; margin-right: 8px;"></i>
               Người theo dõi: <strong id="count-followers">0</strong></span>
             <span style="margin: 0 10px; color: var(--border);">|</span>
             <span style="cursor:pointer; color: var(--primary);"
               onclick="window.openFollowModal && window.openFollowModal('following')"><i
-                class="fa-solid fa-user-check"></i> Đang theo dõi: <strong id="count-following">0</strong></span>
+                class="fa-solid fa-user-check" style="width: 16px; text-align: center; margin-right: 8px;"></i> Đang theo dõi: <strong id="count-following">0</strong></span>
+            <span style="margin: 0 10px; color: var(--border);">|</span>
+            <span style="color: #D97706;" title="Số dư xu"><i class="fa-solid fa-coins" style="width: 16px; text-align: center; margin-right: 8px;"></i> Số dư: <strong id="header-soduxu">0</strong> Xu</span>
           </div>
         </div>
       </div>
@@ -115,10 +117,24 @@
               </select>
             </div>
           </div>
-          <div class="form-row" style="margin-top: 15px;">
+          <div class="form-row" style="margin-top: 15px; grid-template-columns: 1fr;">
             <div class="form-group" style="width: 100%;">
               <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ: </label>
               <input type="text" id="input-diachi" class="form-control" placeholder="Nhập địa chỉ của bạn">
+            </div>
+          </div>
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-building-columns" style="margin-right: 6px;"></i> Trường học (Tùy chọn): </label>
+              <select id="input-truonghoc" class="form-control">
+                <option value="">Chọn trường học</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-graduation-cap" style="margin-right: 6px;"></i> Khoa/Ngành (Tùy chọn): </label>
+              <select id="input-khoanganh" class="form-control">
+                <option value="">Chọn khoa/ngành</option>
+              </select>
             </div>
           </div>
 
@@ -142,19 +158,28 @@
           <form>
             <div class="form-group">
               <label class="form-label">Mật khẩu hiện tại</label>
-              <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
-                autocomplete="current-password">
+              <div style="position: relative;">
+                <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
+                  autocomplete="current-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
+                <i class="fa-regular fa-eye-slash toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+              </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Mật khẩu mới</label>
-                <input type="password" id="input-new-pw" class="form-control" placeholder="Mật khẩu mới"
-                  autocomplete="new-password">
+                <div style="position: relative;">
+                  <input type="password" id="input-new-pw" class="form-control" placeholder="Mật khẩu mới"
+                    autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
+                  <i class="fa-regular fa-eye-slash toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                </div>
               </div>
               <div class="form-group">
                 <label class="form-label">Xác nhận mật khẩu mới</label>
-                <input type="password" id="input-confirm-pw" class="form-control" placeholder="Nhập lại mật khẩu mới"
-                  autocomplete="new-password">
+                <div style="position: relative;">
+                  <input type="password" id="input-confirm-pw" class="form-control" placeholder="Nhập lại mật khẩu mới"
+                    autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
+                  <i class="fa-regular fa-eye-slash toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                </div>
               </div>
             </div>
             <div class="form-actions">
@@ -175,6 +200,12 @@
           <div class="tab-item" id="tab-bookmarks">
             <i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu
           </div>
+          <div class="tab-item" id="tab-purchased">
+            <i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM
+          </div>
+          <div class="tab-item" id="tab-transactions">
+            <i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Lịch sử giao dịch Xu
+          </div>
           <div class="tab-item" id="tab-my-reports">
             <i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm
           </div>
@@ -186,6 +217,14 @@
 
         <div class="doc-list" id="bookmarks-container" style="display: none;">
           <p>Đang tải tài liệu đã lưu...</p>
+        </div>
+
+        <div class="doc-list" id="purchased-container" style="display: none;">
+          <p>Đang tải tài liệu đã mua...</p>
+        </div>
+
+        <div class="doc-list" id="transactions-container" style="display: none;">
+          <p>Đang tải lịch sử giao dịch...</p>
         </div>
 
         <div class="doc-list" id="my-reports-container" style="display: none;">
@@ -225,7 +264,6 @@
     </div>
   </div>
 
-  <!-- Crop Modal -->
   <div id="crop-modal" class="modal-overlay"
     style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center;">
     <div class="modal-content"
@@ -237,6 +275,33 @@
       <div style="display: flex; gap: 12px; margin-top: 24px; width: 100%; justify-content: flex-end;">
         <button type="button" id="btn-cancel-crop" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 500;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
         <button type="button" id="btn-save-crop" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 500;"><i class="fa-solid fa-crop-simple" style="margin-right: 6px;"></i> Cắt & Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-account-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); z-index: 1050; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;">
+    <div class="modal-content"
+      style="background: var(--white); width: 100%; max-width: 450px; border-radius: var(--radius-card); padding: 24px; display: flex; flex-direction: column; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: flex; justify-content: center; align-items: center; font-size: 24px; flex-shrink: 0;">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h2 style="margin: 0; font-size: 20px; color: #111827; font-weight: 700;">Xoá vĩnh viễn tài khoản?</h2>
+        </div>
+      </div>
+      <p style="color: #4B5563; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Hành động này không thể hoàn tác. Toàn bộ dữ liệu của bạn sẽ bị xoá khỏi hệ thống. Vui lòng nhập mật khẩu để xác nhận.</p>
+      
+      <div class="form-group" style="margin-bottom: 24px;">
+        <label class="form-label" style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
+        <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..." autocomplete="current-password" style="width: 100%; box-sizing: border-box;">
+        <span id="delete-pw-error" style="color: #EF4444; font-size: 13px; display: none; margin-top: 6px; font-weight: 500;"><i class="fa-solid fa-circle-exclamation" style="margin-right: 4px;"></i> <span></span></span>
+      </div>
+
+      <div style="display: flex; gap: 12px; width: 100%; justify-content: flex-end;">
+        <button type="button" id="btn-cancel-delete" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 600; color: #4B5563; transition: all 0.2s;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
+        <button type="button" id="btn-confirm-delete" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; border: none; background: #EF4444; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;"><i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Xác nhận</button>
       </div>
     </div>
   </div>

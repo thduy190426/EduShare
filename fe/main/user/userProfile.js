@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession } from '../shared/utils.js';
+import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML } from '../shared/utils.js';
 
 const token = getToken();
 
@@ -70,12 +70,16 @@ function checkProfileChanges() {
     const currentTuoi = document.getElementById('input-tuoi').value;
     const currentGioiTinh = document.getElementById('input-gioitinh').value;
     const currentDiaChi = document.getElementById('input-diachi').value;
+    const currentTruongHoc = document.getElementById('input-truonghoc').value;
+    const currentKhoaNganh = document.getElementById('input-khoanganh').value;
 
     const isChanged = 
         currentHoTen !== initialProfileState.hoTen ||
         currentTuoi !== initialProfileState.tuoi ||
         currentGioiTinh !== initialProfileState.gioiTinh ||
-        currentDiaChi !== initialProfileState.diaChi;
+        currentDiaChi !== initialProfileState.diaChi ||
+        currentTruongHoc !== initialProfileState.truongHoc ||
+        currentKhoaNganh !== initialProfileState.khoaNganh;
 
     const btnSave = document.getElementById('btn-save-profile');
     if (isChanged && currentHoTen.trim() !== '') {
@@ -167,19 +171,49 @@ window.closeFollowModal = function() {
 
 async function initProfile() {
     try {
-        const res = await fetch(`${API_URL}/users/profile`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const [res, schoolRes, majorRes] = await Promise.all([
+            fetch(`${API_URL}/users/profile`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`${API_URL}/truonghoc`),
+            fetch(`${API_URL}/khoanganh`)
+        ]);
         if (!res.ok) throw new Error('Không thể lấy thông tin cá nhân.');
         
         const data = await res.json();
         const profile = data.profile;
         currentProfile = profile;
+
+        if (schoolRes.ok && majorRes.ok) {
+            const schoolData = await schoolRes.json();
+            const majorData = await majorRes.json();
+            
+            const schoolSelect = document.getElementById('input-truonghoc');
+            const majorSelect = document.getElementById('input-khoanganh');
+            
+            if (schoolSelect) {
+                schoolData.truongHoc.forEach(school => {
+                    const option = document.createElement('option');
+                    option.value = school.TenTruong;
+                    option.textContent = school.TenTruong;
+                    schoolSelect.appendChild(option);
+                });
+            }
+            
+            if (majorSelect) {
+                majorData.khoaNganh.forEach(major => {
+                    const option = document.createElement('option');
+                    option.value = major.TenKhoa;
+                    option.textContent = major.TenKhoa;
+                    majorSelect.appendChild(option);
+                });
+            }
+        }
         
         
         document.getElementById('header-name').textContent = profile.HoTen;
         document.getElementById('header-email').textContent = profile.Email;
         document.getElementById('header-role').textContent = profile.VaiTro === 'SinhVien' ? 'Sinh viên' : profile.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên';
+        const elSoDuXu = document.getElementById('header-soduxu');
+        if (elSoDuXu) elSoDuXu.textContent = (profile.SoDuXu || 0).toLocaleString();
         
         renderCurrentUserAvatar(profile);
 
@@ -189,12 +223,16 @@ async function initProfile() {
         document.getElementById('input-tuoi').value = profile.Tuoi || '';
         document.getElementById('input-gioitinh').value = normalizeGioiTinhValue(profile.GioiTinh);
         document.getElementById('input-diachi').value = profile.DiaChi || '';
+        document.getElementById('input-truonghoc').value = profile.TruongHoc || '';
+        document.getElementById('input-khoanganh').value = profile.KhoaNganh || '';
         
         initialProfileState = {
             hoTen: profile.HoTen || '',
             tuoi: profile.Tuoi ? String(profile.Tuoi) : '',
             gioiTinh: normalizeGioiTinhValue(profile.GioiTinh),
-            diaChi: profile.DiaChi || ''
+            diaChi: profile.DiaChi || '',
+            truongHoc: profile.TruongHoc || '',
+            khoaNganh: profile.KhoaNganh || ''
         };
         checkProfileChanges();
     } catch (err) {
@@ -208,6 +246,8 @@ async function saveProfile() {
     const tuoi = document.getElementById('input-tuoi').value;
     const gioiTinh = document.getElementById('input-gioitinh').value;
     const diaChi = document.getElementById('input-diachi').value;
+    const truongHoc = document.getElementById('input-truonghoc').value;
+    const khoaNganh = document.getElementById('input-khoanganh').value;
     
     if (!hoTen.trim()) return Toast.fire({ icon: 'warning', title: 'Họ tên không được để trống.' });
 
@@ -218,7 +258,7 @@ async function saveProfile() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi })
+            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh })
         });
         const data = await res.json();
         if (res.ok) {
@@ -301,68 +341,105 @@ async function changePassword() {
     }
 }
 
-async function deleteAccount() {
-    const result = await Swal.fire({
-        title: 'Xoá vĩnh viễn tài khoản?',
-        html: 'Hành động này không thể hoàn tác. Vui lòng nhập mật khẩu để xác nhận.',
-        icon: 'warning',
-        input: 'password',
-        inputPlaceholder: 'Mật khẩu hiện tại',
-        inputAttributes: {
-            autocomplete: 'current-password',
-            autocapitalize: 'off',
-            autocorrect: 'off'
-        },
-        showCancelButton: true,
-        confirmButtonText: 'Xoá vĩnh viễn',
-        cancelButtonText: 'Huỷ',
-        confirmButtonColor: '#EF4444',
-        preConfirm: (matKhau) => {
-            if (!matKhau) {
-                Swal.showValidationMessage('Vui lòng nhập mật khẩu để xác nhận.');
-                return false;
-            }
-            return matKhau;
-        }
-    });
+let isDeletingAccount = false;
 
-    if (!result.isConfirmed) return;
+function openDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+    
+    const inputPw = document.getElementById('input-delete-pw');
+    const errorMsg = document.getElementById('delete-pw-error');
+    const btnConfirm = document.getElementById('btn-confirm-delete');
+    
+    inputPw.value = '';
+    errorMsg.style.display = 'none';
+    
+    if (btnConfirm) {
+        btnConfirm.disabled = true;
+        btnConfirm.style.opacity = '0.5';
+        btnConfirm.style.cursor = 'not-allowed';
+    }
+    
+    modal.style.display = 'flex';
+    modal.offsetHeight; 
+    modal.style.opacity = '1';
+    modal.querySelector('.modal-content').style.transform = 'scale(1)';
+    
+    setTimeout(() => {
+        inputPw.focus();
+    }, 300);
+}
+
+function closeDeleteAccountModal() {
+    const modal = document.getElementById('delete-account-modal');
+    if (!modal) return;
+    modal.style.opacity = '0';
+    modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function processDeleteAccount() {
+    if (isDeletingAccount) return;
+    
+    const inputPw = document.getElementById('input-delete-pw');
+    const errorMsg = document.getElementById('delete-pw-error');
+    const matKhau = inputPw.value.trim();
+    const errorTextSpan = errorMsg.querySelector('span');
+    
+    if (!matKhau) {
+        errorTextSpan.textContent = 'Vui lòng nhập mật khẩu để xác nhận.';
+        errorMsg.style.display = 'block';
+        return;
+    }
+    
+    errorMsg.style.display = 'none';
+    isDeletingAccount = true;
+    
+    const btnConfirm = document.getElementById('btn-confirm-delete');
+    if (!btnConfirm) return;
+    const originalText = btnConfirm.innerHTML;
+    btnConfirm.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang xử lý...';
+    btnConfirm.style.pointerEvents = 'none';
+    btnConfirm.style.opacity = '0.7';
 
     try {
-        Swal.fire({
-            title: 'Đang xoá tài khoản...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
-
         const res = await fetch(`${API_URL}/users/profile`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ matKhau: result.value })
+            body: JSON.stringify({ matKhau })
         });
         const data = await res.json();
 
         if (!res.ok) {
-            Swal.close();
-            Toast.fire({ icon: 'error', title: data.message || 'Không thể xoá tài khoản.' });
+            errorTextSpan.textContent = data.message || 'Không thể xoá tài khoản.';
+            errorMsg.style.display = 'block';
+            isDeletingAccount = false;
+            btnConfirm.innerHTML = originalText;
+            btnConfirm.style.pointerEvents = 'auto';
+            btnConfirm.style.opacity = '1';
             return;
         }
 
         clearAuthSession();
-        await Swal.fire({
-            icon: 'success',
-            title: 'Đã xoá tài khoản',
-            text: data.message || 'Tài khoản của bạn đã được xoá vĩnh viễn.',
-            confirmButtonText: 'Đóng'
-        });
-        window.location.href = '../guest/guestHome.html';
+        Toast.fire({ icon: 'success', title: data.message || 'Đã xoá tài khoản thành công.' });
+        closeDeleteAccountModal();
+        setTimeout(() => {
+            window.location.href = '../guest/guestHome.html';
+        }, 1500);
     } catch (err) {
         console.error(err);
-        Swal.close();
-        Toast.fire({ icon: 'error', title: 'Không thể xoá tài khoản lúc này.' });
+        errorTextSpan.textContent = 'Không thể xoá tài khoản lúc này. Vui lòng thử lại sau.';
+        errorMsg.style.display = 'block';
+        isDeletingAccount = false;
+        btnConfirm.innerHTML = originalText;
+        btnConfirm.style.pointerEvents = 'auto';
+        btnConfirm.style.opacity = '1';
     }
 }
 
@@ -418,6 +495,8 @@ async function fetchMyDocuments() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
+        const tab = document.getElementById('tab-my-docs');
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi (${data.documents ? data.documents.length : 0})`;
         const container = document.getElementById('my-docs-container');
         container.innerHTML = '';
         
@@ -432,10 +511,11 @@ async function fetchMyDocuments() {
             el.style.animationDelay = `${index * 0.04}s`;
             
             let icon = 'fa-file';
+            let iconColor = 'inherit';
             let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
-            if (loaiFile === 'pdf') icon = 'fa-file-pdf';
-            else if (loaiFile === 'pptx' || loaiFile === 'ppt') icon = 'fa-chart-column';
-            else if (loaiFile === 'docx' || loaiFile === 'doc') icon = 'fa-pen-to-square';
+            if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; iconColor = '#DC2626'; }
+            else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-file-powerpoint'; iconColor = '#EA580C'; }
+            else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-file-word'; iconColor = '#2563EB'; }
 
             const statusColor = doc.TrangThaiKiemDuyet === 'DaDuyet' ? 'var(--success)' : 
                                (doc.TrangThaiKiemDuyet === 'ChoDuyet' ? 'var(--warning)' : 'var(--danger)');
@@ -444,9 +524,9 @@ async function fetchMyDocuments() {
 
             el.innerHTML = `
                 <div class="doc-info">
-                  <div class="doc-icon"><i class="fa-solid ${icon}"></i></div>
+                  <div class="doc-icon"><i class="fa-solid ${icon}" style="color: ${iconColor};"></i></div>
                   <div>
-                    <div class="doc-title">${doc.TenTL}</div>
+                    <div class="doc-title">${doc.TenTL} ${doc.LaTaiLieuDocQuyen ? `<span style="margin-left: 8px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM</span>` : ''}</div>
                     <div class="doc-meta">
                       <span>Môn học: ${doc.TenMonHoc || 'Không xác định'}</span>
                       <span>•</span>
@@ -473,6 +553,8 @@ async function fetchBookmarks() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
+        const tab = document.getElementById('tab-bookmarks');
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu (${data.documents ? data.documents.length : 0})`;
         const container = document.getElementById('bookmarks-container');
         container.innerHTML = '';
         
@@ -487,18 +569,19 @@ async function fetchBookmarks() {
             el.style.animationDelay = `${index * 0.04}s`;
             
             let icon = 'fa-file';
+            let iconColor = 'inherit';
             let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
-            if (loaiFile === 'pdf') icon = 'fa-file-pdf';
-            else if (loaiFile === 'pptx' || loaiFile === 'ppt') icon = 'fa-chart-column';
-            else if (loaiFile === 'docx' || loaiFile === 'doc') icon = 'fa-pen-to-square';
+            if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; iconColor = '#DC2626'; }
+            else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-file-powerpoint'; iconColor = '#EA580C'; }
+            else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-file-word'; iconColor = '#2563EB'; }
 
             const dateStr = new Date(doc.NgayLuu).toLocaleDateString('vi-VN');
 
             el.innerHTML = `
                 <div class="doc-info">
-                  <div class="doc-icon"><i class="fa-solid ${icon}"></i></div>
+                  <div class="doc-icon"><i class="fa-solid ${icon}" style="color: ${iconColor};"></i></div>
                   <div>
-                    <div class="doc-title">${doc.TenTL}</div>
+                    <div class="doc-title">${doc.TenTL} ${doc.LaTaiLieuDocQuyen ? `<span style="margin-left: 8px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM</span>` : ''}</div>
                     <div class="doc-meta">
                       <span>Người đăng: ${doc.TenNguoiDang}</span>
                       <span>•</span>
@@ -519,12 +602,117 @@ async function fetchBookmarks() {
     }
 }
 
+async function fetchPurchasedDocuments() {
+    try {
+        const res = await fetch(`${API_URL}/users/purchased-documents`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const tab = document.getElementById('tab-purchased');
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM (${data.documents ? data.documents.length : 0})`;
+        const container = document.getElementById('purchased-container');
+        container.innerHTML = '';
+        
+        if (!data.documents || data.documents.length === 0) {
+            container.innerHTML = '<p>Bạn chưa mua tài liệu PREMIUM nào.</p>';
+            return;
+        }
+
+        data.documents.forEach((doc, index) => {
+            const el = document.createElement('div');
+            el.className = 'doc-item';
+            el.style.animationDelay = `${index * 0.04}s`;
+            
+            let icon = 'fa-file';
+            let iconColor = 'inherit';
+            let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
+            if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; iconColor = '#DC2626'; }
+            else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-file-powerpoint'; iconColor = '#EA580C'; }
+            else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-file-word'; iconColor = '#2563EB'; }
+
+            const dateStr = new Date(doc.NgayMua).toLocaleDateString('vi-VN');
+
+            el.innerHTML = `
+                <div class="doc-info">
+                  <div class="doc-icon"><i class="fa-solid ${icon}" style="color: ${iconColor};"></i></div>
+                  <div>
+                    <div class="doc-title">${escapeHTML(doc.TenTL)} <span style="margin-left: 8px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i> ĐÃ MUA</span></div>
+                    <div class="doc-meta">
+                      <span>Người bán: ${escapeHTML(doc.TenNguoiBan)}</span>
+                      <span>•</span>
+                      <span>Giá: <strong style="color: #D97706;">${doc.GiaMua} Xu</strong></span>
+                      <span>•</span>
+                      <span style="color:var(--text-secondary);">Ngày mua: ${dateStr}</span>
+                    </div>
+                  </div>
+                </div>
+                <a href="../document/documentDetails.html?id=${doc.MaTL}" class="btn-outline-primary"><i class="fa-solid fa-eye" style="margin-right: 6px;"></i> Xem chi tiết</a>
+            `;
+            container.appendChild(el);
+        });
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function fetchTransactions() {
+    try {
+        const res = await fetch(`${API_URL}/users/transactions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const tab = document.getElementById('tab-transactions');
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Lịch sử giao dịch Xu (${data.transactions ? data.transactions.length : 0})`;
+        const container = document.getElementById('transactions-container');
+        container.innerHTML = '';
+        
+        if (!data.transactions || data.transactions.length === 0) {
+            container.innerHTML = '<p>Bạn chưa có giao dịch nào.</p>';
+            return;
+        }
+
+        data.transactions.forEach((txn, index) => {
+            const el = document.createElement('div');
+            el.className = 'doc-item';
+            el.style.animationDelay = `${index * 0.04}s`;
+            
+            const isCong = txn.LoaiGiaoDich === 'Cong';
+            const icon = isCong ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
+            const iconColor = isCong ? 'var(--success)' : 'var(--danger)';
+            const sign = isCong ? '+' : '-';
+            const amountColor = isCong ? 'var(--success)' : 'var(--danger)';
+            const d = new Date(txn.NgayTao);
+            const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+            const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+            el.innerHTML = `
+                <div class="doc-info" style="flex:1;">
+                  <div class="doc-icon"><i class="fa-solid ${icon}" style="color: ${iconColor};"></i></div>
+                  <div>
+                    <div class="doc-title" style="margin-bottom: 5px;">${escapeHTML(txn.MoTa)}</div>
+                    <div class="doc-meta">
+                      <span style="color:${amountColor}; font-weight:600; font-size: 15px;">${sign}${txn.SoXuThayDoi} Xu</span>
+                      <span>•</span>
+                      <span style="color:var(--text-secondary);"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${timeStr} | ${dateStr}</span>
+                    </div>
+                  </div>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 async function fetchMyReports() {
     try {
         const res = await fetch(`${API_URL}/users/my-reports`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
+        const tab = document.getElementById('tab-my-reports');
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm (${data.reports ? data.reports.length : 0})`;
         const container = document.getElementById('my-reports-container');
         container.innerHTML = '';
         
@@ -570,19 +758,27 @@ async function fetchMyReports() {
 function setupTabListeners() {
     const tabMyDocs = document.getElementById('tab-my-docs');
     const tabBookmarks = document.getElementById('tab-bookmarks');
+    const tabPurchased = document.getElementById('tab-purchased');
+    const tabTransactions = document.getElementById('tab-transactions');
     const tabMyReports = document.getElementById('tab-my-reports');
     
     const containerMyDocs = document.getElementById('my-docs-container');
     const containerBookmarks = document.getElementById('bookmarks-container');
+    const containerPurchased = document.getElementById('purchased-container');
+    const containerTransactions = document.getElementById('transactions-container');
     const containerMyReports = document.getElementById('my-reports-container');
 
     function resetTabs() {
         tabMyDocs.classList.remove('active');
         tabBookmarks.classList.remove('active');
+        tabPurchased.classList.remove('active');
+        tabTransactions.classList.remove('active');
         tabMyReports.classList.remove('active');
         
         containerMyDocs.style.display = 'none';
         containerBookmarks.style.display = 'none';
+        containerPurchased.style.display = 'none';
+        containerTransactions.style.display = 'none';
         containerMyReports.style.display = 'none';
     }
 
@@ -600,6 +796,25 @@ function setupTabListeners() {
         containerBookmarks.style.display = 'flex';
         containerBookmarks.style.flexDirection = 'column';
         containerBookmarks.style.gap = '15px';
+        fetchBookmarks();
+    });
+    
+    tabPurchased.addEventListener('click', () => {
+        resetTabs();
+        tabPurchased.classList.add('active');
+        containerPurchased.style.display = 'flex';
+        containerPurchased.style.flexDirection = 'column';
+        containerPurchased.style.gap = '15px';
+        fetchPurchasedDocuments();
+    });
+    
+    tabTransactions.addEventListener('click', () => {
+        resetTabs();
+        tabTransactions.classList.add('active');
+        containerTransactions.style.display = 'flex';
+        containerTransactions.style.flexDirection = 'column';
+        containerTransactions.style.gap = '15px';
+        fetchTransactions();
     });
     
     tabMyReports.addEventListener('click', () => {
@@ -608,6 +823,7 @@ function setupTabListeners() {
         containerMyReports.style.display = 'flex';
         containerMyReports.style.flexDirection = 'column';
         containerMyReports.style.gap = '15px';
+        fetchMyReports();
     });
 }
 
@@ -713,21 +929,74 @@ function checkPasswordChanges() {
     }
 }
 
+function checkDeleteAccountPassword() {
+    const inputPw = document.getElementById('input-delete-pw');
+    const btnConfirm = document.getElementById('btn-confirm-delete');
+    
+    if (inputPw && btnConfirm) {
+        const matKhau = inputPw.value.trim();
+        if (matKhau.length >= 6) {
+            btnConfirm.disabled = false;
+            btnConfirm.style.opacity = '1';
+            btnConfirm.style.cursor = 'pointer';
+        } else {
+            btnConfirm.disabled = true;
+            btnConfirm.style.opacity = '0.5';
+            btnConfirm.style.cursor = 'not-allowed';
+        }
+    }
+}
+
 function setupEventListeners() {
     document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
     const btnDeleteAccount = document.getElementById('btn-delete-account');
-    if (btnDeleteAccount) btnDeleteAccount.addEventListener('click', deleteAccount);
+    if (btnDeleteAccount) btnDeleteAccount.addEventListener('click', openDeleteAccountModal);
+    
+    const btnCancelDelete = document.getElementById('btn-cancel-delete');
+    if (btnCancelDelete) btnCancelDelete.addEventListener('click', closeDeleteAccountModal);
+    
+    const btnConfirmDelete = document.getElementById('btn-confirm-delete');
+    if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', processDeleteAccount);
+    
+    const inputDeletePw = document.getElementById('input-delete-pw');
+    if (inputDeletePw) inputDeletePw.addEventListener('input', checkDeleteAccountPassword);
+    
+    const modalOverlay = document.getElementById('delete-account-modal');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeDeleteAccountModal();
+        });
+    }
     
     const btnChangePw = document.getElementById('btn-change-pw');
     btnChangePw.addEventListener('click', changePassword);
     
+    document.querySelectorAll('.toggle-password').forEach(icon => {
+        icon.addEventListener('click', function() {
+            const input = this.previousElementSibling;
+            if (input && input.tagName === 'INPUT') {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.classList.remove('fa-eye-slash');
+                    this.classList.add('fa-eye');
+                    this.style.color = 'var(--primary)';
+                } else {
+                    input.type = 'password';
+                    this.classList.remove('fa-eye');
+                    this.classList.add('fa-eye-slash');
+                    this.style.color = '#6b7280';
+                }
+            }
+        });
+    });
+
     checkPasswordChanges();
     ['input-old-pw', 'input-new-pw', 'input-confirm-pw'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', checkPasswordChanges);
     });
     
-    ['input-hoten', 'input-tuoi', 'input-diachi'].forEach(id => {
+    ['input-hoten', 'input-tuoi', 'input-diachi', 'input-truonghoc', 'input-khoanganh'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', checkProfileChanges);
     });

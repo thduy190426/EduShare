@@ -64,21 +64,21 @@
           <label class="form-label">Loại file: <span style="color:var(--danger)">*</span></label>
           <div class="radio-grid">
             <label class="radio-option">
-              <input type="radio" name="filetype" checked>
+              <input type="radio" name="filetype" value="pdf" checked>
               <div class="radio-card file-type-card">
                 <div class="file-type-icon pdf-icon"><i class="fa-solid fa-file-pdf"></i></div>
                 <div>Tài liệu PDF</div>
               </div>
             </label>
             <label class="radio-option">
-              <input type="radio" name="filetype">
+              <input type="radio" name="filetype" value="docx">
               <div class="radio-card file-type-card">
                 <div class="file-type-icon word-icon"><i class="fa-solid fa-file-word"></i></div>
                 <div>Tài liệu Word</div>
               </div>
             </label>
             <label class="radio-option">
-              <input type="radio" name="filetype">
+              <input type="radio" name="filetype" value="pptx">
               <div class="radio-card file-type-card">
                 <div class="file-type-icon powerpoint-icon"><i class="fa-solid fa-file-powerpoint"></i></div>
                 <div>Tài liệu PowerPoint</div>
@@ -90,6 +90,18 @@
         <div class="form-group">
           <label class="form-label">Mô tả tài liệu:</label>
           <textarea id="moTa" class="form-control" placeholder="Viết mô tả ngắn về nội dung tài liệu..."></textarea>
+        </div>
+
+        <div class="form-group" id="premium-form-group" style="background: #FFFBEB; padding: 15px; border: 1px solid #FDE68A; border-radius: 8px;">
+          <label class="form-label" style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer; color: #92400E;">
+            <input type="checkbox" id="laTaiLieuDocQuyen" style="width: 18px; height: 18px;">
+            <strong><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 6px;"></i> Đánh dấu là "Tài liệu Độc quyền (PREMIUM)"</strong>
+          </label>
+          <p style="margin: 5px 0 12px 26px; font-size: 13px; color: #B45309;">Người dùng khác sẽ cần dùng Xu để tải hoặc xem tài liệu này.</p>
+          <div id="giaXuContainer" style="display: none; margin-left: 26px;">
+            <label class="form-label">Giá yêu cầu (Xu): <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="giaXu" class="form-control" placeholder="Ví dụ: 10" min="1" max="1000" style="max-width: 200px;">
+          </div>
         </div>
 
         <div class="form-group" id="official-form-group" style="display: none; background: #F0FDF4; padding: 15px; border: 1px solid #BBF7D0; border-radius: 8px;">
@@ -130,10 +142,6 @@
           <div class="action-note">
             <span><i class="fa-solid fa-triangle-exclamation"></i></span> Tài liệu sẽ được Admin kiểm duyệt trước khi hiển thị công khai.
           </div>
-          <button type="button" class="btn btn-ghost" onclick="window.history.back()">
-            <i class="fa-solid fa-xmark"></i>
-            Hủy
-          </button>
           <button type="submit" class="btn btn-primary">
             <i class="fa-solid fa-cloud-arrow-up"></i>
             Đăng tài liệu
