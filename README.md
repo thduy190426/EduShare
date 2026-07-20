@@ -17,6 +17,7 @@
 ## 2. Các Tính Năng Nổi Bật (Key Features)
 
 ### Phân Hệ Người Dùng (User Module)
+
 * **Xác Thực Đa Tầng:** Đăng nhập, đăng ký, khôi phục mật khẩu thông qua JSON Web Token (JWT).
 * **Động Cơ Tìm Kiếm Thông Minh:** Tích hợp bộ lọc đa chiều (môn học, phân loại định dạng file, cấp độ học) và tính năng tìm kiếm toàn văn bản (Full-text Search).
 * **Xử Lý Tài Liệu Phức Hợp:** Tự động nhận diện định dạng (PDF, DOCX, PPTX). Đặc biệt, hệ thống hỗ trợ cơ chế tự động chuyển đổi file PPTX sang file PDF để hiển thị xem trước (preview) trực tiếp trên trình duyệt mà không cần tải về.
@@ -26,11 +27,13 @@
   * **Mạng Lưới Nhóm Học Tập:** Khởi tạo nhóm kín, chia sẻ mã mời, trao đổi và chia sẻ tài liệu lưu trữ nội bộ cho nhóm.
 
 ### Hệ Thống Giao Dịch & Tài Chính (Financial System)
+
 * **Ví Điện Tử (Xu):** Giao diện hiển thị số dư hiện tại, chức năng khởi tạo yêu cầu nạp tiền.
 * **Tài Liệu PREMIUM:** Cho phép người dùng tự do định giá cho tài liệu khi tải lên, cơ chế chuyển Xu tự động từ người mua sang ví của người bán.
 * **Lịch Sử Giao Dịch:** Kiểm kê và truy xuất lịch sử thu/chi, lịch sử nạp Xu minh bạch.
 
 ### Phân Hệ Quản Trị Hệ Thống (Admin Dashboard)
+
 * **Bảng Điều Khiển Tổng Quan:** Cung cấp biểu đồ trực quan, số liệu thống kê thời gian thực về lượng truy cập, số dư, số lượng tài liệu và luồng giao dịch.
 * **Quản Trị Nội Dung:** Xét duyệt, ẩn/hiện các tài liệu vi phạm. Đặc quyền xác minh các tài liệu là "Chính Thống" (Official) để tăng độ uy tín.
 * **Quản Trị Giao Dịch:** Phê duyệt hoặc từ chối các biên lai, yêu cầu nạp Xu của thành viên.
@@ -43,6 +46,7 @@
 Hệ thống được thiết kế theo mô hình Client-Server chặt chẽ. Dưới đây là các công nghệ cốt lõi cấu thành dự án:
 
 ### Frontend
+
 | Công nghệ | Vai trò |
 | :--- | :--- |
 | **HTML5 / CSS3** | Cấu trúc và thiết kế giao diện (UI) đáp ứng tiêu chuẩn. |
@@ -51,6 +55,7 @@ Hệ thống được thiết kế theo mô hình Client-Server chặt chẽ. D�
 | **Chart.js** | Hiển thị các biểu đồ thống kê trực quan trên Dashboard. |
 
 ### Backend
+
 | Công nghệ | Vai trò |
 | :--- | :--- |
 | **Node.js & Express.js** | Nền tảng xây dựng RESTful API và xử lý luồng logic nghiệp vụ. |
@@ -59,6 +64,7 @@ Hệ thống được thiết kế theo mô hình Client-Server chặt chẽ. D�
 | **LibreOffice Convert** | Tích hợp thư viện để gọi LibreOffice xử lý render (PDF hóa) tài liệu bản trình bày. |
 
 ### Cơ Sở Dữ Liệu
+
 | Công nghệ | Vai trò |
 | :--- | :--- |
 | **MySQL (v8.0+)** | Hệ quản trị CSDL quan hệ, tương tác bất đồng bộ thông qua thư viện `mysql2/promise`. |
@@ -95,28 +101,37 @@ EduShare/
 Vui lòng tuân thủ chặt chẽ các bước dưới đây để triển khai và chạy thử dự án trên môi trường cục bộ (Local).
 
 ### 5.1 Yêu Cầu Môi Trường Tiền Quyết
+
 * **Node.js** bản LTS (Phiên bản >= 16.x).
 * **MySQL Server** đang hoạt động (Thường chạy tại cổng 3306).
 * **LibreOffice** đã được cài đặt trên máy và khai báo biến môi trường (PATH) để hệ thống Backend có thể gọi lệnh convert.
 
 ### 5.2 Khởi Tạo Cơ Sở Dữ Liệu
+
 1. Khởi tạo một cơ sở dữ liệu rỗng trong MySQL (Ví dụ đặt tên là: `edushare_db`).
 2. Mở MySQL Console hoặc công cụ quản trị GUI (DBeaver, Navicat, phpMyAdmin) và thực thi toàn bộ script trong tệp `be/database.sql` để khởi tạo cấu trúc bảng.
 3. Chạy script để cập nhật bổ sung cấu trúc (nếu có):
+
    ```bash
    node be/alter_db.js
    ```
 
 ### 5.3 Cài Đặt Và Khởi Chạy Backend
+
 1. Di chuyển vào thư mục Backend:
+
    ```bash
    cd be
    ```
+
 2. Cài đặt các thư viện Node.js cần thiết:
+
    ```bash
    npm install
    ```
+
 3. Tạo tệp `.env` nằm ngang hàng với tệp `server.js` và thiết lập các thông số môi trường thực tế của bạn:
+
    ```env
    PORT=3000
    DB_HOST=localhost
@@ -125,14 +140,19 @@ Vui lòng tuân thủ chặt chẽ các bước dưới đây để triển khai
    DB_NAME=edushare_db
    JWT_SECRET=YOUR_SECURE_RANDOM_SECRET_KEY
    ```
+
 4. Khởi động máy chủ:
+
    ```bash
    npm start
    ```
+
    > Nếu thiết lập đúng, Terminal sẽ thông báo Server khởi chạy thành công tại địa chỉ `http://localhost:3000`.
 
 ### 5.4 Cài Đặt Và Khởi Chạy Frontend
+
 Dự án áp dụng mô hình thuần HTML/CSS/JS, do vậy không yêu cầu quy trình Build/Bundle phức tạp như React hay Vue.
+
 1. Khuyến nghị sử dụng **Live Server** (extension trên VSCode) hoặc ứng dụng máy chủ tĩnh tương tự.
 2. Bật Live Server trỏ vào gốc thư mục dự án hoặc trực tiếp vào thư mục `fe/`.
 3. Ứng dụng sẽ tự động mở trên trình duyệt (Ví dụ tại địa chỉ: `http://127.0.0.1:5500/fe/pages/guest/guestHome.html`).

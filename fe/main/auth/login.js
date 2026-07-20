@@ -75,6 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+            if (!recaptchaToken) {
+                Toast.fire({ icon: 'warning', title: 'Vui lòng xác nhận bạn không phải người máy' });
+                return;
+            }
+
             try {
                 const submitBtn = loginForm.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
@@ -83,19 +89,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.style.cursor = 'not-allowed';
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i>&nbsp; Đang xử lý...';
 
-                const response = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, matKhau, rememberLogin })
-                });
+                document.body.style.pointerEvents = 'none';
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Đang đăng nhập...',
+                        text: 'Vui lòng chờ giây lát',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                }
+
+                const [response] = await Promise.all([
+                    fetch(`${API_URL}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, matKhau, rememberLogin, recaptchaToken })
+                    }),
+                    new Promise(resolve => setTimeout(resolve, 1000))
+                ]);
 
                 const data = await response.json();
 
                 if (!response.ok) {
+                    document.body.style.pointerEvents = 'auto';
                     submitBtn.disabled = false;
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
                     submitBtn.innerHTML = originalText;
+                    if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
                     Toast.fire({ icon: 'error', title: data.message || 'Đăng nhập thất bại' });
                 } else {
                     Toast.fire({ icon: 'success', title: 'Đăng nhập thành công! Đang chuyển hướng...' });
@@ -129,11 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error(error);
+                document.body.style.pointerEvents = 'auto';
                 const submitBtn = loginForm.querySelector('button[type="submit"]');
                 submitBtn.disabled = false;
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
                 submitBtn.innerHTML = 'Đăng nhập';
+                if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
                 Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ' });
             }
         });

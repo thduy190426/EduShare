@@ -241,7 +241,8 @@ function renderDocumentInfo(doc, hasPurchased) {
         previewContainer.style.border = '';
     }
     if (loaiFile === 'pdf' || (doc.PreviewURL && doc.PreviewURL !== 'null')) {
-        const fileUrlFull = `http://localhost:3000${doc.PreviewURL || doc.FileURL}`;
+        let rawUrl = doc.PreviewURL || doc.FileURL;
+        const fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
         previewContainer.innerHTML = `<iframe src="${fileUrlFull}#toolbar=0" style="width: 100%; height: 100%; border: none;"></iframe>`;
         previewContainer.style.width = '100%';
         previewContainer.style.height = 'calc(100% - 44px)';

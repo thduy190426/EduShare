@@ -154,6 +154,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+            if (!recaptchaToken) {
+                Toast.fire({ icon: 'warning', title: 'Vui lòng xác nhận bạn không phải người máy' });
+                return;
+            }
+
             try {
                 const submitBtn = registerForm.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
@@ -165,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch(`${API_URL}/register/send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ hoTen, email })
+                    body: JSON.stringify({ hoTen, email, recaptchaToken })
                 });
 
                 const data = await response.json();
@@ -176,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerHTML = originalText;
 
                 if (!response.ok) {
+                    if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
                     Toast.fire({ icon: 'error', title: data.message || 'Lỗi gửi mã OTP' });
                 } else {
                     Toast.fire({ icon: 'success', title: data.message || 'Mã OTP đã được gửi' });
@@ -201,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
                 submitBtn.innerHTML = 'Đăng ký tài khoản';
+                if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
                 Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ' });
             }
         });

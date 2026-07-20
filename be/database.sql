@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS TAILIEU (
     MaND_NguoiDang INT NOT NULL,
     TrangThaiKiemDuyet ENUM('ChoDuyet', 'DaDuyet', 'TuChoi') DEFAULT 'ChoDuyet',
     LyDoTuChoi TEXT DEFAULT NULL,
+    PhanHoiTuChoi TEXT DEFAULT NULL,
     LaTaiLieuChinhThuc BOOLEAN DEFAULT FALSE,
     LaTaiLieuDocQuyen BOOLEAN DEFAULT FALSE,
     SoLuotTai INT DEFAULT 0,

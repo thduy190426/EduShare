@@ -59,6 +59,10 @@ function loadUserProfileNav() {
             roleEl.textContent = payload.VaiTro === 'Admin'
                 ? 'Quản trị viên'
                 : (payload.VaiTro === 'GiaoVien' ? 'Giáo viên' : 'Sinh viên');
+            if (payload.VaiTro === 'Admin') {
+                roleEl.style.color = 'var(--danger-color, #ef4444)';
+                roleEl.style.fontWeight = '600';
+            }
         }
     } catch (e) {
         console.error('Lỗi giải mã token:', e);
@@ -1376,8 +1380,15 @@ async function fetchGroupDocuments() {
             }
 
             let thumbHtml = `<i class="fa-solid ${iconClass}"></i>`;
-            if (doc.LoaiFile && doc.LoaiFile.toLowerCase() === 'pdf' && doc.FileURL) {
-                const fileUrlFull = `${API_URL.replace('/api', '')}${doc.FileURL}`;
+            let previewTarget = null;
+            if (doc.PreviewURL) {
+                previewTarget = doc.PreviewURL;
+            } else if (doc.LoaiFile && doc.LoaiFile.toLowerCase() === 'pdf' && doc.FileURL) {
+                previewTarget = doc.FileURL;
+            }
+
+            if (previewTarget) {
+                const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
                 thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
                 thumbClass = '';
             }
@@ -1420,7 +1431,7 @@ async function fetchGroupDocuments() {
                     <div class="doc-footer">
                         <div class="doc-author js-author-link" data-user-id="${doc.MaND_NguoiDang || ''}" title="Xem hồ sơ người đăng">
                             ${avatarHtml}
-                            <span>${escapeHTML(doc.TenNguoiDang) || 'Ẩn danh'}</span>
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; display: inline-block; vertical-align: middle;">${escapeHTML(doc.TenNguoiDang) || 'Ẩn danh'}</span>
                         </div>
                         <div class="doc-stats">
                             <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>
@@ -1598,18 +1609,22 @@ async function loadMyDocumentsForShare() {
         
         select.innerHTML = '<option value="">Chọn tài liệu của bạn</option>';
         if (approvedDocuments.length > 0) {
+            let hasUnshared = false;
             approvedDocuments.forEach(doc => {
-                let extraText = '';
+                let isAlreadyShared = false;
                 if (window.currentGroupDocs) {
-                    const isAlreadyShared = window.currentGroupDocs.some(d => String(d.MaTL) === String(doc.MaTL));
-                    if (isAlreadyShared) {
-                        extraText = ' (Đã chia sẻ trong nhóm)';
-                    }
+                    isAlreadyShared = window.currentGroupDocs.some(d => String(d.MaTL) === String(doc.MaTL));
                 }
-                select.innerHTML += `<option value="${doc.MaTL}">${doc.TenTL}${extraText}</option>`;
+                if (!isAlreadyShared) {
+                    hasUnshared = true;
+                    select.innerHTML += `<option value="${doc.MaTL}">${doc.TenTL}</option>`;
+                }
             });
+            if (!hasUnshared) {
+                select.innerHTML = '<option value="">Tất cả tài liệu của bạn đã được chia sẻ vào nhóm này.</option>';
+            }
         } else {
-            select.innerHTML = '<option value="">Chưa có tài liệu.</option>';
+            select.innerHTML = '<option value="">Chưa có tài liệu đã duyệt.</option>';
         }
     } catch (err) {
         console.error(err);

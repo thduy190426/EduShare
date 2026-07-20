@@ -101,7 +101,6 @@ function renderTransactions(transactions) {
                     ${avatarHtml}
                     <div>
                         <div><strong>${tx.HoTen}</strong></div>
-                        <div style="font-size:12px; color:#64748b;">${tx.Email}</div>
                     </div>
                 </div>
             </td>
@@ -131,7 +130,7 @@ async function handleApprove(id) {
         text: 'Bạn có chắc chắn đã nhận được tiền và muốn cộng xu cho người dùng này?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Đã nhận, Duyệt!',
+        confirmButtonText: 'Duyệt',
         cancelButtonText: 'Hủy'
     });
 

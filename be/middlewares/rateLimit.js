@@ -24,8 +24,35 @@ const reportLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    max: 5, 
+    message: { message: 'Bạn đã đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, 
+    max: 5, 
+    message: { message: 'Bạn đã đăng ký quá nhiều tài khoản. Vui lòng thử lại sau 1 giờ.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const contactLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, 
+    max: 3, 
+    message: { message: 'Bạn đã gửi liên hệ quá nhiều lần. Vui lòng thử lại sau 1 giờ.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 module.exports = {
     uploadLimiter,
     rateLimiter,
-    reportLimiter
+    reportLimiter,
+    loginLimiter,
+    registerLimiter,
+    contactLimiter
 };

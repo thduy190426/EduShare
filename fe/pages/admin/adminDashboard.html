@@ -82,11 +82,10 @@
         </div>
       </div>
 
-      <div class="grid-2">
-        
+      <div class="grid-2" style="margin-bottom: 24px;">
         <div class="panel">
           <div class="panel-header">
-            <h3 class="panel-title">Biểu đồ tổng quan</h3>
+            <h3 class="panel-title">Tổng quan</h3>
           </div>
           <div class="chart-container" style="padding: 20px;">
             <canvas id="overviewChart" width="400" height="250"></canvas>
@@ -94,8 +93,62 @@
           </div>
         </div>
 
-        
         <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Vai trò Người dùng</h3>
+          </div>
+          <div class="chart-container" style="padding: 20px; display: flex; justify-content: center; align-items: center; height: 100%;">
+            <canvas id="roleChart" style="max-height: 250px;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 24px;">
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Trạng thái Tài liệu</h3>
+          </div>
+          <div class="chart-container" style="padding: 20px; display: flex; justify-content: center; align-items: center; height: 100%;">
+            <canvas id="statusChart" style="max-height: 250px;"></canvas>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title">Top 5 Môn học</h3>
+          </div>
+          <div class="chart-container" style="padding: 20px;">
+            <canvas id="subjectChart" width="400" height="250"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 24px;">
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title"><i class="fa-solid fa-medal" style="color: #f59e0b; margin-right: 8px;"></i>Top Nạp Xu</h3>
+          </div>
+          <div class="ranking-container">
+            <ul id="topDepositorsList" class="ranking-list">
+
+            </ul>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h3 class="panel-title"><i class="fa-solid fa-fire" style="color: #ef4444; margin-right: 8px;"></i>Top Đóng Góp</h3>
+          </div>
+          <div class="ranking-container">
+            <ul id="topContributorsList" class="ranking-list">
+
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-1" style="margin-bottom: 24px;">
+        <div class="panel" style="grid-column: span 1;">
           <div class="panel-header">
             <h3 class="panel-title">Tài liệu mới chờ duyệt</h3>
             <a href="adminModeration.html" class="panel-action">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
@@ -115,7 +168,6 @@
           </table>
         </div>
       </div>
-
     </main>
   </div>
 

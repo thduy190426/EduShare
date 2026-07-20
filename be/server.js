@@ -124,6 +124,24 @@ app.use(express.json());
 app.use(requestLogger);
 app.use('/uploads', express.static('public/uploads'));
 
+const { loginLimiter, registerLimiter, contactLimiter } = require('./middlewares/rateLimit');
+
+async function verifyRecaptcha(token) {
+    if (!token) return false;
+    try {
+        const response = await fetch(`https://www.google.com/recaptcha/api/siteverify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`
+        });
+        const data = await response.json();
+        return data.success;
+    } catch (err) {
+        console.error('Lỗi xác thực reCAPTCHA:', err);
+        return false;
+    }
+}
+
 const pool = mysql.createPool({
     host:               process.env.DB_HOST     || 'localhost',
     user:               process.env.DB_USER     || 'root',
@@ -176,8 +194,12 @@ app.get('/api/khoanganh', async (req, res) => {
     }
 });
 
-app.post('/api/register/send-otp', async (req, res) => {
-    const { email, hoTen } = req.body;
+app.post('/api/register/send-otp', registerLimiter, async (req, res) => {
+    const { email, hoTen, recaptchaToken } = req.body;
+
+    const isHuman = await verifyRecaptcha(recaptchaToken);
+    if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
+
     if (!email || !hoTen) return res.status(400).json({ message: 'Vui lòng cung cấp email và họ tên.' });
 
     try {
@@ -210,7 +232,7 @@ app.post('/api/register/send-otp', async (req, res) => {
     }
 });
 
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
     const { hoTen, email, matKhau, vaiTro, truongHoc, khoaNganh, otp } = req.body;
     const allowedRoles   = ['SinhVien', 'GiaoVien'];
     const normalizedRole = allowedRoles.includes(vaiTro) ? vaiTro : 'SinhVien';
@@ -252,8 +274,11 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-app.post('/api/login', async (req, res) => {
-    const { email, matKhau, rememberLogin } = req.body;
+app.post('/api/login', loginLimiter, async (req, res) => {
+    const { email, matKhau, rememberLogin, recaptchaToken } = req.body;
+
+    const isHuman = await verifyRecaptcha(recaptchaToken);
+    if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
 
     if (!email || !matKhau)
         return res.status(400).json({ message: 'Vui lòng cung cấp email và mật khẩu.' });
@@ -510,6 +535,119 @@ app.post('/api/reset-password', async (req, res) => {
     } catch (err) {
         logger.error('Reset password failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.post('/api/contact', contactLimiter, async (req, res) => {
+    const { name, email, subject, message, recaptchaToken } = req.body;
+    
+    const isHuman = await verifyRecaptcha(recaptchaToken);
+    if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
+    
+    if (!name || !email || !subject || !message) {
+        return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
+    }
+
+    try {
+        const mailOptions = {
+    from: `"${name}" <${email}>`,
+    to: process.env.GMAIL_USER,
+    subject: `[EduShare Liên Hệ] ${subject}`,
+    html: `
+        <div style="margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Arial,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;padding:40px 16px;">
+            <tr>
+              <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width:580px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+                  <tr>
+                    <td style="background:linear-gradient(135deg,#4F46E5,#7C3AED);padding:32px 40px;text-align:center;">
+                      <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;"><i class="fa-solid fa-book"></i> EduShare</h1>
+                      <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Tin nhắn liên hệ mới từ website</p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="padding:32px 40px;">
+
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding-bottom:12px;">
+                            <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8f7ff;border-radius:8px;border-left:4px solid #4F46E5;">
+                              <tr>
+                                <td style="font-size:12px;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">Họ và tên: </td>
+                              </tr>
+                              <tr>
+                                <td style="font-size:15px;color:#111827;font-weight:600;padding-top:2px;">${name}</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding-bottom:12px;">
+                            <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8f7ff;border-radius:8px;border-left:4px solid #4F46E5;">
+                              <tr>
+                                <td style="font-size:12px;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">Email: </td>
+                              </tr>
+                              <tr>
+                                <td style="font-size:15px;padding-top:2px;">
+                                  <a href="mailto:${email}" style="color:#4F46E5;text-decoration:none;font-weight:600;">${email}</a>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding-bottom:24px;">
+                            <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8f7ff;border-radius:8px;border-left:4px solid #4F46E5;">
+                              <tr>
+                                <td style="font-size:12px;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">Chủ đề: </td>
+                              </tr>
+                              <tr>
+                                <td style="font-size:15px;color:#111827;font-weight:600;padding-top:2px;">${subject}</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="margin:0 0 12px;font-size:13px;color:#6B7280;text-transform:uppercase;letter-spacing:0.8px;font-weight:600;">Nội dung tin nhắn: </p>
+                      <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:8px;padding:20px;font-size:15px;color:#374151;line-height:1.8;white-space:pre-wrap;">${message}</div>
+
+                      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+                        <tr>
+                          <td align="center">
+                            <a href="mailto:${email}" style="display:inline-block;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 32px;border-radius:8px;letter-spacing:0.3px;">
+                              <i class="fa-solid fa-reply" style="margin-right: 5px;"></i>  Trả lời ngay
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
+                      <p style="margin:0;font-size:12px;color:#9CA3AF;">Email này được gửi tự động từ hệ thống EduShare · Không trả lời trực tiếp email này</p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+    `,
+    replyTo: email
+};
+
+        await transporter.sendMail(mailOptions);
+        logger.success(`Contact email received from ${email}`);
+        res.status(200).json({ message: 'Tin nhắn đã được gửi thành công!' });
+    } catch (err) {
+        logger.error('Failed to send contact email', err);
+        res.status(500).json({ message: 'Không thể gửi tin nhắn lúc này. Vui lòng thử lại sau.' });
     }
 });
 

@@ -5,9 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     const levelSelect = document.getElementById('levelSelect');
-    const subjectSearch = document.getElementById('subjectSearch');
-    const subjectFilters = document.getElementById('subjectFilters');
-    let subjectCheckboxes = document.querySelectorAll('input[name="maMonHoc"]');
+    const subjectSelect = document.getElementById('subjectSelect');
     const fileTypeCheckboxes = document.querySelectorAll('input[name="loaiFile"]');
     const officialOnly = document.getElementById('officialOnly');
     const fromDate = document.getElementById('fromDate');
@@ -23,6 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
         .split(',')
         .map(id => id.trim())
         .filter(Boolean);
+
+    if (searchInput) {
+        const queryParam = initialParams.get('q');
+        if (queryParam) {
+            searchInput.value = queryParam;
+        }
+    }
 
     let currentPage = 1;
     let debounceTimer = null;
@@ -99,14 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchInput && searchInput.value.trim() !== '') isDefault = false;
         if (sortSelect && sortSelect.value !== 'MoiNhat') isDefault = false;
         if (levelSelect && levelSelect.value !== '') isDefault = false;
-        if (subjectSearch && subjectSearch.value.trim() !== '') isDefault = false;
+        if (subjectSelect && subjectSelect.value !== '') isDefault = false;
         if (officialOnly && officialOnly.checked) isDefault = false;
         if (fromDate && fromDate.value !== '') isDefault = false;
         if (toDate && toDate.value !== '') isDefault = false;
         if (authorInput && authorInput.value.trim() !== '') isDefault = false;
-
-        const hasSubject = Array.from(subjectCheckboxes).some(cb => cb.checked);
-        if (hasSubject) isDefault = false;
 
         const hasFile = Array.from(fileTypeCheckboxes).some(cb => cb.checked);
         if (hasFile) isDefault = false;
@@ -136,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sortSelect) sortSelect.addEventListener('change', handleFilterChange);
     if (levelSelect) levelSelect.addEventListener('change', handleFilterChange);
-    subjectCheckboxes.forEach(cb => cb.addEventListener('change', handleFilterChange));
+
     fileTypeCheckboxes.forEach(cb => cb.addEventListener('change', handleFilterChange));
     if (officialOnly) officialOnly.addEventListener('change', handleFilterChange);
     if (fromDate) fromDate.addEventListener('change', handleFilterChange);
@@ -155,23 +157,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (searchInput) searchInput.value = '';
             if (sortSelect) sortSelect.value = 'MoiNhat';
             if (levelSelect) levelSelect.value = '';
-            if (subjectSearch) subjectSearch.value = '';
+            if (subjectSelect) subjectSelect.value = '';
             if (officialOnly) officialOnly.checked = false;
             if (fromDate) fromDate.value = '';
             if (toDate) toDate.value = '';
             if (authorInput) authorInput.value = '';
-            subjectCheckboxes.forEach(cb => cb.checked = false);
             fileTypeCheckboxes.forEach(cb => cb.checked = false);
-            filterSubjectOptions();
             handleFilterChange();
-        });
-    }
-
-    function filterSubjectOptions() {
-        if (!subjectSearch || !subjectFilters) return;
-        const keyword = subjectSearch.value.trim().toLowerCase();
-        subjectFilters.querySelectorAll('.filter-item').forEach(item => {
-            item.style.display = item.textContent.toLowerCase().includes(keyword) ? 'flex' : 'none';
         });
     }
 
@@ -179,8 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!activeFilters) return;
 
         const chips = [];
-        const selectedSubjects = Array.from(subjectCheckboxes).filter(cb => cb.checked);
-        selectedSubjects.forEach(cb => chips.push({ type: 'subject', value: cb.value, label: cb.nextElementSibling?.textContent || 'Môn học' }));
+        if (subjectSelect && subjectSelect.value) {
+            const label = subjectSelect.options[subjectSelect.selectedIndex].text;
+            chips.push({ type: 'subject', value: subjectSelect.value, label });
+        }
 
         Array.from(fileTypeCheckboxes).filter(cb => cb.checked).forEach(cb => {
             chips.push({ type: 'file', value: cb.value, label: cb.value.toUpperCase() });
@@ -211,8 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = chip.dataset.value;
 
             if (type === 'subject') {
-                const checkbox = Array.from(subjectCheckboxes).find(cb => cb.value === value);
-                if (checkbox) checkbox.checked = false;
+                if (subjectSelect) subjectSelect.value = '';
             } else if (type === 'file') {
                 const checkbox = Array.from(fileTypeCheckboxes).find(cb => cb.value === value);
                 if (checkbox) checkbox.checked = false;
@@ -233,9 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadSubjectFilters() {
-        if (!subjectFilters) return;
-
-        subjectFilters.innerHTML = '<div style="color:#6b7280; font-size:14px;">Đang tải môn học...</div>';
+        if (!subjectSelect) return;
 
         try {
             const response = await fetch(`${API_URL}/documents/subjects`);
@@ -244,31 +235,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             const subjects = data.subjects || [];
 
-            subjectFilters.innerHTML = '';
             subjects.forEach(subject => {
-                const label = document.createElement('label');
-                label.className = 'filter-item';
-                label.innerHTML = `
-                    <input type="checkbox" name="maMonHoc" value="${subject.MaMonHoc}">
-                    <span>${escapeHTML(subject.TenMonHoc)}</span>
-                `;
-                subjectFilters.appendChild(label);
+                const option = document.createElement('option');
+                option.value = subject.MaMonHoc;
+                option.textContent = subject.TenMonHoc;
+                subjectSelect.appendChild(option);
             });
 
-            if (subjects.length === 0) {
-                subjectFilters.innerHTML = '<div style="color:#6b7280; font-size:14px;">Chưa có môn học</div>';
-            }
-
-            subjectCheckboxes = document.querySelectorAll('input[name="maMonHoc"]');
             if (initialSubjectIds.length > 0) {
-                subjectCheckboxes.forEach(cb => {
-                    cb.checked = initialSubjectIds.includes(cb.value);
-                });
+                subjectSelect.value = initialSubjectIds[0];
             }
-            subjectCheckboxes.forEach(cb => cb.addEventListener('change', handleFilterChange));
+            subjectSelect.addEventListener('change', handleFilterChange);
         } catch (error) {
             console.error('Lỗi tải môn học:', error);
-            subjectFilters.innerHTML = '<div style="color:#ef4444; font-size:14px;">Không thể tải môn học</div>';
         }
     }
 
@@ -310,9 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
             queryParams.append('capHoc', levelSelect.value);
         }
 
-        const selectedSubjects = Array.from(subjectCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
-        if (selectedSubjects.length > 0) {
-            queryParams.append('maMonHoc', selectedSubjects.join(','));
+        if (subjectSelect && subjectSelect.value) {
+            queryParams.append('maMonHoc', subjectSelect.value);
         }
 
         const selectedFiles = Array.from(fileTypeCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
@@ -394,8 +372,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-                    if (loaiFile === 'pdf' && doc.FileURL) {
-                        const fileUrlFull = `${API_URL.replace('/api', '')}${doc.FileURL}`;
+                    let previewTarget = null;
+                    if (doc.PreviewURL) {
+                        previewTarget = doc.PreviewURL;
+                    } else if (loaiFile === 'pdf' && doc.FileURL) {
+                        previewTarget = doc.FileURL;
+                    }
+
+                    if (previewTarget) {
+                        const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
                         thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
                         thumbClass = '';
                     }
@@ -419,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="doc-content">
                             <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="doc-meta-item"><i class="fa-solid fa-folder"></i> ${escapeHTML(doc.TenMonHoc) || 'Không có'}</span>
+                                <span class="doc-meta-item" style="max-width: 65%;"><i class="fa-solid fa-folder" style="flex-shrink: 0;"></i> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHTML(doc.TenMonHoc) || 'Không có'}">${escapeHTML(doc.TenMonHoc) || 'Không có'}</span></span>
                                 <span class="doc-meta-item" style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
                             </div>
                             <h3 class="doc-title">${escapeHTML(doc.TenTL)}</h3>
@@ -427,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="doc-footer">
                                 <div class="doc-author js-author-link" data-user-id="${doc.MaND_NguoiDang || ''}" title="Xem hồ sơ người đăng">
                                     ${avatarHtml}
-                                    <span>${escapeHTML(doc.TenNguoiDang) || 'Ẩn danh'}</span>
+                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; display: inline-block; vertical-align: middle;">${escapeHTML(doc.TenNguoiDang) || 'Ẩn danh'}</span>
                                 </div>
                                 <div class="doc-stats">
                                     <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>

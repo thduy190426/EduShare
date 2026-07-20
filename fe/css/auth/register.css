@@ -45,11 +45,13 @@
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .form-group { margin-bottom: 20px; }
     .form-label { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .form-label i { margin-right: 6px; color: var(--primary); font-size: 14px; }
     .input-wrapper { position: relative; display: flex; align-items: center; }
-    .input-icon { position: absolute; left: 16px; font-size: 18px; color: var(--text-secondary); pointer-events: none; }
+    .input-icon { display: none; }
     .toggle-password { position: absolute; right: 16px; font-size: 16px; color: var(--text-secondary); cursor: pointer; transition: color 0.2s; }
     .toggle-password:hover { color: var(--primary); }
-    .form-control { width: 100%; height: 48px; border: 1px solid var(--border); border-radius: var(--radius-btn); padding: 0 16px 0 44px; font-size: 15px; font-family: inherit; color: var(--text-primary); transition: all 0.2s; outline: none; background: var(--white); }
+    .form-control { width: 100%; height: 48px; border: 1px solid var(--border); border-radius: var(--radius-btn); padding: 0 16px; font-size: 15px; font-family: inherit; color: var(--text-primary); transition: all 0.2s; outline: none; background: var(--white); }
+    .form-control[type="password"] { padding-right: 44px; }
     .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
     .form-control::placeholder { color: #94A3B8; }
     

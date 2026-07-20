@@ -7,6 +7,35 @@ const { Readable } = require('stream');
 const router = express.Router();
 const { authMiddleware } = require('./middlewares/auth');
 const cloudinary = require('./config/cloudinary');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
+    }
+});
+
+const generateOTPChangePwEmail = (hoTen, otp) => {
+    return `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #4F46E5; margin: 0; font-size: 28px;">EduShare</h1>
+            <p style="color: #6B7280; margin-top: 5px; font-size: 16px;">Nền tảng chia sẻ tài liệu học tập</p>
+        </div>
+        <div style="background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
+            <h2 style="color: #1f2937; margin-top: 0;">Xin chào ${hoTen},</h2>
+            <p style="font-size: 16px;">Chúng tôi nhận được yêu cầu đổi mật khẩu cho tài khoản EduShare của bạn. Dưới đây là mã xác thực OTP để hoàn tất quá trình đổi mật khẩu:</p>
+            <div style="background: #EEF2FF; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; border: 1px dashed #4F46E5;">
+                <div style="font-size: 32px; font-weight: 700; color: #4F46E5; letter-spacing: 4px;">${otp}</div>
+            </div>
+            <p style="font-size: 14px; color: #6b7280; font-style: italic;">Mã này sẽ hết hạn sau 15 phút.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
+        </div>
+    </div>`;
+};
 
 async function tableExists(conn, tableName) {
     const [rows] = await conn.execute(
@@ -109,8 +138,51 @@ router.get('/profile', authMiddleware, async (req, res) => {
 });
 
 
+router.post('/send-change-password-otp', authMiddleware, async (req, res) => {
+    try {
+        const { matKhauCu } = req.body;
+        if (!matKhauCu) {
+            return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu hiện tại.' });
+        }
+
+        const pool = req.app.locals.pool;
+        const maND = req.user.MaND;
+
+        const [rows] = await pool.execute('SELECT Email, HoTen, MatKhau FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+
+        const isMatch = await bcrypt.compare(matKhauCu, rows[0].MatKhau);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Mật khẩu hiện tại không chính xác.' });
+        }
+
+        const email = rows[0].Email;
+        const hoTen = rows[0].HoTen;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
+
+        await pool.execute(
+            'INSERT INTO RESET_PASSWORD_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
+            [email, otp, expiresAt, otp, expiresAt]
+        );
+
+        await transporter.sendMail({
+            from: `"EduShare" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Mã OTP Đổi Mật Khẩu',
+            html: generateOTPChangePwEmail(hoTen, otp)
+        });
+
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
+    } catch (err) {
+        console.error('Lỗi gửi OTP đổi mật khẩu:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi gửi OTP.' });
+    }
+});
+
+
 router.put('/profile', authMiddleware, async (req, res) => {
-    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh } = req.body;
+    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, otp } = req.body;
     const normalizedTruongHoc = typeof truongHoc === 'string' && truongHoc.trim() !== '' ? truongHoc.trim() : null;
     const normalizedKhoaNganh = typeof khoaNganh === 'string' && khoaNganh.trim() !== '' ? khoaNganh.trim() : null;
     const normalizedHoTen = typeof hoTen === 'string' ? hoTen.trim() : '';
@@ -135,8 +207,22 @@ router.put('/profile', authMiddleware, async (req, res) => {
         const maND = req.user.MaND;
 
         if (matKhauCu && matKhauMoi) {
-            const [rows] = await pool.execute('SELECT MatKhau FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+            const [rows] = await pool.execute('SELECT Email, MatKhau FROM NGUOIDUNG WHERE MaND = ?', [maND]);
             if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+            
+            const email = rows[0].Email;
+
+            if (!otp) {
+                return res.status(400).json({ message: 'Vui lòng cung cấp mã OTP để đổi mật khẩu.' });
+            }
+
+            const [otpRows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+            if (otpRows.length === 0) {
+                return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+            }
+            if (new Date() > new Date(otpRows[0].ExpiresAt)) {
+                return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+            }
 
             const isMatch = await bcrypt.compare(matKhauCu, rows[0].MatKhau);
             if (!isMatch) {
@@ -146,6 +232,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(matKhauMoi, saltRounds);
             await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ? WHERE MaND = ?', [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, maND]);
+            await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);
         } else {
             await pool.execute(
                 'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ? WHERE MaND = ?',
@@ -317,7 +404,35 @@ function parseAvatarRequest(req) {
     });
 }
 
+const avatarUpdateLimits = new Map();
+const MAX_AVATAR_CHANGES = 5;
+const AVATAR_LIMIT_RESET_TIME = 60 * 60 * 1000; // 1 giờ
+
+function checkAvatarRateLimit(maND) {
+    const now = Date.now();
+    if (!avatarUpdateLimits.has(maND)) {
+        avatarUpdateLimits.set(maND, { count: 1, resetAt: now + AVATAR_LIMIT_RESET_TIME });
+        return true;
+    }
+
+    const limitData = avatarUpdateLimits.get(maND);
+    if (now > limitData.resetAt) {
+        avatarUpdateLimits.set(maND, { count: 1, resetAt: now + AVATAR_LIMIT_RESET_TIME });
+        return true;
+    }
+
+    if (limitData.count >= MAX_AVATAR_CHANGES) {
+        return false;
+    }
+
+    limitData.count++;
+    return true;
+}
+
 router.post('/profile/avatar', authMiddleware, async (req, res) => {
+    if (!checkAvatarRateLimit(req.user.MaND)) {
+        return res.status(429).json({ message: 'Bạn đã thay đổi ảnh đại diện quá nhiều lần. Vui lòng thử lại sau 1 giờ.' });
+    }
     const hasCloudinaryConfig = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
     if (!hasCloudinaryConfig) {
         return res.status(500).json({ message: 'Chưa cấu hình Cloudinary trên máy chủ.' });
@@ -338,6 +453,9 @@ router.post('/profile/avatar', authMiddleware, async (req, res) => {
 });
 
 router.delete('/profile/avatar', authMiddleware, async (req, res) => {
+    if (!checkAvatarRateLimit(req.user.MaND)) {
+        return res.status(429).json({ message: 'Bạn đã xoá ảnh đại diện quá nhiều lần. Vui lòng thử lại sau 1 giờ.' });
+    }
     try {
         const pool = req.app.locals.pool;
         await pool.execute('UPDATE NGUOIDUNG SET AvatarURL = NULL WHERE MaND = ?', [req.user.MaND]);

@@ -88,7 +88,7 @@
 
     
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-    .modal-container { background: var(--white); border-radius: var(--radius-card); width: 100%; max-width: 500px; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); position: relative; }
+    .modal-container { background: var(--white); border-radius: var(--radius-card); width: 100%; max-width: 600px; padding: 32px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); position: relative; }
     .modal-close { position: absolute; top: 20px; right: 24px; font-size: 24px; color: var(--text-secondary); cursor: pointer; }
     .modal-title { font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
     .modal-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
@@ -131,3 +131,21 @@
 body { -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: auto; user-select: auto; }
 
+
+
+.modal-overlay { animation: fadeIn 0.2s ease-out; }
+.modal-overlay .modal-container { animation: scaleIn 0.2s ease-out; }
+.modal-overlay.hide { animation: fadeOut 0.2s ease-in forwards; }
+.modal-overlay.hide .modal-container { animation: scaleOut 0.2s ease-in forwards; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
+
+
+.btn-confirm-reject:disabled {
+    background: #fca5a5 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+}

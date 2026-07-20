@@ -52,6 +52,29 @@
     .section-link { background: var(--primary); color: var(--white); padding: 8px 16px; border-radius: var(--radius-btn); font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; border: none; cursor: pointer; }
     .section-link:hover { background: #4338CA; color: var(--white); transform: translateY(-2px); text-decoration: none; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
 
+    .view-all-link {
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .view-all-link i {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .view-all-link:hover {
+        background: var(--primary-light);
+        color: #4338CA;
+    }
+    .view-all-link:hover i {
+        transform: translateX(4px);
+    }
+
     
     .subject-chips { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 32px; scrollbar-width: none; }
     .subject-chips::-webkit-scrollbar { display: none; }

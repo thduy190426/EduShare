@@ -13,7 +13,7 @@ router.get('/documents/list', adminMiddleware, async (req, res) => {
                 TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.LoaiFile, TL.NgayDang,
                 ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 MH.TenMonHoc,
-                TL.TrangThaiKiemDuyet, TL.LyDoTuChoi, TL.TrangThaiHienThi
+                TL.TrangThaiKiemDuyet, TL.LyDoTuChoi, TL.PhanHoiTuChoi, TL.TrangThaiHienThi
             FROM TAILIEU TL
             LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
@@ -602,13 +602,52 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
         const [downloadSum] = await pool.execute('SELECT SUM(SoLuotTai) as total FROM TAILIEU');
         const [reportCount] = await pool.execute('SELECT COUNT(*) as count FROM BAOCAOVIPHAM WHERE TrangThai = "ChoXuLy"');
         const [pendingDocCount] = await pool.execute('SELECT COUNT(*) as count FROM TAILIEU WHERE TrangThaiKiemDuyet = "ChoDuyet"');
+        const [pendingPaymentCount] = await pool.execute('SELECT COUNT(*) as count FROM GIAODICH_NAPXU WHERE TrangThai = "ChoDuyet"');
+
+        const [usersByRoleRows] = await pool.execute('SELECT VaiTro, COUNT(*) as count FROM NGUOIDUNG GROUP BY VaiTro');
+        
+        const [docsByStatusRows] = await pool.execute('SELECT TrangThaiKiemDuyet, COUNT(*) as count FROM TAILIEU GROUP BY TrangThaiKiemDuyet');
+        
+        const [docsBySubjectRows] = await pool.execute(`
+            SELECT MH.TenMonHoc, COUNT(TL.MaTL) as count 
+            FROM TAILIEU TL
+            JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
+            GROUP BY MH.TenMonHoc
+            ORDER BY count DESC
+            LIMIT 5
+        `);
+
+        const [topDepositors] = await pool.execute(`
+            SELECT ND.MaND, ND.HoTen, ND.AvatarURL, SUM(G.SoXu) as totalXu
+            FROM GIAODICH_NAPXU G
+            JOIN NGUOIDUNG ND ON G.MaND = ND.MaND
+            WHERE G.TrangThai = 'DaDuyet'
+            GROUP BY ND.MaND, ND.HoTen, ND.AvatarURL
+            ORDER BY totalXu DESC
+            LIMIT 5
+        `);
+
+        const [topContributors] = await pool.execute(`
+            SELECT ND.MaND, ND.HoTen, ND.AvatarURL,
+                (SELECT COUNT(*) FROM TAILIEU TL WHERE TL.MaND_NguoiDang = ND.MaND AND TL.TrangThaiKiemDuyet = 'DaDuyet') AS countDoc,
+                (SELECT COUNT(*) FROM BINHLUAN BL WHERE BL.MaND = ND.MaND) AS countComment
+            FROM NGUOIDUNG ND
+            ORDER BY (countDoc * 10 + countComment) DESC
+            LIMIT 5
+        `);
 
         res.status(200).json({
             users: userCount[0].count,
             documents: docCount[0].count,
             downloads: downloadSum[0].total || 0,
             pendingReports: reportCount[0].count,
-            pendingDocs: pendingDocCount[0].count
+            pendingDocs: pendingDocCount[0].count,
+            pendingPayments: pendingPaymentCount[0].count,
+            usersByRole: usersByRoleRows,
+            docsByStatus: docsByStatusRows,
+            docsBySubject: docsBySubjectRows,
+            topDepositors: topDepositors,
+            topContributors: topContributors
         });
     } catch (error) {
         console.error('Lỗi API /stats/overview:', error);

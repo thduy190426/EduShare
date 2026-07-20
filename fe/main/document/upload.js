@@ -125,6 +125,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
             if (previewSize) previewSize.textContent = `Kích thước: ${sizeInMB} MB`;
 
+            const fileIconContainer = document.querySelector('#filePreview .file-icon');
+            if (fileIconContainer) {
+                if (fileExtension === 'pdf') {
+                    fileIconContainer.innerHTML = '<i class="fa-solid fa-file-pdf"></i>';
+                    fileIconContainer.style.color = '#EF4444';
+                } else if (fileExtension === 'docx' || fileExtension === 'doc') {
+                    fileIconContainer.innerHTML = '<i class="fa-solid fa-file-word"></i>';
+                    fileIconContainer.style.color = '#3B82F6';
+                } else if (fileExtension === 'pptx' || fileExtension === 'ppt') {
+                    fileIconContainer.innerHTML = '<i class="fa-solid fa-file-powerpoint"></i>';
+                    fileIconContainer.style.color = '#F97316';
+                } else {
+                    fileIconContainer.innerHTML = '<i class="fa-solid fa-file-lines"></i>';
+                    fileIconContainer.style.color = 'var(--primary)';
+                }
+            }
+
             const btnSelectFile = document.getElementById('btnSelectFile');
             if (btnSelectFile && !filePreview) {
                 btnSelectFile.innerHTML = `<i class="fa-solid fa-file-circle-check" style="margin-right: 8px;"></i>Đã chọn: ${file.name} - Đổi file`;
@@ -214,6 +231,12 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('giaXu', document.getElementById('giaXu').value);
         }
 
+        const originalBtnContent = btnUpload.innerHTML;
+        btnUpload.disabled = true;
+        btnUpload.style.opacity = '0.7';
+        btnUpload.style.cursor = 'not-allowed';
+        btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên...';
+
         try {
             
             const response = await fetch(`${API_URL}/documents/upload`, {
@@ -231,17 +254,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 await Swal.fire({
                     icon: 'success',
                     title: 'Thành công!',
-                    text: 'Tải lên tài liệu thành công! Tài liệu đang chờ admin kiểm duyệt.',
-                    timer: 2000,
-                    showConfirmButton: false
+                    text: 'Tải lên tài liệu thành công! Tài liệu đang chờ Admin kiểm duyệt.',
+                    confirmButtonText: 'Đồng ý',
+                    allowOutsideClick: false
                 });
                 window.location.href = 'myDocuments.html';
             } else {
                 Swal.fire(`Lỗi: ${data.message || 'Tải lên thất bại'}`);
+                btnUpload.disabled = false;
+                btnUpload.style.opacity = '1';
+                btnUpload.style.cursor = 'pointer';
+                btnUpload.innerHTML = originalBtnContent;
             }
         } catch (error) {
             console.error('Lỗi khi tải tài liệu:', error);
             Swal.fire('Đã xảy ra lỗi khi tải tài liệu lên server.');
+            btnUpload.disabled = false;
+            btnUpload.style.opacity = '1';
+            btnUpload.style.cursor = 'pointer';
+            btnUpload.innerHTML = originalBtnContent;
         }
     });
 });

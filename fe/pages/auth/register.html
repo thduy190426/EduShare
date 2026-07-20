@@ -70,34 +70,30 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Họ và tên:</label>
+            <label class="form-label"><i class="fa-solid fa-user"></i> Họ và tên:</label>
             <div class="input-wrapper">
-              <span class="input-icon"><i class="fa-solid fa-user"></i></span>
               <input type="text" id="registerName" class="form-control" placeholder="Nhập họ và tên" required>
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Email:</label>
+            <label class="form-label"><i class="fa-solid fa-envelope"></i> Email:</label>
             <div class="input-wrapper">
-              <span class="input-icon"><i class="fa-solid fa-envelope"></i></span>
               <input type="email" id="registerEmail" class="form-control" placeholder="Nhập địa chỉ email" required>
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Mật khẩu:</label>
+              <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu:</label>
               <div class="input-wrapper">
-                <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
                 <input type="password" id="registerPassword" class="form-control" placeholder="Tạo mật khẩu" autocomplete="new-password" required>
                 <span class="toggle-password" id="toggleRegisterPassword"><i class="fa-solid fa-eye" id="toggleRegisterIcon"></i></span>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Xác nhận mật khẩu:</label>
+              <label class="form-label"><i class="fa-solid fa-lock"></i> Xác nhận mật khẩu:</label>
               <div class="input-wrapper">
-                <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
                 <input type="password" id="registerConfirmPassword" class="form-control" placeholder="Nhập lại mật khẩu" autocomplete="new-password" required>
                 <span class="toggle-password" id="toggleConfirmPassword"><i class="fa-solid fa-eye" id="toggleConfirmIcon"></i></span>
               </div>
@@ -106,18 +102,16 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Trường học (Tùy chọn):</label>
+              <label class="form-label"><i class="fa-solid fa-building-columns"></i> Trường học (Tùy chọn):</label>
               <div class="input-wrapper">
-                <span class="input-icon"><i class="fa-solid fa-building-columns"></i></span>
                 <select id="registerSchool" class="form-control">
                   <option value="">Chọn trường học</option>
                 </select>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Khoa/Ngành (Tùy chọn):</label>
+              <label class="form-label"><i class="fa-solid fa-graduation-cap"></i> Khoa/Ngành (Tùy chọn):</label>
               <div class="input-wrapper">
-                <span class="input-icon"><i class="fa-solid fa-graduation-cap"></i></span>
                 <select id="registerMajor" class="form-control">
                   <option value="">Chọn khoa/ngành</option>
                 </select>
@@ -130,6 +124,10 @@
               <input type="checkbox" id="registerAgreeTerms" required style="margin-top: 2px;">
               <span>Bằng việc đăng ký, bạn đồng ý với <a href="../guest/terms.html" style="color: var(--primary);" target="_blank">Điều khoản dịch vụ</a> và <a href="../guest/privacy.html" style="color: var(--primary);" target="_blank">Chính sách bảo mật</a> của chúng tôi.</span>
             </label>
+          </div>
+
+          <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9"></div>
           </div>
 
           <button type="submit" class="btn btn-primary">Đăng ký tài khoản</button>
@@ -145,5 +143,6 @@
   </div>
   <script type="module" src="../../main/auth/register.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>

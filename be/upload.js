@@ -4,24 +4,21 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
-const libre = require('libreoffice-convert');
-libre.convertAsync = require('util').promisify(libre.convert);
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
+require('dotenv').config();
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const router = express.Router();
 const { authMiddleware, teacherMiddleware } = require('./middlewares/auth');
 const { uploadLimiter, rateLimiter, reportLimiter } = require('./middlewares/rateLimit');
 
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, 'public/uploads/'));
-    },
-    filename: function (req, file, cb) {
-        const ext = path.extname(file.originalname).toLowerCase();
-        const safeName = crypto.randomBytes(16).toString('hex') + ext;
-        cb(null, safeName);
-    }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
@@ -82,6 +79,25 @@ async function notifyActiveAdmins(pool, noiDung, linkDich, excludeUserId = null)
     }
 }
 
+router.get('/subjects/popular', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT MH.MaMonHoc, MH.TenMonHoc, MH.CapHoc, COUNT(TL.MaTL) as DocCount
+            FROM MONHOC MH
+            LEFT JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc AND TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'
+            WHERE MH.TrangThai = 'HoatDong'
+            GROUP BY MH.MaMonHoc, MH.TenMonHoc, MH.CapHoc
+            ORDER BY DocCount DESC, MH.TenMonHoc ASC
+            LIMIT 4
+        `);
+        res.status(200).json({ subjects: rows });
+    } catch (error) {
+        console.error('Lỗi API /documents/subjects/popular:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách môn học phổ biến.' });
+    }
+});
+
 router.get('/subjects', async (req, res) => {
     try {
         const pool = req.app.locals.pool;
@@ -112,6 +128,24 @@ router.get('/levels', async (req, res) => {
     } catch (error) {
         console.error('Lỗi API /documents/levels:', error);
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách cấp bậc.' });
+    }
+});
+
+router.get('/stats/platform', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [docRows] = await pool.execute("SELECT COUNT(*) AS count FROM TAILIEU WHERE TrangThaiKiemDuyet = 'DaDuyet'");
+        const [userRows] = await pool.execute("SELECT COUNT(*) AS count FROM NGUOIDUNG");
+        const [dlRows] = await pool.execute("SELECT SUM(SoLuotTai) AS count FROM TAILIEU");
+
+        res.status(200).json({
+            documents: docRows[0].count || 0,
+            users: userRows[0].count || 0,
+            downloads: dlRows[0].count || 0
+        });
+    } catch (error) {
+        console.error('Lỗi API /documents/stats/platform:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 
@@ -150,22 +184,31 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
         }
 
         const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
-        const fileURL = `/uploads/${req.file.filename}`;
-        let previewURL = null;
+        const isPdf = loaiFile === 'pdf';
+        const resourceType = isPdf ? 'image' : 'raw';
 
         try {
-            if (loaiFile === 'pptx' || loaiFile === 'ppt') {
-                try {
-                    const pptxBuf = fs.readFileSync(req.file.path);
-                    const pdfBuf = await libre.convertAsync(pptxBuf, '.pdf', undefined);
-                    const pdfFileName = `${path.parse(req.file.filename).name}.pdf`;
-                    const pdfPath = path.join(__dirname, 'public/uploads/previews/', pdfFileName);
-                    fs.writeFileSync(pdfPath, pdfBuf);
-                    previewURL = `/uploads/previews/${pdfFileName}`;
-                } catch (convErr) {
-                    console.error('Lỗi convert pptx sang pdf:', convErr);
-                }
-            }
+            const uploadToCloudinary = (buffer, options) => {
+                return new Promise((resolve, reject) => {
+                    const cld_upload_stream = cloudinary.uploader.upload_stream(
+                        options,
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    );
+                    streamifier.createReadStream(buffer).pipe(cld_upload_stream);
+                });
+            };
+
+            const cloudinaryResult = await uploadToCloudinary(req.file.buffer, {
+                resource_type: resourceType,
+                folder: 'edushare_docs',
+                format: isPdf ? 'pdf' : undefined
+            });
+
+            const fileURL = cloudinaryResult.secure_url;
+            const previewURL = null;
 
             const pool = req.app.locals.pool;
 
@@ -184,15 +227,11 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
 
             res.status(200).json({ message: 'Tải lên tài liệu thành công.', fileURL });
         } catch (dbErr) {
-            if (req.file && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
-            console.error('Lỗi khi lưu DB:', dbErr);
-            res.status(500).json({ message: 'Lỗi máy chủ khi lưu thông tin tài liệu.' });
+            console.error('Lỗi khi tải lên hoặc lưu DB:', dbErr);
+            res.status(500).json({ message: 'Lỗi máy chủ khi xử lý tài liệu.' });
         }
     });
 });
-
 
 router.get('/search', async (req, res) => {
     try {
@@ -283,11 +322,13 @@ router.get('/search', async (req, res) => {
 
         let orderClause = '';
         if (sapXep === 'PhoBien') {
-            orderClause = ` ORDER BY TL.SoLuotTai DESC, TL.MaTL DESC`;
+            orderClause = ` ORDER BY TL.LaTaiLieuDocQuyen DESC, TL.SoLuotTai DESC, TL.MaTL DESC`;
+        } else if (sapXep === 'NoiBat') {
+            orderClause = ` ORDER BY TL.LaTaiLieuDocQuyen DESC, DiemDanhGia DESC, TL.SoLuotTai DESC, TL.MaTL DESC`;
         } else if (sapXep === 'Relevance' && booleanSearchQuery) {
-            orderClause = ` ORDER BY score DESC, TL.MaTL DESC`;
+            orderClause = ` ORDER BY TL.LaTaiLieuDocQuyen DESC, score DESC, TL.MaTL DESC`;
         } else {
-            orderClause = ` ORDER BY TL.MaTL DESC`;
+            orderClause = ` ORDER BY TL.LaTaiLieuDocQuyen DESC, TL.MaTL DESC`;
         }
 
         const sql = selectClause + fromClause + whereClause + orderClause + ` LIMIT ? OFFSET ?`;
@@ -483,27 +524,41 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
         }
 
 
+        const fileName = `Tailieu_${doc.MaTL}.${doc.LoaiFile}`;
+        res.setHeader('X-Download-Filename', encodeURIComponent(fileName));
+        res.setHeader('Access-Control-Expose-Headers', 'X-Download-Filename');
+
+        const updateDownloadHistory = async () => {
+            try {
+                const [historyRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaND = ? AND MaTL = ?', [maND, maTL]);
+                if (historyRows.length === 0) {
+                    await pool.execute('INSERT INTO LICH_SU_TAI (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
+                    await pool.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
+                }
+            } catch (dbErr) {
+                console.error('Lỗi khi cập nhật lịch sử tải:', dbErr);
+            }
+        };
+
+        if (doc.FileURL.startsWith('http')) {
+            await updateDownloadHistory();
+            let downloadUrl = doc.FileURL;
+            if (downloadUrl.includes('/upload/')) {
+                downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+            }
+            return res.redirect(downloadUrl);
+        }
+
         const filePath = path.join(__dirname, 'public', doc.FileURL);
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ message: 'Không tìm thấy file vật lý trên máy chủ.' });
         }
 
-        const fileName = `Tailieu_${doc.MaTL}.${doc.LoaiFile}`;
-        res.setHeader('X-Download-Filename', encodeURIComponent(fileName));
-        res.setHeader('Access-Control-Expose-Headers', 'X-Download-Filename');
         res.type(path.extname(filePath));
         
         res.sendFile(filePath, async (err) => {
             if (!err) {
-                try {
-                    const [historyRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaND = ? AND MaTL = ?', [maND, maTL]);
-                    if (historyRows.length === 0) {
-                        await pool.execute('INSERT INTO LICH_SU_TAI (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
-                        await pool.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
-                    }
-                } catch (dbErr) {
-                    console.error('Lỗi khi cập nhật lịch sử tải:', dbErr);
-                }
+                await updateDownloadHistory();
             } else {
                 console.error('Lỗi hoặc gián đoạn khi gửi file:', err);
             }
@@ -734,19 +789,6 @@ router.put('/:maTL', authMiddleware, (req, res) => {
                 const fileURL = `/uploads/${req.file.filename}`;
 
                 let previewURL = null;
-                if (loaiFile === 'pptx' || loaiFile === 'ppt') {
-                    try {
-                        const pptxBuf = fs.readFileSync(req.file.path);
-                        const pdfBuf = await libre.convertAsync(pptxBuf, '.pdf', undefined);
-                        const pdfFileName = `${path.parse(req.file.filename).name}.pdf`;
-                        const pdfPath = path.join(__dirname, 'public/uploads/previews/', pdfFileName);
-                        fs.writeFileSync(pdfPath, pdfBuf);
-                        previewURL = `/uploads/previews/${pdfFileName}`;
-                    } catch (convErr) {
-                        console.error('Lỗi convert pptx sang pdf khi sửa:', convErr);
-                    }
-                }
-
                 await pool.execute(
                     'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
                     [tenTL, moTa || null, maMonHoc, fileURL, previewURL, loaiFile, maTL]
@@ -883,6 +925,52 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
 
     } catch (error) {
         console.error('Lỗi khi mua tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:id/appeal', authMiddleware, async (req, res) => {
+    try {
+        const docId = req.params.id;
+        const userId = req.user.MaND;
+        const { phanHoi } = req.body;
+
+        if (!phanHoi || phanHoi.trim() === '') {
+            return res.status(400).json({ message: 'Vui lòng nhập nội dung phản hồi.' });
+        }
+
+        const pool = req.app.locals.pool;
+
+        // Check if document belongs to user and is rejected
+        const [docs] = await pool.execute(
+            'SELECT TenTL, TrangThaiKiemDuyet FROM TAILIEU WHERE MaTL = ? AND MaND_NguoiDang = ?',
+            [docId, userId]
+        );
+
+        if (docs.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy tài liệu hoặc bạn không có quyền.' });
+        }
+
+        if (docs[0].TrangThaiKiemDuyet !== 'TuChoi') {
+            return res.status(400).json({ message: 'Chỉ có thể phản hồi cho tài liệu bị từ chối.' });
+        }
+
+        // Update status to ChoDuyet and set PhanHoiTuChoi
+        await pool.execute(
+            'UPDATE TAILIEU SET TrangThaiKiemDuyet = "ChoDuyet", PhanHoiTuChoi = ? WHERE MaTL = ?',
+            [phanHoi.trim(), docId]
+        );
+
+        // Notify admins
+        await notifyActiveAdmins(
+            pool,
+            `Tài liệu "${docs[0].TenTL}" vừa có phản hồi khiếu nại và đang chờ duyệt lại.`,
+            `../admin/adminModeration.html`
+        );
+
+        res.status(200).json({ message: 'Gửi phản hồi thành công. Tài liệu đang chờ duyệt lại.' });
+    } catch (error) {
+        console.error('Lỗi khi gửi phản hồi tài liệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

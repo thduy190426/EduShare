@@ -52,7 +52,11 @@ function loadUserProfileNav() {
         if (userRoleEl) {
             let roleStr = 'Sinh viên';
             if (payload.VaiTro === 'GiaoVien') roleStr = 'Giảng viên';
-            if (payload.VaiTro === 'Admin') roleStr = 'Quản trị viên';
+            if (payload.VaiTro === 'Admin') {
+                roleStr = 'Quản trị viên';
+                userRoleEl.style.color = 'var(--danger-color, #ef4444)';
+                userRoleEl.style.fontWeight = '600';
+            }
             userRoleEl.textContent = roleStr;
         }
         if (avatarEl && payload.HoTen) {
@@ -181,8 +185,15 @@ async function fetchUserDocuments() {
             }
 
             let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-            if (loaiFile === 'pdf' && doc.FileURL) {
-                const fileUrlFull = `${API_URL.replace('/api', '')}${doc.FileURL}`;
+            let previewTarget = null;
+            if (doc.PreviewURL) {
+                previewTarget = doc.PreviewURL;
+            } else if (loaiFile === 'pdf' && doc.FileURL) {
+                previewTarget = doc.FileURL;
+            }
+
+            if (previewTarget) {
+                const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
                 thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
                 thumbClass = '';
             }

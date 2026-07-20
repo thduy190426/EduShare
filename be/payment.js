@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware, adminMiddleware } = require('./middlewares/auth');
 
+
 const PACKAGES = [
     { id: 'G10K', price: 10000, coins: 100 },
     { id: 'G20K', price: 20000, coins: 200 },
-    { id: 'G50K', price: 50000, coins: 500 },
-    { id: 'G100K', price: 100000, coins: 1000 },
-    { id: 'G200K', price: 200000, coins: 2000 },
-    { id: 'G500K', price: 500000, coins: 5000 }
+    { id: 'G50K', price: 50000, coins: 550 },
+    { id: 'G100K', price: 100000, coins: 1150 },
+    { id: 'G200K', price: 200000, coins: 2400 },
+    { id: 'G500K', price: 500000, coins: 6250 }
 ];
 
 router.get('/packages', (req, res) => {
@@ -35,6 +36,7 @@ router.post('/create', authMiddleware, async (req, res) => {
             [userId, 'ChoDuyet']
         );
 
+        
         let maGD;
 
         if (pendingTx.length > 0) {
@@ -51,7 +53,7 @@ router.post('/create', authMiddleware, async (req, res) => {
             maGD = result.insertId;
         }
         
-        const bankName = 'TECHCOMBANK'; 
+                const bankName = 'TECHCOMBANK'; 
         const accountNo = '19073799656017'; 
         const accountName = 'TRAN HOANG DUY'; 
         const addInfo = `NAPXU ${maGD}`; 
@@ -59,6 +61,7 @@ router.post('/create', authMiddleware, async (req, res) => {
         const qrUrl = `https://img.vietqr.io/image/${bankName}-${accountNo}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(addInfo)}&accountName=${encodeURIComponent(accountName)}`;
 
         res.status(200).json({ maGD, amount, coins, qrUrl, addInfo });
+
     } catch (error) {
         console.error('Lỗi khi tạo giao dịch nạp xu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ khi tạo giao dịch.' });
@@ -196,5 +199,4 @@ router.delete('/delete/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-
 module.exports = router;

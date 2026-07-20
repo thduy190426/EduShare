@@ -52,8 +52,29 @@
 
     .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; margin-top: 80px; }
     .section-title { font-size: 28px; font-weight: 700; color: var(--text-primary); }
-    .section-link { color: var(--primary); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
-    .section-link:hover { text-decoration: underline; }
+    .section-link {
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 8px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .section-link i {
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .section-link:hover {
+        background: var(--primary-light);
+        color: #4338CA;
+        text-decoration: none;
+    }
+    .section-link:hover i {
+        transform: translateX(4px);
+    }
 
     .doc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
     .doc-card { background: var(--white); border-radius: var(--radius-card); border: 1px solid var(--border); overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; display: flex; flex-direction: column; cursor: pointer; }

@@ -35,17 +35,15 @@
 
         <form id="loginForm">
           <div class="form-group">
-            <label class="form-label">Email:</label>
+            <label class="form-label"><i class="fa-solid fa-envelope"></i> Email:</label>
             <div class="input-wrapper">
-              <span class="input-icon"><i class="fa-solid fa-envelope"></i></span>
                 <input type="email" id="loginEmail" class="form-control" placeholder="Nhập địa chỉ email" required>
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Mật khẩu:</label>
+            <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu:</label>
             <div class="input-wrapper">
-              <span class="input-icon"><i class="fa-solid fa-lock"></i></span>
                 <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
                 <span class="toggle-password" id="toggleLoginPassword"><i class="fa-solid fa-eye" id="toggleLoginIcon"></i></span>
             </div>
@@ -57,6 +55,10 @@
               <span>Ghi nhớ đăng nhập</span>
             </label>
             <a href="forgot-password.html" class="forgot-link">Quên mật khẩu?</a>
+          </div>
+
+          <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9"></div>
           </div>
 
           <button type="submit" class="btn btn-primary">Đăng nhập</button>
@@ -72,6 +74,7 @@
   </div>
   <script type="module" src="../../main/auth/login.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>
 

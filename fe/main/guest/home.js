@@ -4,14 +4,40 @@ import { escapeHTML, formatRatingSummary, getAssetUrl } from '../shared/utils.js
 document.addEventListener('DOMContentLoaded', () => {
     fetchFeaturedDocuments();
     fetchSubjects();
+    fetchStats();
 });
+
+async function fetchStats() {
+    try {
+        const response = await fetch(`${API_URL}/documents/stats/platform`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        
+        const docElem = document.getElementById('stat-documents');
+        const userElem = document.getElementById('stat-users');
+        const dlElem = document.getElementById('stat-downloads');
+
+        const formatNum = (num) => {
+            if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M+';
+            if (num > 1000) return Math.floor(num / 1000) + '.000+'; // Giả lập số chẵn như 50.000+
+            return num + '+';
+        };
+
+        if (docElem) docElem.textContent = formatNum(data.documents);
+        if (userElem) userElem.textContent = formatNum(data.users);
+        if (dlElem) dlElem.textContent = formatNum(data.downloads);
+    } catch (error) {
+        console.error('Lỗi khi tải thống kê:', error);
+    }
+}
 
 async function fetchSubjects() {
     const grid = document.getElementById('homeSubjectGrid');
     if (!grid) return;
 
     try {
-        const response = await fetch(`${API_URL}/documents/subjects`);
+        const response = await fetch(`${API_URL}/documents/subjects/popular`);
         if (!response.ok) throw new Error('Không thể tải danh sách môn học.');
 
         const data = await response.json();
@@ -33,7 +59,7 @@ function renderSubjects(subjects) {
 
     grid.innerHTML = '';
     
-    const displaySubjects = subjects.slice(0, 8);
+    const displaySubjects = subjects;
     const icons = [
         'fa-ruler-combined', 'fa-magnet', 'fa-laptop', 'fa-floppy-disk', 
         'fa-book', 'fa-flask', 'fa-earth-americas', 'fa-bullhorn'
@@ -63,7 +89,7 @@ async function fetchFeaturedDocuments() {
     if (!grid) return;
 
     try {
-        const response = await fetch(`${API_URL}/documents/search?trang=1&limit=4`);
+        const response = await fetch(`${API_URL}/documents/search?trang=1&limit=6&sapXep=NoiBat`);
         if (!response.ok) throw new Error('Khong the tai tai lieu noi bat.');
 
         const data = await response.json();
@@ -78,7 +104,7 @@ function renderFeaturedDocuments(documents) {
     const grid = document.getElementById('homeDocGrid');
     if (!grid) return;
 
-    const topDocuments = documents.slice(0, 4);
+    const topDocuments = documents.slice(0, 6);
     if (topDocuments.length === 0) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chua co tai lieu nao tren he thong.</p>';
         return;
@@ -105,9 +131,16 @@ function renderFeaturedDocuments(documents) {
         }
 
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        if (fileType === 'pdf' && doc.FileURL) {
-            const fileUrlFull = `${API_URL.replace('/api', '')}${doc.FileURL}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
+        let previewTarget = null;
+        if (doc.PreviewURL) {
+            previewTarget = doc.PreviewURL;
+        } else if (fileType === 'pdf' && doc.FileURL) {
+            previewTarget = doc.FileURL;
+        }
+
+        if (previewTarget) {
+            const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
+            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
             thumbClass = '';
         }
 
@@ -131,7 +164,7 @@ function renderFeaturedDocuments(documents) {
             </div>
             <div class="doc-content">
                 <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="doc-meta-item"><span><i class="fa-solid fa-folder"></i></span> ${escapeHTML(doc.TenMonHoc || 'Khong xac dinh')}</span>
+                    <span class="doc-meta-item" style="max-width: 65%;"><span><i class="fa-solid fa-folder" style="flex-shrink: 0;"></i></span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHTML(doc.TenMonHoc || 'Khong xac dinh')}">${escapeHTML(doc.TenMonHoc || 'Khong xac dinh')}</span></span>
                     <span class="doc-meta-item" style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${dateText}</span>
                 </div>
                 <h3 class="doc-title">${escapeHTML(doc.TenTL || 'Tai lieu')}</h3>

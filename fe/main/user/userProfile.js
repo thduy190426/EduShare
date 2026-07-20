@@ -298,9 +298,10 @@ async function changePassword() {
     const matKhauCu = document.getElementById('input-old-pw').value;
     const matKhauMoi = document.getElementById('input-new-pw').value;
     const confirm = document.getElementById('input-confirm-pw').value;
+    const otp = document.getElementById('input-change-pw-otp').value;
     const hoTen = document.getElementById('input-hoten').value;
 
-    if (!matKhauCu || !matKhauMoi || !confirm) return Toast.fire({ icon: 'warning', title: 'Vui lòng điền đủ thông tin đổi mật khẩu.' });
+    if (!matKhauCu || !matKhauMoi || !confirm || !otp) return Toast.fire({ icon: 'warning', title: 'Vui lòng điền đủ thông tin đổi mật khẩu và mã OTP.' });
     if (matKhauMoi !== confirm) return Toast.fire({ icon: 'warning', title: 'Mật khẩu xác nhận không khớp.' });
 
     try {
@@ -310,7 +311,7 @@ async function changePassword() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, matKhauCu, matKhauMoi })
+            body: JSON.stringify({ hoTen, matKhauCu, matKhauMoi, otp })
         });
         const data = await res.json();
         if (res.ok) {
@@ -325,6 +326,7 @@ async function changePassword() {
             document.getElementById('input-old-pw').value = '';
             document.getElementById('input-new-pw').value = '';
             document.getElementById('input-confirm-pw').value = '';
+            document.getElementById('input-change-pw-otp').value = '';
             checkPasswordChanges();
             
             const btnTogglePwd = document.getElementById('btn-toggle-pwd');
@@ -342,6 +344,37 @@ async function changePassword() {
 }
 
 let isDeletingAccount = false;
+
+
+
+let currentAppealDocId = null;
+
+window.openRejectReasonModal = function(docId, title, reason) {
+    currentAppealDocId = docId;
+    document.getElementById('reject-reason-doc-title').textContent = title;
+    document.getElementById('reject-reason-content').textContent = reason || 'Không có lý do cụ thể.';
+    
+    const input = document.getElementById('input-reject-appeal');
+    input.value = '';
+    
+    const btnSubmit = document.getElementById('btn-submit-appeal');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.style.opacity = '0.5';
+        btnSubmit.style.cursor = 'not-allowed';
+    }
+    
+    const modal = document.getElementById('reject-reason-modal');
+    modal.style.display = 'flex';
+    setTimeout(() => { modal.style.opacity = '1'; }, 10);
+};
+
+window.closeRejectReasonModal = function() {
+    currentAppealDocId = null;
+    const modal = document.getElementById('reject-reason-modal');
+    modal.style.opacity = '0';
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+};
 
 function openDeleteAccountModal() {
     const modal = document.getElementById('delete-account-modal');
@@ -522,6 +555,13 @@ async function fetchMyDocuments() {
             const statusText = doc.TrangThaiKiemDuyet === 'DaDuyet' ? 'Đã duyệt' : 
                               (doc.TrangThaiKiemDuyet === 'ChoDuyet' ? 'Chờ kiểm duyệt' : 'Từ chối');
 
+            let actionBtn = `<a href="../document/documentDetails.html?id=${doc.MaTL}" class="btn-outline-primary"><i class="fa-solid fa-eye" style="margin-right: 6px;"></i> Xem chi tiết</a>`;
+            if (doc.TrangThaiKiemDuyet === 'TuChoi') {
+                const rejectReason = doc.LyDoTuChoi ? doc.LyDoTuChoi.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "") : '';
+                const docTitle = doc.TenTL ? doc.TenTL.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "") : '';
+                actionBtn = `<button onclick="window.openRejectReasonModal(${doc.MaTL}, '${docTitle}', '${rejectReason}')" class="btn-outline-primary" style="color: var(--danger); border-color: var(--danger); cursor: pointer; background: transparent;"><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i> Xem lí do từ chối</button>`;
+            }
+
             el.innerHTML = `
                 <div class="doc-info">
                   <div class="doc-icon"><i class="fa-solid ${icon}" style="color: ${iconColor};"></i></div>
@@ -538,7 +578,7 @@ async function fetchMyDocuments() {
                     </div>
                   </div>
                 </div>
-                <a href="../document/documentDetails.html?id=${doc.MaTL}" class="btn-outline-primary"><i class="fa-solid fa-eye" style="margin-right: 6px;"></i> Xem chi tiết</a>
+                ${actionBtn}
             `;
             container.appendChild(el);
         });
@@ -676,10 +716,10 @@ async function fetchTransactions() {
             el.className = 'doc-item';
             el.style.animationDelay = `${index * 0.04}s`;
             
-            const isCong = txn.LoaiGiaoDich === 'Cong';
+            const isCong = txn.SoXuThayDoi > 0;
             const icon = isCong ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
             const iconColor = isCong ? 'var(--success)' : 'var(--danger)';
-            const sign = isCong ? '+' : '-';
+            const sign = isCong ? '+' : '';
             const amountColor = isCong ? 'var(--success)' : 'var(--danger)';
             const d = new Date(txn.NgayTao);
             const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
@@ -916,9 +956,10 @@ function checkPasswordChanges() {
     const matKhauCu = document.getElementById('input-old-pw').value;
     const matKhauMoi = document.getElementById('input-new-pw').value;
     const confirm = document.getElementById('input-confirm-pw').value;
+    const otp = document.getElementById('input-change-pw-otp').value;
     const btn = document.getElementById('btn-change-pw');
     
-    if (matKhauCu.trim() && matKhauMoi.trim() && confirm.trim() && matKhauMoi === confirm) {
+    if (matKhauCu.trim() && matKhauMoi.trim() && confirm.trim() && otp.trim() && matKhauMoi === confirm) {
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
@@ -971,24 +1012,80 @@ function setupEventListeners() {
     const btnChangePw = document.getElementById('btn-change-pw');
     btnChangePw.addEventListener('click', changePassword);
     
+    const btnSendPwOtp = document.getElementById('btn-send-pw-otp');
+    if (btnSendPwOtp) btnSendPwOtp.addEventListener('click', sendChangePasswordOtp);
+    
+    document.getElementById('input-change-pw-otp')?.addEventListener('input', checkPasswordChanges);
+    
     document.querySelectorAll('.toggle-password').forEach(icon => {
         icon.addEventListener('click', function() {
             const input = this.previousElementSibling;
-            if (input && input.tagName === 'INPUT') {
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    this.classList.remove('fa-eye-slash');
-                    this.classList.add('fa-eye');
-                    this.style.color = 'var(--primary)';
-                } else {
-                    input.type = 'password';
-                    this.classList.remove('fa-eye');
-                    this.classList.add('fa-eye-slash');
-                    this.style.color = '#6b7280';
-                }
-            }
+            const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+            input.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+            this.classList.toggle('fa-eye');
         });
     });
+
+    const btnSubmitAppeal = document.getElementById('btn-submit-appeal');
+    const inputRejectAppeal = document.getElementById('input-reject-appeal');
+
+    if (inputRejectAppeal && btnSubmitAppeal) {
+        inputRejectAppeal.addEventListener('input', function() {
+            if (this.value.trim().length > 0) {
+                btnSubmitAppeal.disabled = false;
+                btnSubmitAppeal.style.opacity = '1';
+                btnSubmitAppeal.style.cursor = 'pointer';
+            } else {
+                btnSubmitAppeal.disabled = true;
+                btnSubmitAppeal.style.opacity = '0.5';
+                btnSubmitAppeal.style.cursor = 'not-allowed';
+            }
+        });
+    }
+
+    if (btnSubmitAppeal) {
+        btnSubmitAppeal.addEventListener('click', async function() {
+            const phanHoi = document.getElementById('input-reject-appeal').value;
+            if (!phanHoi || phanHoi.trim() === '') {
+                Toast.fire({ icon: 'warning', title: 'Vui lòng nhập nội dung phản hồi.' });
+                return;
+            }
+
+            if (!currentAppealDocId) return;
+
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_URL}/documents/${currentAppealDocId}/appeal`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phanHoi })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    Toast.fire({ icon: 'success', title: data.message });
+                    window.closeRejectReasonModal();
+                    fetchMyDocuments(); // Reload list
+                } else {
+                    Toast.fire({ icon: 'error', title: data.message || 'Lỗi khi gửi phản hồi.' });
+                }
+            } catch (error) {
+                console.error(error);
+                Toast.fire({ icon: 'error', title: 'Lỗi kết nối máy chủ.' });
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    }
 
     checkPasswordChanges();
     ['input-old-pw', 'input-new-pw', 'input-confirm-pw'].forEach(id => {
@@ -1129,4 +1226,55 @@ function setupEventListeners() {
     dropdown.addEventListener('click', (e) => {
         e.stopPropagation(); 
     });
+}
+
+async function sendChangePasswordOtp() {
+    const matKhauCu = document.getElementById('input-old-pw').value;
+    if (!matKhauCu.trim()) {
+        return Toast.fire({ icon: 'warning', title: 'Vui lòng nhập mật khẩu hiện tại trước khi lấy mã OTP.' });
+    }
+
+    const btn = document.getElementById('btn-send-pw-otp');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+    btn.disabled = true;
+    
+    try {
+        const res = await fetch(`${API_URL}/users/send-change-password-otp`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ matKhauCu })
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+            Toast.fire({ icon: 'success', title: data.message });
+            
+            // Countdown timer
+            let timeLeft = 60;
+            const timerId = setInterval(() => {
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                } else {
+                    btn.innerHTML = `Gửi lại sau ${timeLeft}s`;
+                    timeLeft--;
+                }
+            }, 1000);
+        } else {
+            Toast.fire({ icon: 'error', title: data.message || 'Lỗi gửi OTP.' });
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    } catch (err) {
+        console.error(err);
+        Toast.fire({ icon: 'error', title: 'Lỗi kết nối máy chủ.' });
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }

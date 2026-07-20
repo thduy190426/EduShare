@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchMySubjects();
     fetchLatestDocuments();
     fetchRecommendedGroups();
+    setupSearch();
 
     const btnCustomize = document.getElementById('btn-customize-subjects');
     if (btnCustomize) {
@@ -18,6 +19,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let mySubjects = [];
 let selectedSubjectId = '';
+
+function setupSearch() {
+    const searchInput = document.querySelector('.nav-search input');
+    const searchIcon = document.querySelector('.nav-search .search-icon');
+
+    if (!searchInput || !searchIcon) return;
+
+    const performSearch = () => {
+        const query = searchInput.value.trim();
+        if (query) {
+            window.location.href = `../document/searchResults.html?q=${encodeURIComponent(query)}`;
+        }
+    };
+
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+
+    searchIcon.addEventListener('click', performSearch);
+    searchIcon.style.cursor = 'pointer';
+}
 
 async function fetchMySubjects() {
     const token = getToken();
@@ -257,7 +281,11 @@ function loadUserProfileNav() {
         if (userRoleEl) {
             let roleStr = 'Sinh viên';
             if (payload.VaiTro === 'GiaoVien') roleStr = 'Giảng viên';
-            if (payload.VaiTro === 'Admin') roleStr = 'Quản trị viên';
+            if (payload.VaiTro === 'Admin') {
+                roleStr = 'Quản trị viên';
+                userRoleEl.style.color = 'var(--danger-color, #ef4444)';
+                userRoleEl.style.fontWeight = '600';
+            }
             userRoleEl.textContent = roleStr;
         }
         if (avatarEl && payload.HoTen) {
@@ -443,8 +471,15 @@ function renderHomeDocuments(documents) {
         }
 
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        if (loaiFile === 'pdf' && doc.FileURL) {
-            const fileUrlFull = `${API_URL.replace('/api', '')}${doc.FileURL}`;
+        let previewTarget = null;
+        if (doc.PreviewURL) {
+            previewTarget = doc.PreviewURL;
+        } else if (loaiFile === 'pdf' && doc.FileURL) {
+            previewTarget = doc.FileURL;
+        }
+
+        if (previewTarget) {
+            const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
             thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
             thumbClass = '';
         }
@@ -463,7 +498,7 @@ function renderHomeDocuments(documents) {
             </div>
             <div class="doc-content">
                 <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span class="doc-meta-item"><span><i class="fa-solid fa-folder"></i></span> ${doc.TenMonHoc || 'Không xác định'}</span>
+                    <span class="doc-meta-item" style="max-width: 65%;"><span><i class="fa-solid fa-folder" style="flex-shrink: 0;"></i></span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${doc.TenMonHoc || 'Không xác định'}">${doc.TenMonHoc || 'Không xác định'}</span></span>
                     <span class="doc-meta-item" style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
                 </div>
                 <h3 class="doc-title">
@@ -473,7 +508,7 @@ function renderHomeDocuments(documents) {
                 <div class="doc-footer">
                     <div class="doc-author js-author-link" data-user-id="${doc.MaND_NguoiDang || ''}" title="Xem hồ sơ người đăng">
                         ${avatarHtml}
-                        <span>${doc.TenNguoiDang || 'Ẩn danh'}</span>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; display: inline-block; vertical-align: middle;">${doc.TenNguoiDang || 'Ẩn danh'}</span>
                     </div>
                     <div class="doc-stats">
                         <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>

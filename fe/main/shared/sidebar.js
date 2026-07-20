@@ -7,12 +7,12 @@ const SIDEBAR_ITEMS = [
     { label: 'Tải tài liệu', icon: 'fa-upload', href: '../document/uploadDocument.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
-    { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
   
     { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], group: 'admin' },
     { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin'], badge: 'pendingDocs', group: 'admin' },
-    { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], group: 'admin' },
+    { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], badge: 'pendingPayments', group: 'admin' },
     { label: 'Người dùng', icon: 'fa-users-gear', href: '../admin/adminUserManagement.html', roles: ['Admin'], group: 'admin' },
     { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], group: 'admin' },
     { label: 'Quản lý Nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
@@ -102,14 +102,39 @@ async function renderSidebar() {
         btnLogout.addEventListener('click', (e) => {
             e.preventDefault();
             try {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Đang đăng xuất...',
+                        text: 'Vui lòng chờ giây lát',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                } else {
+                    document.body.style.pointerEvents = 'none';
+                    document.body.style.opacity = '0.5';
+                }
+
                 clearAuthSession();
-                showToast('success', 'Đăng xuất thành công');
                 setTimeout(() => {
                     window.location.href = '../auth/login.html';
                 }, 1000);
             } catch (error) {
                 console.error(error);
-                showToast('error', 'Đăng xuất thất bại');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi',
+                        text: 'Đăng xuất thất bại'
+                    });
+                } else {
+                    document.body.style.pointerEvents = 'auto';
+                    document.body.style.opacity = '1';
+                    showToast('error', 'Đăng xuất thất bại');
+                }
             }
         });
     }
@@ -170,9 +195,23 @@ async function renderSidebar() {
                         badgeReports.style.display = 'none';
                     }
                 }
+
+                if (data.pendingPayments > 0) {
+                    const badgePayments = document.getElementById('badge-pendingPayments');
+                    if (badgePayments) {
+                        badgePayments.textContent = data.pendingPayments > 99 ? '99+' : data.pendingPayments;
+                        badgePayments.style.display = 'flex';
+                    }
+                } else {
+                    const badgePayments = document.getElementById('badge-pendingPayments');
+                    if (badgePayments) {
+                        badgePayments.textContent = '0';
+                        badgePayments.style.display = 'none';
+                    }
+                }
             }
         } catch (e) {
-            console.error('Lỗi load admin badges:', e);
+            console.error('Lỗi load Admin badges:', e);
         }
     }
 
@@ -258,6 +297,17 @@ window.refreshSidebarBadges = async function () {
                 badgeReports.style.display = 'none';
             }
         }
+
+        const badgePayments = document.getElementById('badge-pendingPayments');
+        if (badgePayments) {
+            if (Number(data.pendingPayments || 0) > 0) {
+                badgePayments.textContent = data.pendingPayments > 99 ? '99+' : data.pendingPayments;
+                badgePayments.style.display = 'flex';
+            } else {
+                badgePayments.textContent = '0';
+                badgePayments.style.display = 'none';
+            }
+        }
     } catch (e) {
         console.error('Lá»—i refresh sidebar badges:', e);
     }
@@ -293,6 +343,10 @@ function renderNavbarUserProfile() {
         
         if (roleEl && payload.VaiTro) {
             roleEl.textContent = payload.VaiTro === 'Admin' ? 'Quản trị viên' : (payload.VaiTro === 'GiaoVien' ? 'Giáo viên' : 'Sinh viên');
+            if (payload.VaiTro === 'Admin') {
+                roleEl.style.color = 'var(--danger-color, #ef4444)';
+                roleEl.style.fontWeight = '600';
+            }
         }
         
 

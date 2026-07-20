@@ -45,6 +45,7 @@ async function run() {
 
     try {
         await addColumnIfMissing('TAILIEU', 'LyDoTuChoi', 'TEXT DEFAULT NULL');
+        await addColumnIfMissing('TAILIEU', 'PhanHoiTuChoi', 'TEXT DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'AvatarURL', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'Tuoi', 'INT DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'SoDuXu', 'INT DEFAULT 0');

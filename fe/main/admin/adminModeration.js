@@ -24,14 +24,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnConfirmReject = document.getElementById("btn-confirm-reject");
 
   const closeModal = () => {
-    if (rejectModal) rejectModal.style.display = "none";
-    currentRejectId = null;
-    const reasonInput = document.getElementById("reject-reason-input");
-    if (reasonInput) reasonInput.value = "";
+    if (rejectModal) {
+      rejectModal.classList.add("hide");
+      setTimeout(() => {
+        rejectModal.style.display = "none";
+        rejectModal.classList.remove("hide");
+        currentRejectId = null;
+        const reasonInput = document.getElementById("reject-reason-input");
+        if (reasonInput) reasonInput.value = "";
+      }, 200);
+    }
   };
 
   if (btnCloseModal) btnCloseModal.addEventListener("click", closeModal);
   if (btnCancelModal) btnCancelModal.addEventListener("click", closeModal);
+
+  
+  const reasonInput = document.getElementById("reject-reason-input");
+  if (reasonInput && btnConfirmReject) {
+    reasonInput.addEventListener('input', () => {
+      const val = reasonInput.value.trim();
+      btnConfirmReject.disabled = val.length < 10;
+    });
+  }
 
   if (btnConfirmReject) {
     btnConfirmReject.addEventListener("click", () => {
@@ -118,7 +133,7 @@ function renderDocuments(documents, status) {
   tbody.innerHTML = "";
 
   if (documents.length === 0) {
-    let emptyText = "Không có tài liệu nào chờ duyệt.";
+    let emptyText = "Không có tài liệu nào đang trong trạng thái chờ duyệt.";
     if (status === 'DaDuyet') emptyText = "Không có tài liệu nào đã duyệt.";
     else if (status === 'TuChoi') emptyText = "Không có tài liệu nào bị từ chối.";
     tbody.innerHTML =
@@ -156,6 +171,11 @@ function renderDocuments(documents, status) {
 
     if (status === 'ChoDuyet') {
         statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span style="color:var(--warning); font-size:14px; font-weight:600;">Chờ duyệt</span></div>`;
+        
+        if (doc.PhanHoiTuChoi) {
+            statusBadgeHtml += `<div style="font-size:12px; color:#D97706; margin-top:6px; max-width: 180px; white-space: normal; background: #FEF3C7; padding: 6px; border-radius: 4px; border: 1px solid #FDE68A;" title="${doc.PhanHoiTuChoi.replace(/"/g, '&quot;')}"><i class="fa-solid fa-comment-dots" style="margin-right:4px;"></i> <strong>Phản hồi:</strong> ${doc.PhanHoiTuChoi}</div>`;
+        }
+
         actionBtnsHtml += `
             <button class="btn-action btn-approve" style="background:#ecfdf5; color:#10b981; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" title="Duyệt" data-id="${doc.MaTL}"><i class="fa-solid fa-check"></i></button>
             <button class="btn-action btn-reject" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" title="Từ chối" data-id="${doc.MaTL}" data-title="${doc.TenTL}"><i class="fa-solid fa-xmark"></i></button>
@@ -179,6 +199,9 @@ function renderDocuments(documents, status) {
         `;
     } else if (status === 'TuChoi') {
         statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--danger);"></span><span style="color:var(--danger); font-size:14px; font-weight:600;">Từ chối</span></div><div style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width: 150px; white-space: normal;" title="${doc.LyDoTuChoi || ''}">Lý do: ${doc.LyDoTuChoi || 'Không rõ'}</div>`;
+        actionBtnsHtml += `
+            <button class="btn-action btn-delete-doc" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="Xóa vĩnh viễn" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}"><i class="fa-solid fa-trash"></i></button>
+        `;
     }
 
     let dateStr = '-';
@@ -258,7 +281,11 @@ function renderDocuments(documents, status) {
 
       currentRejectId = id;
       document.getElementById("reject-doc-title").textContent = title;
-      document.getElementById("reject-modal-overlay").style.display = "flex";
+      const reasonInput = document.getElementById("reject-reason-input");
+      if (reasonInput) reasonInput.value = "";
+      const btnConfirm = document.getElementById("btn-confirm-reject");
+      if (btnConfirm) btnConfirm.disabled = true;
+      const m = document.getElementById("reject-modal-overlay"); m.style.display = "flex"; m.classList.remove("hide");
     });
   });
 
@@ -267,7 +294,8 @@ function renderDocuments(documents, status) {
     btn.addEventListener("click", (e) => {
       const url = e.currentTarget.getAttribute("data-url");
       if (url) {
-        window.open("http://localhost:3000" + url, "_blank");
+        const fullUrl = url.startsWith('http') ? url : "http://localhost:3000" + url;
+        window.open(fullUrl, "_blank");
       } else {
         showToast("error", "Không có đường dẫn file.");
       }
