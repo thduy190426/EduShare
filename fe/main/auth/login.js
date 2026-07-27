@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { isValidEmail, saveLoginSession } from '../shared/utils.js';
+import { isValidEmail, saveLoginSession, getTimeBasedGreeting } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = document.getElementById('loginEmail')?.value.trim() || '';
         const matKhau = document.getElementById('loginPassword')?.value || '';
         
-        if (isValidEmail(email) && matKhau.length > 0) {
+        if (isValidEmail(email) && matKhau.length > 0 && window.isCaptchaSolved) {
             loginSubmitBtn.disabled = false;
             loginSubmitBtn.style.opacity = '1';
             loginSubmitBtn.style.cursor = 'pointer';
@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loginSubmitBtn.style.cursor = 'not-allowed';
         }
     };
+    window.validateLoginForm = validateLoginForm;
 
     if (loginForm) {
         document.getElementById('loginEmail')?.addEventListener('input', validateLoginForm);
@@ -87,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = '0.5';
                 submitBtn.style.cursor = 'not-allowed';
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i>&nbsp; Đang xử lý...';
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i>&nbsp; Đang đăng nhập...';
 
                 document.body.style.pointerEvents = 'none';
                 if (typeof Swal !== 'undefined') {
@@ -121,12 +122,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     submitBtn.style.cursor = 'pointer';
                     submitBtn.innerHTML = originalText;
                     if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
-                    Toast.fire({ icon: 'error', title: data.message || 'Đăng nhập thất bại' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Đăng nhập thất bại',
+                        text: data.message || 'Email hoặc mật khẩu không đúng'
+                    });
                 } else {
-                    Toast.fire({ icon: 'success', title: 'Đăng nhập thành công! Đang chuyển hướng...' });
+                    const greeting = getTimeBasedGreeting('login');
+                    Toast.fire({ icon: 'success', title: greeting });
                     
                     saveLoginSession({
                         token: data.token,
+                        refreshToken: data.refreshToken,
                         avatarURL: data.avatarURL,
                         rememberLogin
                     });

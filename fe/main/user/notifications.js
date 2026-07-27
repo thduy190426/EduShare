@@ -1,9 +1,12 @@
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
 
+let currentPage = 1;
+const LIMIT = 20;
+
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
-    fetchNotifications();
+    fetchNotifications(currentPage);
 
     const btnMarkAll = document.getElementById('btn-mark-all-read');
     if (btnMarkAll) {
@@ -13,6 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDeleteAll = document.getElementById('btn-delete-all-notifications');
     if (btnDeleteAll) {
         btnDeleteAll.addEventListener('click', deleteAllNotifications);
+    }
+
+    const btnLoadMore = document.getElementById('btn-load-more');
+    if (btnLoadMore) {
+        btnLoadMore.addEventListener('click', () => {
+            currentPage++;
+            btnLoadMore.textContent = 'Đang tải...';
+            btnLoadMore.disabled = true;
+            fetchNotifications(currentPage);
+        });
     }
 });
 
@@ -44,12 +57,12 @@ function loadUserProfileNav() {
     }
 }
 
-async function fetchNotifications() {
+async function fetchNotifications(page = 1) {
     const token = getToken();
     if (!token) return;
 
     try {
-        const response = await fetch(`${API_URL}/notifications`, {
+        const response = await fetch(`${API_URL}/notifications?page=${page}&limit=${LIMIT}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -58,7 +71,7 @@ async function fetchNotifications() {
             throw new Error(data.message || 'Lỗi tải thông báo');
         }
 
-        renderNotifications(data.notifications);
+        renderNotifications(data.notifications, page, data.hasMore);
     } catch (error) {
         console.error(error);
         const list = document.getElementById('notificationList');
@@ -68,18 +81,22 @@ async function fetchNotifications() {
     }
 }
 
-function renderNotifications(notifications) {
+function renderNotifications(notifications, page = 1, hasMore = false) {
     const list = document.getElementById('notificationList');
     if (!list) return;
 
-    list.innerHTML = '';
+    if (page === 1) {
+        list.innerHTML = '';
+    }
 
     const pageActions = document.querySelector('.page-actions');
-    if (notifications.length === 0) {
+    
+    if (page === 1 && notifications.length === 0) {
         list.innerHTML = '<div style="text-align:center; padding:2rem; color:#6b7280;">Bạn không có thông báo nào.</div>';
         if (pageActions) pageActions.style.display = 'none';
         return;
     }
+    
     if (pageActions) pageActions.style.display = 'flex';
 
     notifications.forEach(noti => {
@@ -144,6 +161,13 @@ function renderNotifications(notifications) {
 
         list.appendChild(item);
     });
+
+    const btnLoadMore = document.getElementById('btn-load-more');
+    if (btnLoadMore) {
+        btnLoadMore.style.display = hasMore ? 'inline-block' : 'none';
+        btnLoadMore.textContent = 'Xem thêm thông báo';
+        btnLoadMore.disabled = false;
+    }
 }
 
 async function markAsRead(maTB) {
@@ -193,6 +217,9 @@ async function deleteNotification(maTB, itemEl) {
             list.innerHTML = '<div style="text-align:center; padding:2rem; color:#6b7280;">Bạn không có thông báo nào.</div>';
             const pageActions = document.querySelector('.page-actions');
             if (pageActions) pageActions.style.display = 'none';
+            
+            const btnLoadMore = document.getElementById('btn-load-more');
+            if (btnLoadMore) btnLoadMore.style.display = 'none';
         }
 
         Swal.fire({
@@ -255,6 +282,9 @@ async function deleteAllNotifications() {
         }
         const pageActions = document.querySelector('.page-actions');
         if (pageActions) pageActions.style.display = 'none';
+        
+        const btnLoadMore = document.getElementById('btn-load-more');
+        if (btnLoadMore) btnLoadMore.style.display = 'none';
 
         Swal.fire({
             toast: true,

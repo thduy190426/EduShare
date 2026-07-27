@@ -1,7 +1,9 @@
 import { API_URL } from '../shared/config.js';
-import { getToken, showToast } from '../shared/utils.js';
+import { getToken, showToast, renderPagination } from '../shared/utils.js';
 
 const token = getToken();
+let currentPage = 1;
+const limit = 10;
 
 window.openAddSubjectModal = () => {
     const modal = document.getElementById('addSubjectModal');
@@ -69,7 +71,7 @@ function escapeHTML(value) {
 
 async function fetchSubjects() {
     try {
-        const res = await fetch(`${API_URL}/admin/subjects`, {
+        const res = await fetch(`${API_URL}/admin/subjects?page=${currentPage}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -80,8 +82,15 @@ async function fetchSubjects() {
         }
 
         const data = await res.json();
-        window.subjectsData = data.subjects;
-        renderSubjects(data.subjects);
+        window.subjectsData = data.data || [];
+        renderSubjects(window.subjectsData);
+        
+        if (data.pagination) {
+            renderPagination('subject-pagination', data.pagination.totalPages, currentPage, (page) => {
+                currentPage = page;
+                fetchSubjects();
+            });
+        }
     } catch (err) {
         console.error(err);
     }
@@ -185,6 +194,7 @@ function renderSubjectSuggestions(suggestions) {
         }
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td style="font-weight: 600;">${escapeHTML(item.TenMonHoc)}</td>
             <td><span style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHTML(item.CapHoc || 'Khác')}</span></td>
             <td>
@@ -288,11 +298,11 @@ function renderSubjects(subjects) {
     tbody.innerHTML = '';
 
     if (subjects.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không có môn học nào.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không có môn học nào.</td></tr>';
         return;
     }
 
-    subjects.forEach(sub => {
+    subjects.forEach((sub, index) => {
         const tr = document.createElement('tr');
         
         const dateObj = new Date(sub.NgayCapNhat || sub.NgayTao || new Date());
@@ -305,6 +315,7 @@ function renderSubjects(subjects) {
         const dateStr = `${h}:${min}:${s} | ${d}/${m}/${y}`;
 
         tr.innerHTML = `
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td style="font-weight: 600;">
                 ${escapeHTML(sub.TenMonHoc)}
                 ${sub.TrangThai === 'TamAn' ? '<span style="margin-left: 8px; background: #F3F4F6; color: #6B7280; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 500;"><i class="fa-solid fa-eye-slash" style="margin-right: 4px;"></i>Đang ẩn</span>' : ''}

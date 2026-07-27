@@ -72,6 +72,8 @@ function checkProfileChanges() {
     const currentDiaChi = document.getElementById('input-diachi').value;
     const currentTruongHoc = document.getElementById('input-truonghoc').value;
     const currentKhoaNganh = document.getElementById('input-khoanganh').value;
+    const currentPrivacyDownloads = document.getElementById('input-privacy-downloads').checked;
+    const currentPrivacyRatings = document.getElementById('input-privacy-ratings').checked;
 
     const isChanged = 
         currentHoTen !== initialProfileState.hoTen ||
@@ -79,7 +81,9 @@ function checkProfileChanges() {
         currentGioiTinh !== initialProfileState.gioiTinh ||
         currentDiaChi !== initialProfileState.diaChi ||
         currentTruongHoc !== initialProfileState.truongHoc ||
-        currentKhoaNganh !== initialProfileState.khoaNganh;
+        currentKhoaNganh !== initialProfileState.khoaNganh ||
+        currentPrivacyDownloads !== initialProfileState.privacyDownloads ||
+        currentPrivacyRatings !== initialProfileState.privacyRatings;
 
     const btnSave = document.getElementById('btn-save-profile');
     if (isChanged && currentHoTen.trim() !== '') {
@@ -213,7 +217,18 @@ async function initProfile() {
         document.getElementById('header-email').textContent = profile.Email;
         document.getElementById('header-role').textContent = profile.VaiTro === 'SinhVien' ? 'Sinh viên' : profile.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên';
         const elSoDuXu = document.getElementById('header-soduxu');
-        if (elSoDuXu) elSoDuXu.textContent = (profile.SoDuXu || 0).toLocaleString();
+        if (elSoDuXu) {
+            if (profile.VaiTro === 'SinhVien') {
+                elSoDuXu.textContent = (profile.SoDuXu || 0).toLocaleString();
+            } else {
+                elSoDuXu.parentElement.style.display = 'none';
+            }
+        }
+        
+        const tabGiaoDich = document.querySelector('.tab-btn[data-tab="transactions"]');
+        if (tabGiaoDich && profile.VaiTro !== 'SinhVien') {
+            tabGiaoDich.style.display = 'none';
+        }
         
         renderCurrentUserAvatar(profile);
 
@@ -225,6 +240,8 @@ async function initProfile() {
         document.getElementById('input-diachi').value = profile.DiaChi || '';
         document.getElementById('input-truonghoc').value = profile.TruongHoc || '';
         document.getElementById('input-khoanganh').value = profile.KhoaNganh || '';
+        document.getElementById('input-privacy-downloads').checked = profile.HienThiLichSuTai !== 0;
+        document.getElementById('input-privacy-ratings').checked = profile.HienThiDanhGia !== 0;
         
         initialProfileState = {
             hoTen: profile.HoTen || '',
@@ -232,14 +249,59 @@ async function initProfile() {
             gioiTinh: normalizeGioiTinhValue(profile.GioiTinh),
             diaChi: profile.DiaChi || '',
             truongHoc: profile.TruongHoc || '',
-            khoaNganh: profile.KhoaNganh || ''
+            khoaNganh: profile.KhoaNganh || '',
+            privacyDownloads: profile.HienThiLichSuTai !== 0,
+            privacyRatings: profile.HienThiDanhGia !== 0
         };
         checkProfileChanges();
+        
+        if (profile.VaiTro === 'SinhVien') {
+            document.getElementById('upgrade-teacher-section').style.display = 'block';
+            initUpgradeTeacher();
+        }
     } catch (err) {
         console.error(err);
         Toast.fire({ icon: 'error', title: err.message });
     }
 }
+
+async function initUpgradeTeacher() {
+    const statusContainer = document.getElementById('upgrade-status-container');
+    const form = document.getElementById('form-upgrade-teacher');
+    
+    try {
+        const res = await fetch(`${API_URL}/users/upgrade-status`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.status) {
+            statusContainer.style.display = 'block';
+            if (data.status.TrangThai === 'ChoDuyet') {
+                statusContainer.innerHTML = `<i class="fa-solid fa-clock" style="color: #F59E0B; margin-right: 8px;"></i> Yêu cầu của bạn đang chờ Admin xét duyệt (Gửi lúc: ${new Date(data.status.NgayTao).toLocaleString()}).`;
+                statusContainer.style.backgroundColor = '#FEF3C7';
+                statusContainer.style.border = '1px solid #FDE68A';
+                statusContainer.style.color = '#B45309';
+                form.style.display = 'none';
+            } else if (data.status.TrangThai === 'TuChoi') {
+                statusContainer.innerHTML = `
+                    <div style="font-weight: 600;"><i class="fa-solid fa-circle-xmark" style="color: #EF4444; margin-right: 8px;"></i> Yêu cầu bị từ chối</div>
+                    <div style="margin-top: 4px; font-size: 13px;">Lý do: ${data.status.LyDoTuChoi || 'Không hợp lệ'}</div>
+                    <div style="margin-top: 4px; font-size: 13px;">Bạn có thể nộp lại minh chứng bên dưới.</div>
+                `;
+                statusContainer.style.backgroundColor = '#FEE2E2';
+                statusContainer.style.border = '1px solid #FECACA';
+                statusContainer.style.color = '#B91C1C';
+                form.style.display = 'block';
+            } else if (data.status.TrangThai === 'DaDuyet') {
+                document.getElementById('upgrade-teacher-section').style.display = 'none';
+            }
+        }
+    } catch (err) {
+        console.error('Lỗi lấy trạng thái nâng cấp:', err);
+    }
+}
+
 
 async function saveProfile() {
     const hoTen = document.getElementById('input-hoten').value;
@@ -248,6 +310,8 @@ async function saveProfile() {
     const diaChi = document.getElementById('input-diachi').value;
     const truongHoc = document.getElementById('input-truonghoc').value;
     const khoaNganh = document.getElementById('input-khoanganh').value;
+    const hienThiLichSuTai = document.getElementById('input-privacy-downloads').checked ? 1 : 0;
+    const hienThiDanhGia = document.getElementById('input-privacy-ratings').checked ? 1 : 0;
     
     if (!hoTen.trim()) return Toast.fire({ icon: 'warning', title: 'Họ tên không được để trống.' });
 
@@ -258,7 +322,7 @@ async function saveProfile() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh })
+            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, hienThiLichSuTai, hienThiDanhGia })
         });
         const data = await res.json();
         if (res.ok) {
@@ -311,7 +375,7 @@ async function changePassword() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, matKhauCu, matKhauMoi, otp })
+            body: JSON.stringify({ hoTen, matKhauCu, matKhauMoi, otp, hienThiLichSuTai: document.getElementById('input-privacy-downloads').checked ? 1 : 0, hienThiDanhGia: document.getElementById('input-privacy-ratings').checked ? 1 : 0 })
         });
         const data = await res.json();
         if (res.ok) {
@@ -485,7 +549,7 @@ async function deleteAvatar() {
         text: 'Hồ sơ của bạn sẽ quay về ảnh mặc định.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Xoá ảnh',
+        confirmButtonText: 'Xoá',
         cancelButtonText: 'Huỷ',
         confirmButtonColor: '#EF4444'
     });
@@ -519,6 +583,8 @@ async function deleteAvatar() {
 async function initDocuments() {
     await fetchMyDocuments();
     await fetchBookmarks();
+    await fetchPurchasedDocuments();
+    await fetchTransactions();
     await fetchMyReports();
 }
 
@@ -582,6 +648,7 @@ async function fetchMyDocuments() {
             `;
             container.appendChild(el);
         });
+        addLoadMoreButton(container, 5);
     } catch (err) {
         console.error(err);
     }
@@ -637,6 +704,7 @@ async function fetchBookmarks() {
             `;
             container.appendChild(el);
         });
+        addLoadMoreButton(container, 5);
     } catch (err) {
         console.error(err);
     }
@@ -670,17 +738,20 @@ async function fetchPurchasedDocuments() {
             else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-file-powerpoint'; iconColor = '#EA580C'; }
             else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-file-word'; iconColor = '#2563EB'; }
 
-            const dateStr = new Date(doc.NgayMua).toLocaleDateString('vi-VN');
+            const d = new Date(doc.NgayMua);
+            const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+            const dateOnlyStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+            const dateStr = `${timeStr} | ${dateOnlyStr}`;
 
             el.innerHTML = `
                 <div class="doc-info">
                   <div class="doc-icon"><i class="fa-solid ${icon}" style="color: ${iconColor};"></i></div>
                   <div>
-                    <div class="doc-title">${escapeHTML(doc.TenTL)} <span style="margin-left: 8px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i> ĐÃ MUA</span></div>
+                    <div class="doc-title">${escapeHTML(doc.TenTL)} <span style="margin-left: 8px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right:4px"></i> ĐÃ MUA</span></div>
                     <div class="doc-meta">
-                      <span>Người bán: ${escapeHTML(doc.TenNguoiBan)}</span>
+                      <span>Chủ tài liệu: ${escapeHTML(doc.TenNguoiBan || 'Không xác định')}</span>
                       <span>•</span>
-                      <span>Giá: <strong style="color: #D97706;">${doc.GiaMua} Xu</strong></span>
+                      <span>Giá: <strong style="color: #D97706;">${doc.GiaXuThoiDiemMua} Xu</strong></span>
                       <span>•</span>
                       <span style="color:var(--text-secondary);">Ngày mua: ${dateStr}</span>
                     </div>
@@ -690,6 +761,7 @@ async function fetchPurchasedDocuments() {
             `;
             container.appendChild(el);
         });
+        addLoadMoreButton(container, 5);
     } catch (err) {
         console.error(err);
     }
@@ -1073,7 +1145,7 @@ function setupEventListeners() {
                 if (res.ok) {
                     Toast.fire({ icon: 'success', title: data.message });
                     window.closeRejectReasonModal();
-                    fetchMyDocuments(); // Reload list
+                    fetchMyDocuments(); 
                 } else {
                     Toast.fire({ icon: 'error', title: data.message || 'Lỗi khi gửi phản hồi.' });
                 }
@@ -1093,9 +1165,13 @@ function setupEventListeners() {
         if(el) el.addEventListener('input', checkPasswordChanges);
     });
     
-    ['input-hoten', 'input-tuoi', 'input-diachi', 'input-truonghoc', 'input-khoanganh'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.addEventListener('input', checkProfileChanges);
+    ['input-hoten', 'input-tuoi', 'input-gioitinh', 'input-diachi', 'input-truonghoc', 'input-khoanganh'].forEach(id => {
+        document.getElementById(id).addEventListener('input', checkProfileChanges);
+        document.getElementById(id).addEventListener('change', checkProfileChanges);
+    });
+    
+    ['input-privacy-downloads', 'input-privacy-ratings'].forEach(id => {
+        document.getElementById(id).addEventListener('change', checkProfileChanges);
     });
     const gioiTinhEl = document.getElementById('input-gioitinh');
     if(gioiTinhEl) gioiTinhEl.addEventListener('change', checkProfileChanges);
@@ -1254,7 +1330,6 @@ async function sendChangePasswordOtp() {
         if (res.ok) {
             Toast.fire({ icon: 'success', title: data.message });
             
-            // Countdown timer
             let timeLeft = 60;
             const timerId = setInterval(() => {
                 if (timeLeft <= 0) {
@@ -1277,4 +1352,155 @@ async function sendChangePasswordOtp() {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
+}
+
+function addLoadMoreButton(container, step = 5) {
+    let visibleCount = step;
+    const items = container.querySelectorAll('.doc-item');
+    if (items.length <= visibleCount) return;
+    
+    items.forEach((item, idx) => {
+        if (idx >= visibleCount) item.style.display = 'none';
+    });
+
+    const btnWrapper = document.createElement('div');
+    btnWrapper.style.textAlign = 'center';
+    btnWrapper.style.marginTop = '15px';
+    btnWrapper.style.width = '100%';
+    btnWrapper.className = 'load-more-wrapper';
+    
+    const btn = document.createElement('button');
+    btn.className = 'btn-outline-primary btn-load-more';
+    btn.innerHTML = '<i class="fa-solid fa-angle-down" style="margin-right: 6px;"></i> Tải thêm';
+    btn.style.padding = '8px 24px';
+    btn.style.borderRadius = '20px';
+    btn.style.fontWeight = '500';
+    btn.style.transition = 'all 0.3s ease';
+    
+    btn.onclick = () => {
+        const nextVisible = visibleCount + step;
+        for (let i = visibleCount; i < nextVisible && i < items.length; i++) {
+            items[i].style.display = '';
+        }
+        visibleCount = nextVisible;
+        if (visibleCount >= items.length) {
+            btnWrapper.style.display = 'none';
+        }
+    };
+    
+    btnWrapper.appendChild(btn);
+    container.appendChild(btnWrapper);
+}
+
+const upgradeHeader = document.getElementById('upgrade-teacher-header');
+if (upgradeHeader) {
+    upgradeHeader.addEventListener('click', () => {
+        const content = document.getElementById('upgrade-teacher-content');
+        const textSpan = upgradeHeader.querySelector('.toggle-text');
+        const isExpanded = content.classList.contains('expanded');
+        
+        if (isExpanded) {
+            content.classList.remove('expanded');
+            upgradeHeader.classList.remove('expanded');
+            textSpan.textContent = 'Mở rộng';
+        } else {
+            content.classList.add('expanded');
+            upgradeHeader.classList.add('expanded');
+            textSpan.textContent = 'Thu gọn';
+        }
+    });
+}
+const fileInput = document.getElementById('input-upgrade-proof');
+const btnSubmitUpgrade = document.getElementById('btn-submit-upgrade');
+if (fileInput && btnSubmitUpgrade) {
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        const fileNameEl = document.getElementById('file-name-proof');
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                Toast.fire({ icon: 'warning', title: 'Vui lòng chọn file hình ảnh hợp lệ.' });
+                fileInput.value = '';
+                fileNameEl.textContent = '';
+                btnSubmitUpgrade.disabled = true;
+                btnSubmitUpgrade.style.opacity = '0.5';
+                btnSubmitUpgrade.style.cursor = 'not-allowed';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) { 
+                Toast.fire({ icon: 'warning', title: 'Dung lượng ảnh không được vượt quá 5MB.' });
+                fileInput.value = '';
+                fileNameEl.textContent = '';
+                btnSubmitUpgrade.disabled = true;
+                btnSubmitUpgrade.style.opacity = '0.5';
+                btnSubmitUpgrade.style.cursor = 'not-allowed';
+                return;
+            }
+            fileNameEl.textContent = file.name;
+            btnSubmitUpgrade.disabled = false;
+            btnSubmitUpgrade.style.opacity = '1';
+            btnSubmitUpgrade.style.cursor = 'pointer';
+        } else {
+            fileNameEl.textContent = '';
+            btnSubmitUpgrade.disabled = true;
+            btnSubmitUpgrade.style.opacity = '0.5';
+            btnSubmitUpgrade.style.cursor = 'not-allowed';
+        }
+    });
+}
+
+if (btnSubmitUpgrade) {
+    btnSubmitUpgrade.addEventListener('click', async () => {
+        const fileInput = document.getElementById('input-upgrade-proof');
+        const file = fileInput.files[0];
+        if (!file) {
+            return Toast.fire({ icon: 'warning', title: 'Vui lòng chọn ảnh minh chứng.' });
+        }
+
+        const originalText = btnSubmitUpgrade.innerHTML;
+        btnSubmitUpgrade.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang tải ảnh lên...';
+        btnSubmitUpgrade.disabled = true;
+
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const uploadRes = await fetch(`${API_URL}/users/upload-image`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            const uploadData = await uploadRes.json();
+            if (!uploadRes.ok) {
+                throw new Error(uploadData.message || 'Lỗi tải ảnh.');
+            }
+
+            btnSubmitUpgrade.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang gửi yêu cầu...';
+
+            const submitRes = await fetch(`${API_URL}/users/upgrade-teacher`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ minhChungURL: uploadData.url })
+            });
+
+            const submitData = await submitRes.json();
+            if (!submitRes.ok) {
+                throw new Error(submitData.message || 'Lỗi gửi yêu cầu.');
+            }
+
+            Toast.fire({ icon: 'success', title: submitData.message });
+            fileInput.value = '';
+            document.getElementById('file-name-proof').textContent = '';
+            initUpgradeTeacher();
+        } catch (err) {
+            console.error(err);
+            Toast.fire({ icon: 'error', title: err.message });
+        } finally {
+            btnSubmitUpgrade.innerHTML = originalText;
+            btnSubmitUpgrade.disabled = false;
+        }
+    });
 }

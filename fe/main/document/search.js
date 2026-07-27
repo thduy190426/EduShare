@@ -30,8 +30,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let currentPage = 1;
+    let totalPages = 1;
+    let isLoading = false;
+    let hasMore = true;
     let debounceTimer = null;
     let bookmarkedDocs = new Set();
+    let isInitialLoaded = false;
+    let observer = null;
+
+    const sentinelEl = document.getElementById('infiniteScrollSentinel');
+    const scrollSpinner = document.getElementById('scrollSpinner');
+    const scrollEndMessage = document.getElementById('scrollEndMessage');
+
+    setupInfiniteScroll();
+
+    function setupInfiniteScroll() {
+        if (!sentinelEl) return;
+        observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            if (entry.isIntersecting && !isLoading && hasMore && isInitialLoaded) {
+                fetchDocuments(currentPage + 1, true);
+            }
+        }, {
+            rootMargin: '250px',
+            threshold: 0.1
+        });
+        observer.observe(sentinelEl);
+    }
 
     loadUserProfileNav();
 
@@ -127,8 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleFilterChange = () => {
         currentPage = 1;
+        hasMore = true;
         checkFilterState();
-        fetchDocuments(1);
+        fetchDocuments(1, false);
     };
 
     const handleDebouncedFilterChange = () => {
@@ -273,8 +299,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function fetchDocuments(page = 1) {
+    async function fetchDocuments(page = 1, isAppend = false) {
+        if (isLoading) return;
+        isLoading = true;
         currentPage = page;
+
+        if (scrollSpinner) scrollSpinner.style.display = 'flex';
+        if (scrollEndMessage) scrollEndMessage.style.display = 'none';
+
         const queryParams = new URLSearchParams();
 
         if (searchInput && searchInput.value.trim() !== '') {
@@ -322,19 +354,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error('Lỗi khi fetch dữ liệu');
 
             const data = await response.json();
-            renderResults(data);
+            renderResults(data, isAppend);
         } catch (error) {
             console.error('Search error:', error);
-            if (resultsGrid) {
-                resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">Đã xảy ra lỗi khi tìm kiếm dữ liệu.</div>';
+            if (resultsGrid && !isAppend) {
+                resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--danger);">Đã xảy ra lỗi khi tìm kiếm dữ liệu.</div>';
             }
+        } finally {
+            isLoading = false;
+            if (scrollSpinner) scrollSpinner.style.display = 'none';
         }
     }
 
-    function renderResults(data) {
-        const { documents, totalPages, totalRecords } = data;
+    function renderResults(data, isAppend = false) {
+        const { documents, totalPages: totalP, totalRecords } = data;
+        totalPages = totalP || 1;
 
-        if (resultsHeader) {
+        if (resultsHeader && !isAppend) {
             if (searchInput && searchInput.value.trim() !== '') {
                 resultsHeader.style.display = 'block';
                 resultsHeader.innerHTML = `<h1 class="results-count">Tìm thấy <strong>${totalRecords}</strong> kết quả cho "${escapeHTML(searchInput.value.trim())}"</h1>`;
@@ -343,11 +379,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-
         if (resultsGrid) {
-            resultsGrid.innerHTML = '';
+            if (!isAppend) {
+                resultsGrid.innerHTML = '';
+            }
+
             if (documents.length === 0) {
-                resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280; font-size: 16px;">Không tìm thấy tài liệu phù hợp.</div>';
+                if (!isAppend) {
+                    resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280; font-size: 16px;">Không tìm thấy tài liệu phù hợp.</div>';
+                }
+                hasMore = false;
             } else {
                 documents.forEach(doc => {
                     const card = document.createElement('a');
@@ -380,9 +421,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     if (previewTarget) {
-                        const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-                        thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
-                        thumbClass = '';
+                        thumbHtml = `
+                            <iframe
+                                src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
+                                style="width: 100%; height: 100%; border: none; pointer-events: none; opacity: 0.9;"
+                                loading="lazy"
+                            ></iframe>
+                        `;
                     }
 
                     let dateStr = 'Không rõ';
@@ -391,28 +436,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         dateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
                     }
 
+                    const isBookmarked = bookmarkedDocs.has(doc.MaTL);
+
                     card.innerHTML = `
                         <div class="doc-thumb ${thumbClass}">
-                            ${thumbHtml}
                             ${officialBadge}
                             ${premiumBadge}
-                            <div class="bookmark-btn">
-                                ${bookmarkedDocs.has(doc.MaTL) 
-                                    ? '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>' 
-                                    : '<i class="fa-regular fa-bookmark"></i>'}
-                            </div>
+                            ${thumbHtml}
+                            <button class="bookmark-btn ${isBookmarked ? 'active' : ''}" type="button" data-id="${doc.MaTL}">
+                                <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-bookmark"></i>
+                            </button>
                         </div>
                         <div class="doc-content">
                             <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
-                                <span class="doc-meta-item" style="max-width: 65%;"><i class="fa-solid fa-folder" style="flex-shrink: 0;"></i> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHTML(doc.TenMonHoc) || 'Không có'}">${escapeHTML(doc.TenMonHoc) || 'Không có'}</span></span>
+                                <span class="doc-meta-item" style="max-width: 65%;"><span><i class="fa-solid fa-folder" style="flex-shrink: 0;"></i></span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHTML(doc.TenMonHoc || 'Không xác định')}">${escapeHTML(doc.TenMonHoc || 'Không xác định')}</span></span>
                                 <span class="doc-meta-item" style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
                             </div>
                             <h3 class="doc-title">${escapeHTML(doc.TenTL)}</h3>
                             <div class="doc-desc">${escapeHTML(doc.MoTa || 'Không có mô tả')}</div>
                             <div class="doc-footer">
-                                <div class="doc-author js-author-link" data-user-id="${doc.MaND_NguoiDang || ''}" title="Xem hồ sơ người đăng">
+                                <div class="doc-author js-author-link" data-user-id="${doc.MaND || ''}" title="Xem hồ sơ người đăng">
                                     ${avatarHtml}
-                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; display: inline-block; vertical-align: middle;">${escapeHTML(doc.TenNguoiDang) || 'Ẩn danh'}</span>
+                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; display: inline-block; vertical-align: middle;">${escapeHTML(doc.TenNguoiDang || 'Ẩn danh')}</span>
                                 </div>
                                 <div class="doc-stats">
                                     <span><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>
@@ -423,33 +468,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     `;
 
                     const bookmarkBtn = card.querySelector('.bookmark-btn');
+                    let isBookmarkProcessing = false;
                     bookmarkBtn.addEventListener('click', async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (isBookmarkProcessing) return;
+                        
                         const token = getToken();
-                        if (!token) return Swal.fire('Vui lòng đăng nhập để lưu tài liệu.');
+                        if (!token) {
+                            Toast.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để lưu tài liệu' });
+                            return;
+                        }
+                        
+                        isBookmarkProcessing = true;
+                        const originalHtml = bookmarkBtn.innerHTML;
+                        bookmarkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                        bookmarkBtn.style.pointerEvents = 'none';
+                        bookmarkBtn.style.opacity = '0.7';
 
                         try {
-                            const res = await fetch(`${API_URL}/documents/${doc.MaTL}/bookmark`, {
+                            const response = await fetch(`${API_URL}/documents/${doc.MaTL}/bookmark`, {
                                 method: 'POST',
                                 headers: { 'Authorization': `Bearer ${token}` }
                             });
-                            const data = await res.json();
-                            if (res.ok) {
-                                if (data.isBookmarked) {
+                            if (response.ok) {
+                                const bData = await response.json();
+                                if (bData.isBookmarked) {
                                     bookmarkedDocs.add(doc.MaTL);
-                                    bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>';
-                                    Swal.fire({ title: 'Đã lưu tài liệu', icon: 'success', timer: 1500, showConfirmButton: false });
+                                    bookmarkBtn.classList.add('active');
+                                    bookmarkBtn.innerHTML = '<i class="fa-solid fa-bookmark"></i>';
+                                    Toast.fire({ icon: 'success', title: 'Đã lưu tài liệu' });
                                 } else {
                                     bookmarkedDocs.delete(doc.MaTL);
+                                    bookmarkBtn.classList.remove('active');
                                     bookmarkBtn.innerHTML = '<i class="fa-regular fa-bookmark"></i>';
-                                    Swal.fire({ title: 'Đã bỏ lưu', icon: 'info', timer: 1500, showConfirmButton: false });
+                                    Toast.fire({ icon: 'info', title: 'Đã bỏ lưu tài liệu' });
                                 }
                             } else {
-                                Swal.fire(data.message);
+                                bookmarkBtn.innerHTML = originalHtml;
                             }
                         } catch (err) {
                             console.error('Lỗi khi lưu bookmark:', err);
+                            bookmarkBtn.innerHTML = originalHtml;
+                        } finally {
+                            isBookmarkProcessing = false;
+                            bookmarkBtn.style.pointerEvents = 'auto';
+                            bookmarkBtn.style.opacity = '1';
                         }
                     });
 
@@ -468,39 +532,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-
-        renderPagination(totalPages, currentPage);
-    }
-
-    function renderPagination(totalPages, current) {
-        if (!paginationContainer) return;
-        paginationContainer.innerHTML = '';
-
-        if (totalPages <= 1) return;
-
-
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'page-btn';
-        prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
-        if (current === 1) prevBtn.disabled = true;
-        else prevBtn.onclick = () => fetchDocuments(current - 1);
-        paginationContainer.appendChild(prevBtn);
-
-
-        for (let i = 1; i <= totalPages; i++) {
-            const pageBtn = document.createElement('button');
-            pageBtn.className = `page-btn ${i === current ? 'active' : ''}`;
-            pageBtn.textContent = i;
-            pageBtn.onclick = () => fetchDocuments(i);
-            paginationContainer.appendChild(pageBtn);
+        hasMore = currentPage < totalPages;
+        isInitialLoaded = true;
+        
+        if (!hasMore && scrollEndMessage && (documents.length > 0 || isAppend)) {
+            scrollEndMessage.style.display = 'block';
+        } else if (scrollEndMessage) {
+            scrollEndMessage.style.display = 'none';
         }
 
-
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'page-btn';
-        nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
-        if (current === totalPages) nextBtn.disabled = true;
-        else nextBtn.onclick = () => fetchDocuments(current + 1);
-        paginationContainer.appendChild(nextBtn);
+        if (observer && sentinelEl && hasMore) {
+            observer.unobserve(sentinelEl);
+            setTimeout(() => observer.observe(sentinelEl), 100);
+        }
     }
 });

@@ -203,10 +203,18 @@ function renderTable() {
         let actionBtns = `<button class="btn-action" title="Xem chi tiết" onclick="window.location.href='documentDetails.html?id=${doc.MaTL}'"><i class="fa-solid fa-eye"></i></button>`;
         
         if (currentTab === 'uploaded') {
-            actionBtns += `
-                <button class="btn-action btn-edit" title="Sửa thông tin" data-id="${doc.MaTL}"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn-action btn-delete" title="Xóa tài liệu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash" style="color: var(--danger);"></i></button>
-            `;
+            if (doc.TrangThaiKiemDuyet === 'TuChoi') {
+                actionBtns += `
+                    <button class="btn-action btn-view-rejection" title="Xem chi tiết lí do bị từ chối" data-id="${doc.MaTL}"><i class="fa-solid fa-circle-exclamation" style="color: var(--danger);"></i></button>
+                    <button class="btn-action btn-delete" title="Xóa tài liệu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash" style="color: var(--danger);"></i></button>
+                `;
+            } else {
+                actionBtns += `
+                    <button class="btn-action btn-update-file" title="Cập nhật bản mới" data-id="${doc.MaTL}"><i class="fa-solid fa-cloud-arrow-up" style="color: #6366F1;"></i></button>
+                    <button class="btn-action btn-edit" title="Sửa thông tin" data-id="${doc.MaTL}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn-action btn-delete" title="Xóa tài liệu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash" style="color: var(--danger);"></i></button>
+                `;
+            }
         } else if (currentTab === 'bookmarks') {
             actionBtns += `
                 <button class="btn-action btn-remove-bookmark" title="Bỏ lưu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash-can" style="color: var(--danger);"></i></button>
@@ -242,6 +250,22 @@ function renderTable() {
     });
 
     if (currentTab === 'uploaded') {
+        document.querySelectorAll('.btn-view-rejection').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.getAttribute('data-id');
+                const doc = uploadedDocs.find(d => d.MaTL == id);
+                if (doc) openRejectReasonModal(doc);
+            });
+        });
+
+        document.querySelectorAll('.btn-update-file').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.getAttribute('data-id');
+                const doc = uploadedDocs.find(d => d.MaTL == id);
+                if (doc) openUpdateFileModal(doc);
+            });
+        });
+
         document.querySelectorAll('.btn-edit').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
@@ -274,7 +298,7 @@ function confirmDelete(id) {
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Đồng ý xóa',
+        confirmButtonText: 'Xóa',
         cancelButtonText: 'Hủy'
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -324,6 +348,146 @@ async function removeBookmark(id) {
     }
 }
 
+window.closeRejectReasonModal = function() {
+    const modal = document.getElementById('reject-reason-modal');
+    modal.style.opacity = '0';
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+function openRejectReasonModal(doc) {
+    const modal = document.getElementById('reject-reason-modal');
+    document.getElementById('reject-reason-doc-title').textContent = doc.TenTL;
+    document.getElementById('reject-reason-content').textContent = doc.LyDoTuChoi || 'Không có lý do cụ thể.';
+    const inputAppeal = document.getElementById('input-reject-appeal');
+    inputAppeal.value = '';
+    const btnSubmit = document.getElementById('btn-submit-appeal');
+    btnSubmit.disabled = true;
+    btnSubmit.style.opacity = '0.5';
+    btnSubmit.style.cursor = 'not-allowed';
+    
+    btnSubmit.onclick = async () => {
+        const phanHoi = inputAppeal.value.trim();
+        if (!phanHoi) return;
+        
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang gửi...';
+        
+        const token = getToken();
+        try {
+            const res = await fetch(`${API_URL}/documents/${doc.MaTL}/appeal`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phanHoi })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Đã gửi khiếu nại thành công.',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+                window.closeRejectReasonModal();
+                fetchAllData();
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể gửi phản hồi.', 'error');
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi phản hồi';
+            }
+        } catch (error) {
+            Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi phản hồi';
+        }
+    };
+
+    inputAppeal.oninput = (e) => {
+        if (e.target.value.trim().length > 0) {
+            btnSubmit.disabled = false;
+            btnSubmit.style.opacity = '1';
+            btnSubmit.style.cursor = 'pointer';
+        } else {
+            btnSubmit.disabled = true;
+            btnSubmit.style.opacity = '0.5';
+            btnSubmit.style.cursor = 'not-allowed';
+        }
+    };
+
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+    });
+}
+
+function openUpdateFileModal(doc) {
+    Swal.fire({
+        title: 'Cập nhật bản mới',
+        text: `Bạn đang cập nhật bản mới cho tài liệu "${doc.TenTL}". Các chỉ số lượt tải và điểm đánh giá sẽ được giữ nguyên. Sau khi cập nhật, tài liệu sẽ chuyển về trạng thái Chờ duyệt.`,
+        icon: 'info',
+        html: `
+            <div style="text-align: left; margin-top: 15px;">
+                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Chọn file mới:</label>
+                <input type="file" id="update-fileUpload" style="width: 100%; padding: 8px; border: 2px dashed #CBD5E1; border-radius: 6px; background: #F8FAFC; cursor: pointer;" accept=".pdf,.doc,.docx,.ppt,.pptx">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-cloud-arrow-up"></i> Tải lên',
+        cancelButtonText: 'Hủy',
+        customClass: {
+            confirmButton: 'modern-btn-confirm',
+            cancelButton: 'modern-btn-cancel'
+        },
+        preConfirm: () => {
+            const fileInput = document.getElementById('update-fileUpload');
+            if (fileInput.files.length === 0) {
+                Swal.showValidationMessage('Vui lòng chọn một file.');
+                return false;
+            }
+            return fileInput.files[0];
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const file = result.value;
+            const token = getToken();
+            const formData = new FormData();
+            formData.append('fileUpload', file);
+
+            Swal.fire({
+                title: 'Đang cập nhật...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                const res = await fetch(`${API_URL}/documents/${doc.MaTL}/file`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công',
+                        text: data.message || 'Cập nhật file thành công.',
+                    });
+                    fetchAllData();
+                } else {
+                    Swal.fire('Lỗi', data.message || 'Không thể cập nhật file.', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
+            }
+        }
+    });
+}
+
 function openEditModal(doc) {
     const isTuChoi = doc.TrangThaiKiemDuyet === 'TuChoi';
     const isDaDuyet = doc.TrangThaiKiemDuyet === 'DaDuyet';
@@ -349,14 +513,14 @@ function openEditModal(doc) {
         },
         html: `
             <style>
-                .modern-modal-popup { border-radius: 12px !important; padding: 24px 20px 20px 20px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important; width: 28em !important; }
+                .modern-modal-popup { border-radius: 12px !important; padding: 24px 20px 20px 20px !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important; width: 36em !important; max-width: 95vw !important; }
                 .modern-modal-title { font-size: 20px !important; font-weight: 700 !important; color: #1E293B !important; margin-bottom: 16px !important; font-family: 'Inter', sans-serif !important; }
                 .modern-form-group { margin-bottom: 16px; text-align: left; }
                 .modern-form-label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; font-family: 'Inter', sans-serif; }
                 .modern-form-label i { margin-right: 6px; color: var(--primary); width: 16px; text-align: center; }
                 .modern-input { width: 100%; padding: 10px 14px; border: 1.5px solid #E2E8F0; border-radius: 6px; font-size: 14px; transition: all 0.2s; outline: none; background: #F8FAFC; color: #0F172A; box-sizing: border-box; font-family: 'Inter', sans-serif; }
                 .modern-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: #FFF; }
-                .modern-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #E2E8F0; border-radius: 6px; font-size: 14px; transition: all 0.2s; outline: none; background: #F8FAFC; min-height: 80px; resize: vertical; color: #0F172A; box-sizing: border-box; font-family: 'Inter', sans-serif; line-height: 1.5; }
+                .modern-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #E2E8F0; border-radius: 6px; font-size: 14px; transition: all 0.2s; outline: none; background: #F8FAFC; min-height: 120px; resize: vertical; color: #0F172A; box-sizing: border-box; font-family: 'Inter', sans-serif; line-height: 1.5; }
                 .modern-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: #FFF; }
                 .modern-file-input { width: 100%; padding: 8px; border: 2px dashed #CBD5E1; border-radius: 6px; font-size: 13px; background: #F8FAFC; transition: all 0.2s; cursor: pointer; color: #64748B; box-sizing: border-box; }
                 .modern-file-input:hover { border-color: var(--primary); background: var(--primary-light); }
@@ -379,6 +543,12 @@ function openEditModal(doc) {
                         ${subjectOptions || '<option value="" disabled selected>Chưa có môn học</option>'}
                     </select>
                 </div>
+                ${doc.LaTaiLieuDocQuyen ? `
+                <div class="modern-form-group">
+                    <label class="modern-form-label"><i class="fa-solid fa-coins"></i>Giá Xu <span style="color:#EF4444">*</span></label>
+                    <input id="edit-giaXu" type="number" min="0" max="1000000" class="modern-input" placeholder="Nhập giá xu..." value="${doc.GiaXu || 0}">
+                </div>
+                ` : ''}
                 <div class="modern-form-group">
                     <label class="modern-form-label"><i class="fa-solid fa-align-left"></i>Mô tả</label>
                     <textarea id="edit-moTa" class="modern-textarea" placeholder="Nhập mô tả chi tiết về tài liệu này...">${doc.MoTa || ''}</textarea>
@@ -386,7 +556,10 @@ function openEditModal(doc) {
                 <div class="modern-form-group" style="margin-bottom: 0;">
                     <label class="modern-form-label"><i class="fa-solid fa-file-arrow-up"></i>File tài liệu mới <span style="font-weight: 400; color: #94A3B8; font-size: 12px;">(Tùy chọn)</span></label>
                     <input type="file" id="edit-fileUpload" class="modern-file-input" accept=".pdf,.doc,.docx,.ppt,.pptx">
-                    <div style="font-size: 12px; color: #64748B; margin-top: 6px;"><i class="fa-solid fa-circle-info" style="margin-right: 4px; color: #94A3B8;"></i>Để trống nếu không muốn thay đổi file.</div>
+                    <div style="font-size: 13px; color: #475569; margin-top: 8px; font-weight: 500;">
+                        <i class="fa-solid fa-paperclip" style="color: #64748B; margin-right: 4px;"></i> File hiện tại: <span style="color: var(--primary);">${doc.FileURL ? doc.FileURL.split('/').pop() : 'Không xác định'}</span>
+                    </div>
+                    <div style="font-size: 12px; color: #64748B; margin-top: 4px;"><i class="fa-solid fa-circle-info" style="margin-right: 4px; color: #94A3B8;"></i>Để trống nếu không muốn thay đổi file.</div>
                 </div>
             </div>
         `,
@@ -404,19 +577,29 @@ function openEditModal(doc) {
             const monHocSelect = document.getElementById('edit-maMonHoc');
             const moTaTextarea = document.getElementById('edit-moTa');
             const fileInput = document.getElementById('edit-fileUpload');
+            const giaXuInput = document.getElementById('edit-giaXu');
 
             const initialTen = doc.TenTL || '';
             const initialMonHoc = String(doc.MaMonHoc || '');
             const initialMoTa = doc.MoTa || '';
+            const initialGiaXu = String(doc.GiaXu || 0);
 
             const validate = () => {
                 const currentTen = tenInput.value.trim();
                 const currentMonHoc = String(monHocSelect.value || '');
                 const currentMoTa = moTaTextarea.value.trim();
                 const hasFile = fileInput.files.length > 0;
+                let currentGiaXu = '';
+                let isGiaXuValid = true;
+                
+                if (giaXuInput) {
+                    currentGiaXu = String(giaXuInput.value || 0);
+                    const val = parseInt(currentGiaXu);
+                    isGiaXuValid = !isNaN(val) && val >= 0 && val <= 1000000;
+                }
 
-                const isChanged = currentTen !== initialTen || currentMonHoc !== initialMonHoc || currentMoTa !== initialMoTa || hasFile;
-                const isValid = currentTen !== '' && currentMonHoc !== '';
+                const isChanged = currentTen !== initialTen || currentMonHoc !== initialMonHoc || currentMoTa !== initialMoTa || (giaXuInput && currentGiaXu !== initialGiaXu) || hasFile;
+                const isValid = currentTen !== '' && currentMonHoc !== '' && isGiaXuValid;
 
                 if (isChanged && isValid) {
                     confirmBtn.disabled = false;
@@ -433,6 +616,7 @@ function openEditModal(doc) {
             monHocSelect.addEventListener('change', validate);
             moTaTextarea.addEventListener('input', validate);
             fileInput.addEventListener('change', validate);
+            if (giaXuInput) giaXuInput.addEventListener('input', validate);
             
             validate();
         },
@@ -440,6 +624,8 @@ function openEditModal(doc) {
             const tenTL = document.getElementById('edit-tenTL').value.trim();
             const maMonHoc = document.getElementById('edit-maMonHoc').value;
             const moTa = document.getElementById('edit-moTa').value.trim();
+            const giaXuInput = document.getElementById('edit-giaXu');
+            const giaXu = giaXuInput ? giaXuInput.value : null;
             const fileInput = document.getElementById('edit-fileUpload');
             const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
@@ -451,7 +637,14 @@ function openEditModal(doc) {
                 Swal.showValidationMessage('Vui lòng chọn môn học');
                 return false;
             }
-            return { tenTL, maMonHoc, moTa, file };
+            if (giaXuInput) {
+                const val = parseInt(giaXu);
+                if (isNaN(val) || val < 0 || val > 1000000) {
+                    Swal.showValidationMessage('Giá xu phải nằm trong khoảng 0 đến 1,000,000');
+                    return false;
+                }
+            }
+            return { tenTL, maMonHoc, moTa, giaXu, file };
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -460,6 +653,9 @@ function openEditModal(doc) {
             formData.append('tenTL', result.value.tenTL);
             formData.append('maMonHoc', result.value.maMonHoc);
             formData.append('moTa', result.value.moTa);
+            if (result.value.giaXu !== null) {
+                formData.append('giaXu', result.value.giaXu);
+            }
             if (result.value.file) {
                 formData.append('fileUpload', result.value.file);
             }

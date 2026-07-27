@@ -4,6 +4,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
+const https = require('https');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 require('dotenv').config();
@@ -16,7 +17,8 @@ cloudinary.config({
 
 const router = express.Router();
 const { authMiddleware, teacherMiddleware } = require('./middlewares/auth');
-const { uploadLimiter, rateLimiter, reportLimiter } = require('./middlewares/rateLimit');
+const { uploadLimiter, rateLimiter, reportLimiter, downloadLimiter, commentLimiter } = require('./middlewares/rateLimit');
+const { scanFileVirus } = require('./services/virusScanner');
 
 const storage = multer.memoryStorage();
 
@@ -167,6 +169,11 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
             return res.status(400).json({ message: 'Vui lòng chọn file tài liệu.' });
         }
 
+        const virusScanResult = await scanFileVirus(req.file.buffer);
+        if (!virusScanResult.safe) {
+            return res.status(400).json({ message: virusScanResult.message });
+        }
+
         const { tenTL, moTa, maMonHoc } = req.body;
         let laTaiLieuChinhThuc = false;
 
@@ -177,7 +184,16 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
 
         let laTaiLieuDocQuyen = req.body.laTaiLieuDocQuyen === 'true';
         let giaXu = parseInt(req.body.giaXu) || 0;
-        if (!laTaiLieuDocQuyen) giaXu = 0;
+        
+        if (req.user.VaiTro !== 'GiaoVien' && req.user.VaiTro !== 'Admin') {
+            laTaiLieuDocQuyen = false;
+        }
+
+        if (!laTaiLieuDocQuyen) {
+            giaXu = 0;
+        } else if (giaXu < 0 || giaXu > 1000000) {
+            return res.status(400).json({ message: 'Giá Xu phải lớn hơn hoặc bằng 0 và không vượt quá 1.000.000.' });
+        }
 
         if (!tenTL || !maMonHoc) {
             return res.status(400).json({ message: 'Vui lòng cung cấp đủ tên tài liệu và mã môn học.' });
@@ -231,6 +247,103 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
             res.status(500).json({ message: 'Lỗi máy chủ khi xử lý tài liệu.' });
         }
     });
+});
+
+router.get('/recommended', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const limit = 4;
+        const maND = req.user.MaND;
+
+        const selectClause = `
+            SELECT 
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
+                TL.LaTaiLieuDocQuyen, TL.GiaXu,
+                ND.HoTen AS TenNguoiDang, ND.AvatarURL,
+                COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc,
+                COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia
+            FROM TAILIEU TL
+            JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
+            LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
+            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'
+              AND TL.MaTL NOT IN (SELECT MaTL FROM LICH_SU_TAI WHERE MaND = ?)
+        `;
+
+        // 1. Collaborative Filtering
+        const colabSql = selectClause + `
+            AND TL.MaTL IN (
+                SELECT MaTL FROM LICH_SU_TAI 
+                WHERE MaND IN (
+                    SELECT MaND FROM (
+                        SELECT DISTINCT L2.MaND FROM LICH_SU_TAI L2 
+                        WHERE L2.MaTL IN (SELECT L3.MaTL FROM LICH_SU_TAI L3 WHERE L3.MaND = ?)
+                          AND L2.MaND != ?
+                    ) AS SimilarUsers
+                )
+            )
+            ORDER BY TL.SoLuotTai DESC
+            LIMIT ?
+        `;
+
+        let [recommendedDocs] = await pool.execute(colabSql, [maND, maND, maND, limit.toString()]);
+
+        // 2. Content-Based Filtering
+        if (recommendedDocs.length < limit) {
+            const currentIds = recommendedDocs.map(d => d.MaTL);
+            let notInClause = '';
+            let params = [maND, maND];
+            
+            if (currentIds.length > 0) {
+                notInClause = ` AND TL.MaTL NOT IN (${currentIds.map(() => '?').join(',')})`;
+                params.push(...currentIds);
+            }
+            params.push((limit - recommendedDocs.length).toString());
+
+            const contentSql = selectClause + notInClause + `
+                AND TL.MaMonHoc IN (
+                    SELECT MaMonHoc FROM (
+                        SELECT T.MaMonHoc, COUNT(*) as count
+                        FROM LICH_SU_TAI L
+                        JOIN TAILIEU T ON L.MaTL = T.MaTL
+                        WHERE L.MaND = ? AND T.MaMonHoc IS NOT NULL
+                        GROUP BY T.MaMonHoc
+                        ORDER BY count DESC
+                        LIMIT 3
+                    ) AS TopSubjects
+                )
+                ORDER BY DiemDanhGia DESC, TL.SoLuotTai DESC
+                LIMIT ?
+            `;
+            const [contentDocs] = await pool.execute(contentSql, params);
+            recommendedDocs = [...recommendedDocs, ...contentDocs];
+        }
+
+        // 3. Fallback: Popular documents
+        if (recommendedDocs.length < limit) {
+            const currentIds = recommendedDocs.map(d => d.MaTL);
+            let notInClause = '';
+            let params = [maND];
+            
+            if (currentIds.length > 0) {
+                notInClause = ` AND TL.MaTL NOT IN (${currentIds.map(() => '?').join(',')})`;
+                params.push(...currentIds);
+            }
+            params.push((limit - recommendedDocs.length).toString());
+
+            const fallbackSql = selectClause + notInClause + `
+                ORDER BY DiemDanhGia DESC, TL.SoLuotTai DESC
+                LIMIT ?
+            `;
+            const [fallbackDocs] = await pool.execute(fallbackSql, params);
+            recommendedDocs = [...recommendedDocs, ...fallbackDocs];
+        }
+
+        res.status(200).json({ documents: recommendedDocs });
+    } catch (error) {
+        console.error('Lỗi khi gợi ý tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi lấy gợi ý.' });
+    }
 });
 
 router.get('/search', async (req, res) => {
@@ -388,19 +501,20 @@ router.get('/:maTL/related', async (req, res) => {
             LEFT JOIN DANHGIA DG ON DG.MaTL = TL.MaTL
             WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.TrangThaiHienThi = 'Hien'
               AND TL.MaTL <> ?
-              AND TL.MaMonHoc = ?
+              AND (TL.MaMonHoc <=> ? OR TL.LoaiFile = ?)
             GROUP BY
                 TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile,
                 TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                 TL.MaND_NguoiDang, ND.HoTen, ND.AvatarURL, MH.TenMonHoc
             ORDER BY
+                CASE WHEN TL.MaMonHoc <=> ? THEN 0 ELSE 1 END,
                 CASE WHEN TL.LoaiFile = ? THEN 0 ELSE 1 END,
                 TL.LaTaiLieuChinhThuc DESC,
                 DiemDanhGia DESC,
                 TL.SoLuotTai DESC,
                 TL.NgayDang DESC
-            LIMIT ?
-        `, [maTL, currentDoc.MaMonHoc, currentDoc.LoaiFile, limit.toString()]);
+            LIMIT ${limit}
+        `, [maTL, currentDoc.MaMonHoc, currentDoc.LoaiFile, currentDoc.MaMonHoc, currentDoc.LoaiFile]);
 
         res.status(200).json({ documents: relatedDocs });
     } catch (error) {
@@ -441,7 +555,7 @@ router.get('/:maTL', async (req, res) => {
             FROM BINHLUAN BL
             JOIN NGUOIDUNG ND ON BL.MaND = ND.MaND
             WHERE BL.MaTL = ?
-            ORDER BY BL.NgayBinhLuan ASC
+            ORDER BY BL.DaGhim DESC, BL.NgayBinhLuan ASC
         `, [maTL]);
 
         let isBookmarked = false;
@@ -477,7 +591,7 @@ router.get('/:maTL', async (req, res) => {
 });
 
 
-router.get('/:maTL/download', authMiddleware, async (req, res) => {
+router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) => {
     const maTL = req.params.maTL;
     const maND = req.user.MaND;
 
@@ -498,7 +612,7 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
             isAllowed = true;
         } else if (doc.MaND_NguoiDang === maND) {
             isAllowed = true;
-        } else if (req.user.VaiTro === 'Admin') {
+        } else if (req.user.VaiTro === 'Admin' || req.user.VaiTro === 'GiaoVien') {
             isAllowed = true;
         } else {
 
@@ -516,7 +630,7 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
             return res.status(403).json({ message: 'Bạn không có quyền tải tài liệu này.' });
         }
         
-        if (doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin') {
+        if (doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin' && req.user.VaiTro !== 'GiaoVien') {
             const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, maND]);
             if (purchaseRows.length === 0) {
                 return res.status(403).json({ message: 'Bạn cần mở khoá tài liệu PREMIUM này trước khi tải.' });
@@ -529,14 +643,32 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
         res.setHeader('Access-Control-Expose-Headers', 'X-Download-Filename');
 
         const updateDownloadHistory = async () => {
+            const connection = await pool.getConnection();
+            await connection.beginTransaction();
             try {
-                const [historyRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaND = ? AND MaTL = ?', [maND, maTL]);
+                const [historyRows] = await connection.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaND = ? AND MaTL = ?', [maND, maTL]);
                 if (historyRows.length === 0) {
-                    await pool.execute('INSERT INTO LICH_SU_TAI (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
-                    await pool.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
+                    await connection.execute('INSERT INTO LICH_SU_TAI (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
+                    await connection.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
+
+                    if (!doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND) {
+                        await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + 1 WHERE MaND = ?', [doc.MaND_NguoiDang]);
+                        await connection.execute(
+                            "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', 1, ?)",
+                            [doc.MaND_NguoiDang, `Thưởng 1 Xu vì có người tải tài liệu: ${doc.TenTL}`]
+                        );
+                        await connection.execute(
+                            "INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, 'HeThong')",
+                            [doc.MaND_NguoiDang, `Bạn vừa nhận được +1 Xu từ lượt tải tài liệu "${doc.TenTL}".`]
+                        );
+                    }
                 }
+                await connection.commit();
             } catch (dbErr) {
+                await connection.rollback();
                 console.error('Lỗi khi cập nhật lịch sử tải:', dbErr);
+            } finally {
+                connection.release();
             }
         };
 
@@ -546,7 +678,16 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
             if (downloadUrl.includes('/upload/')) {
                 downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
             }
-            return res.redirect(downloadUrl);
+            
+            https.get(downloadUrl, (fileStream) => {
+                fileStream.pipe(res);
+            }).on('error', (err) => {
+                console.error('Lỗi khi tải file từ Cloudinary:', err);
+                if (!res.headersSent) {
+                    res.status(500).json({ message: 'Không thể tải file từ máy chủ.' });
+                }
+            });
+            return;
         }
 
         const filePath = path.join(__dirname, 'public', doc.FileURL);
@@ -566,6 +707,89 @@ router.get('/:maTL/download', authMiddleware, async (req, res) => {
 
     } catch (error) {
         console.error('Lỗi khi tải tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maTL/buy', authMiddleware, async (req, res) => {
+    const maTL = req.params.maTL;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [docs] = await pool.execute('SELECT MaND_NguoiDang, GiaXu, LaTaiLieuDocQuyen, TenTL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND TrangThaiHienThi = "Hien"', [maTL]);
+        if (docs.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy tài liệu PREMIUM.' });
+        }
+
+        const doc = docs[0];
+        if (!doc.LaTaiLieuDocQuyen) {
+            return res.status(400).json({ message: 'Đây không phải là tài liệu Premium.' });
+        }
+
+        if (doc.MaND_NguoiDang === maND) {
+            return res.status(400).json({ message: 'Bạn không thể mua tài liệu của chính mình.' });
+        }
+
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        try {
+            const [purchaseRows] = await connection.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ? FOR UPDATE', [maTL, maND]);
+            if (purchaseRows.length > 0) {
+                await connection.rollback();
+                connection.release();
+                return res.status(400).json({ message: 'Bạn đã mua tài liệu này rồi.' });
+            }
+
+            const [userRows] = await connection.execute('SELECT SoDuXu FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
+            if (userRows.length === 0) {
+                await connection.rollback();
+                connection.release();
+                return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+            }
+
+            const soDuXu = userRows[0].SoDuXu;
+            const giaXu = doc.GiaXu || 0;
+
+            if (soDuXu < giaXu) {
+                await connection.rollback();
+                connection.release();
+                return res.status(400).json({ message: 'Số dư Xu không đủ. Vui lòng nạp thêm.' });
+            }
+
+            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu - ? WHERE MaND = ?', [giaXu, maND]);
+            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [giaXu, doc.MaND_NguoiDang]);
+
+            await connection.execute('INSERT INTO TAILIEU_DAMUA (MaND, MaTL, GiaXuThoiDiemMua) VALUES (?, ?, ?)', [maND, maTL, giaXu]);
+
+            await connection.execute(
+                'INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)',
+                [maND, 'MuaTaiLieu', -giaXu, `Mua tài liệu: ${doc.TenTL}`]
+            );
+
+            await connection.execute(
+                'INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)',
+                [doc.MaND_NguoiDang, 'BanTaiLieu', giaXu, `Bán tài liệu: ${doc.TenTL}`]
+            );
+
+            await connection.execute(
+                'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
+                [doc.MaND_NguoiDang, `Bạn vừa nhận được ${giaXu} Xu từ do có người vừa mua tài liệu "${doc.TenTL}".`, 'HeThong']
+            );
+
+            await connection.commit();
+            connection.release();
+
+            res.status(200).json({ message: 'Mua tài liệu thành công!' });
+        } catch (dbErr) {
+            await connection.rollback();
+            connection.release();
+            throw dbErr;
+        }
+    } catch (error) {
+        console.error('Lỗi khi mua tài liệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
@@ -635,7 +859,7 @@ router.post('/:maTL/rate', authMiddleware, rateLimiter, async (req, res) => {
 });
 
 
-router.post('/:maTL/comments', authMiddleware, async (req, res) => {
+router.post('/:maTL/comments', authMiddleware, commentLimiter, async (req, res) => {
     const maTL = req.params.maTL;
     const maND = req.user.MaND;
     const { noiDung, maBL_Cha } = req.body;
@@ -686,6 +910,72 @@ router.post('/:maTL/comments', authMiddleware, async (req, res) => {
     }
 });
 
+router.delete('/comments/:maBL', authMiddleware, async (req, res) => {
+    const maBL = req.params.maBL;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute(`
+            SELECT B.MaND AS CommentOwner, T.MaND_NguoiDang AS DocOwner 
+            FROM BINHLUAN B 
+            JOIN TAILIEU T ON B.MaTL = T.MaTL 
+            WHERE B.MaBL = ?
+        `, [maBL]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy bình luận.' });
+        }
+
+        const { CommentOwner, DocOwner } = rows[0];
+
+        if (CommentOwner !== maND && DocOwner !== maND && req.user.VaiTro !== 'Admin') {
+            return res.status(403).json({ message: 'Bạn không có quyền xóa bình luận này.' });
+        }
+
+        await pool.execute('DELETE FROM BINHLUAN WHERE MaBL_Cha = ?', [maBL]);
+        await pool.execute('DELETE FROM BINHLUAN WHERE MaBL = ?', [maBL]);
+
+        res.status(200).json({ message: 'Đã xóa bình luận.' });
+    } catch (error) {
+        console.error('Lỗi xóa bình luận:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/comments/:maBL/pin', authMiddleware, async (req, res) => {
+    const maBL = req.params.maBL;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute(`
+            SELECT B.MaTL, B.DaGhim, T.MaND_NguoiDang AS DocOwner 
+            FROM BINHLUAN B 
+            JOIN TAILIEU T ON B.MaTL = T.MaTL 
+            WHERE B.MaBL = ?
+        `, [maBL]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy bình luận.' });
+        }
+
+        if (rows[0].DocOwner !== maND && req.user.VaiTro !== 'Admin') {
+            return res.status(403).json({ message: 'Chỉ tác giả tài liệu mới có quyền ghim bình luận.' });
+        }
+
+        const newPinState = rows[0].DaGhim ? false : true;
+        await pool.execute('UPDATE BINHLUAN SET DaGhim = ? WHERE MaBL = ?', [newPinState, maBL]);
+
+        res.status(200).json({ message: newPinState ? 'Đã ghim bình luận.' : 'Đã bỏ ghim bình luận.', DaGhim: newPinState });
+    } catch (error) {
+        console.error('Lỗi ghim bình luận:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 
 router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => {
     const maTL = req.params.maTL;
@@ -732,6 +1022,55 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
 });
 
 
+router.put('/:maTL/file', authMiddleware, (req, res) => {
+    upload.single('fileUpload')(req, res, async function (err) {
+        if (err) return res.status(400).json({ message: err.message });
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Vui lòng chọn một file mới để cập nhật.' });
+        }
+
+        const maTL = req.params.maTL;
+        const maND = req.user.MaND;
+
+        try {
+            const pool = req.app.locals.pool;
+
+            const [docs] = await pool.execute('SELECT MaND_NguoiDang, TrangThaiKiemDuyet, FileURL FROM TAILIEU WHERE MaTL = ?', [maTL]);
+            if (docs.length === 0) {
+                return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+            }
+
+            if (docs[0].MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin') {
+                return res.status(403).json({ message: 'Bạn không có quyền sửa tài liệu này.' });
+            }
+
+            const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
+            const fileURL = `/uploads/${req.file.filename}`;
+            let previewURL = null;
+
+            await pool.execute(
+                'UPDATE TAILIEU SET FileURL = ?, PreviewURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                [fileURL, previewURL, loaiFile, maTL]
+            );
+
+            try {
+                if (docs[0].FileURL && docs[0].FileURL.startsWith('/uploads/')) {
+                    const oldFilePath = path.join(__dirname, 'public', docs[0].FileURL);
+                    if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+                }
+            } catch (e) {
+                console.error('Lỗi xóa file cũ:', e);
+            }
+
+            res.status(200).json({ message: 'Cập nhật file thành công. Tài liệu đang chờ duyệt lại.' });
+        } catch (error) {
+            console.error('Lỗi cập nhật file tài liệu:', error);
+            res.status(500).json({ message: 'Lỗi máy chủ.' });
+        }
+    });
+});
+
 router.put('/:maTL/verify', authMiddleware, teacherMiddleware, async (req, res) => {
     const maTL = req.params.maTL;
 
@@ -766,10 +1105,18 @@ router.put('/:maTL', authMiddleware, (req, res) => {
 
         const maTL = req.params.maTL;
         const maND = req.user.MaND;
-        const { tenTL, moTa, maMonHoc } = req.body;
+        const { tenTL, moTa, maMonHoc, giaXu } = req.body;
 
         if (!tenTL || !maMonHoc) {
             return res.status(400).json({ message: 'Vui lòng cung cấp đủ tên tài liệu và mã môn học.' });
+        }
+        
+        let parsedGiaXu = null;
+        if (giaXu !== undefined && giaXu !== null) {
+            parsedGiaXu = parseInt(giaXu);
+            if (isNaN(parsedGiaXu) || parsedGiaXu < 0 || parsedGiaXu > 1000000) {
+                return res.status(400).json({ message: 'Giá Xu không hợp lệ. Phải từ 0 đến 1,000,000.' });
+            }
         }
 
         try {
@@ -789,10 +1136,17 @@ router.put('/:maTL', authMiddleware, (req, res) => {
                 const fileURL = `/uploads/${req.file.filename}`;
 
                 let previewURL = null;
-                await pool.execute(
-                    'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
-                    [tenTL, moTa || null, maMonHoc, fileURL, previewURL, loaiFile, maTL]
-                );
+                if (parsedGiaXu !== null) {
+                    await pool.execute(
+                        'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, GiaXu = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                        [tenTL, moTa || null, maMonHoc, parsedGiaXu, fileURL, previewURL, loaiFile, maTL]
+                    );
+                } else {
+                    await pool.execute(
+                        'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                        [tenTL, moTa || null, maMonHoc, fileURL, previewURL, loaiFile, maTL]
+                    );
+                }
 
                 try {
                     const oldFilePath = path.join(__dirname, 'public', docs[0].FileURL);
@@ -801,10 +1155,17 @@ router.put('/:maTL', authMiddleware, (req, res) => {
                     console.error('Lỗi xóa file cũ:', e);
                 }
             } else {
-                await pool.execute(
-                    'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
-                    [tenTL, moTa || null, maMonHoc, maTL]
-                );
+                if (parsedGiaXu !== null) {
+                    await pool.execute(
+                        'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, GiaXu = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                        [tenTL, moTa || null, maMonHoc, parsedGiaXu, maTL]
+                    );
+                } else {
+                    await pool.execute(
+                        'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                        [tenTL, moTa || null, maMonHoc, maTL]
+                    );
+                }
             }
 
             res.status(200).json({ message: 'Đã cập nhật thông tin tài liệu thành công. Vui lòng chờ duyệt lại.' });
@@ -823,12 +1184,20 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-        const [docs] = await pool.execute('SELECT MaND_NguoiDang, FileURL, TenTL, TrangThaiKiemDuyet FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        const [docs] = await pool.execute('SELECT MaND_NguoiDang, FileURL, AnhBia, TenTL, TrangThaiKiemDuyet FROM TAILIEU WHERE MaTL = ?', [maTL]);
         if (docs.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
         }
 
-        if (docs[0].MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin') {
+        let isGiaoVienDuyet = false;
+        if (req.user.VaiTro === 'GiaoVien') {
+            const [authorRows] = await pool.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?', [docs[0].MaND_NguoiDang]);
+            if (authorRows.length > 0 && authorRows[0].VaiTro === 'SinhVien') {
+                isGiaoVienDuyet = true;
+            }
+        }
+
+        if (docs[0].MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin' && !isGiaoVienDuyet) {
             return res.status(403).json({ message: 'Bạn không có quyền xóa tài liệu này.' });
         }
 
@@ -851,9 +1220,21 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
 
         try {
             const fs = require('fs');
-            const filePath = path.join(__dirname, 'public', docs[0].FileURL);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
+            
+            // Xóa file tài liệu
+            if (docs[0].FileURL) {
+                const filePath = path.join(__dirname, 'public', docs[0].FileURL);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }
+
+            // Xóa ảnh bìa nếu không phải ảnh mặc định
+            if (docs[0].AnhBia && !docs[0].AnhBia.includes('default-cover.png')) {
+                const coverPath = path.join(__dirname, 'public', docs[0].AnhBia);
+                if (fs.existsSync(coverPath)) {
+                    fs.unlinkSync(coverPath);
+                }
             }
         } catch (e) {
             console.error('Lỗi khi xóa file vật lý:', e);
@@ -866,68 +1247,6 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/:maTL/buy', authMiddleware, async (req, res) => {
-    const maTL = req.params.maTL;
-    const maND = req.user.MaND;
-
-    try {
-        const pool = req.app.locals.pool;
-
-        const [docs] = await pool.execute('SELECT MaND_NguoiDang, GiaXu, LaTaiLieuDocQuyen, TenTL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND TrangThaiHienThi = "Hien"', [maTL]);
-        if (docs.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy tài liệu PREMIUM.' });
-        }
-
-        const doc = docs[0];
-        if (!doc.LaTaiLieuDocQuyen) {
-            return res.status(400).json({ message: 'Tài liệu này không phải là tài liệu độc quyền (PREMIUM).' });
-        }
-
-        if (doc.MaND_NguoiDang === maND) {
-            return res.status(400).json({ message: 'Bạn không thể mua tài liệu do chính bạn đăng.' });
-        }
-
-        const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, maND]);
-        if (purchaseRows.length > 0) {
-            return res.status(400).json({ message: 'Bạn đã mua tài liệu này rồi.' });
-        }
-
-        const [userRows] = await pool.execute('SELECT SoDuXu FROM NGUOIDUNG WHERE MaND = ?', [maND]);
-        if (userRows.length === 0) return res.status(404).json({ message: 'Người dùng không tồn tại.' });
-
-        const soDuHienTai = userRows[0].SoDuXu;
-        if (soDuHienTai < doc.GiaXu) {
-            return res.status(400).json({ message: 'Bạn không đủ xu để mua tài liệu này.' });
-        }
-
-        const connection = await pool.getConnection();
-        await connection.beginTransaction();
-
-        try {
-            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu - ? WHERE MaND = ?', [doc.GiaXu, maND]);
-            
-            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [doc.GiaXu, doc.MaND_NguoiDang]);
-
-            await connection.execute('INSERT INTO TAILIEU_DAMUA (MaND, MaTL, GiaXuThoiDiemMua) VALUES (?, ?, ?)', [maND, maTL, doc.GiaXu]);
-
-            await connection.execute('INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)', [maND, 'MuaTaiLieu', -doc.GiaXu, `Mua tài liệu: ${doc.TenTL}`]);
-
-            await connection.execute('INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)', [doc.MaND_NguoiDang, 'BanTaiLieu', doc.GiaXu, `Bán tài liệu: ${doc.TenTL}`]);
-
-            await connection.commit();
-            res.status(200).json({ message: 'Mua tài liệu thành công!' });
-        } catch (err) {
-            await connection.rollback();
-            throw err;
-        } finally {
-            connection.release();
-        }
-
-    } catch (error) {
-        console.error('Lỗi khi mua tài liệu:', error);
-        res.status(500).json({ message: 'Lỗi máy chủ.' });
-    }
-});
 
 router.put('/:id/appeal', authMiddleware, async (req, res) => {
     try {
@@ -941,7 +1260,6 @@ router.put('/:id/appeal', authMiddleware, async (req, res) => {
 
         const pool = req.app.locals.pool;
 
-        // Check if document belongs to user and is rejected
         const [docs] = await pool.execute(
             'SELECT TenTL, TrangThaiKiemDuyet FROM TAILIEU WHERE MaTL = ? AND MaND_NguoiDang = ?',
             [docId, userId]
@@ -955,13 +1273,11 @@ router.put('/:id/appeal', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Chỉ có thể phản hồi cho tài liệu bị từ chối.' });
         }
 
-        // Update status to ChoDuyet and set PhanHoiTuChoi
         await pool.execute(
             'UPDATE TAILIEU SET TrangThaiKiemDuyet = "ChoDuyet", PhanHoiTuChoi = ? WHERE MaTL = ?',
             [phanHoi.trim(), docId]
         );
 
-        // Notify admins
         await notifyActiveAdmins(
             pool,
             `Tài liệu "${docs[0].TenTL}" vừa có phản hồi khiếu nại và đang chờ duyệt lại.`,

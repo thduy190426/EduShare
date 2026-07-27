@@ -64,6 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
         officialFormGroup.style.display = 'block';
     }
 
+    const premiumFormGroup = document.getElementById('premium-form-group');
+    if (isOfficialUser && premiumFormGroup) {
+        premiumFormGroup.style.display = 'block';
+    }
+
     const cbPremium = document.getElementById('laTaiLieuDocQuyen');
     const giaXuContainer = document.getElementById('giaXuContainer');
     if (cbPremium && giaXuContainer) {
@@ -260,7 +265,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 window.location.href = 'myDocuments.html';
             } else {
-                Swal.fire(`Lỗi: ${data.message || 'Tải lên thất bại'}`);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Tải lên thất bại',
+                    text: data.message || 'Tải lên thất bại'
+                });
                 btnUpload.disabled = false;
                 btnUpload.style.opacity = '1';
                 btnUpload.style.cursor = 'pointer';
@@ -268,7 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Lỗi khi tải tài liệu:', error);
-            Swal.fire('Đã xảy ra lỗi khi tải tài liệu lên server.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi máy chủ',
+                text: 'Đã xảy ra lỗi khi tải tài liệu lên server.'
+            });
             btnUpload.disabled = false;
             btnUpload.style.opacity = '1';
             btnUpload.style.cursor = 'pointer';
@@ -403,7 +416,11 @@ function setupSubjectSuggestionUI(subjectSelect, token) {
             const data = await response.json();
 
             if (!response.ok) {
-                Swal.fire(`Lỗi: ${data.message || 'Không thể gửi đề xuất.'}`);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Đề xuất thất bại',
+                    text: data.message || 'Không thể gửi đề xuất.'
+                });
                 return;
             }
 
@@ -415,7 +432,11 @@ function setupSubjectSuggestionUI(subjectSelect, token) {
             closeModal();
         } catch (error) {
             console.error('Lỗi gửi đề xuất môn học:', error);
-            Swal.fire('Đã xảy ra lỗi khi gửi đề xuất môn học.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi máy chủ',
+                text: 'Đã xảy ra lỗi khi gửi đề xuất môn học.'
+            });
         } finally {
             submitBtn.disabled = false;
         }

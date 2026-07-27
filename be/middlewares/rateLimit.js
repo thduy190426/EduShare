@@ -48,11 +48,38 @@ const contactLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const otpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, 
+    max: 3, 
+    message: { message: 'Bạn đã yêu cầu OTP quá nhiều lần. Vui lòng thử lại sau 5 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const downloadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    message: { message: 'Bạn đã tải tài liệu quá nhiều lần. Vui lòng thử lại sau 15 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const commentLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, 
+    max: 5, 
+    message: { message: 'Bạn bình luận quá nhanh (giới hạn 5 lần/phút). Vui lòng thử lại sau 1 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 module.exports = {
     uploadLimiter,
     rateLimiter,
     reportLimiter,
     loginLimiter,
     registerLimiter,
-    contactLimiter
+    contactLimiter,
+    otpLimiter,
+    downloadLimiter,
+    commentLimiter
 };

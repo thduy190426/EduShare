@@ -46,6 +46,7 @@ async function run() {
     try {
         await addColumnIfMissing('TAILIEU', 'LyDoTuChoi', 'TEXT DEFAULT NULL');
         await addColumnIfMissing('TAILIEU', 'PhanHoiTuChoi', 'TEXT DEFAULT NULL');
+        await addColumnIfMissing('TAILIEU', 'GiaXu', 'INT DEFAULT 0');
         await addColumnIfMissing('NGUOIDUNG', 'AvatarURL', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'Tuoi', 'INT DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'SoDuXu', 'INT DEFAULT 0');
@@ -112,6 +113,49 @@ async function run() {
                 FOREIGN KEY (MaND_Duyet) REFERENCES NGUOIDUNG(MaND)
             )
         `);
+        await createTableIfMissing('TAILIEU_DAMUA', `
+            CREATE TABLE TAILIEU_DAMUA (
+                MaND INT NOT NULL,
+                MaTL INT NOT NULL,
+                NgayMua DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (MaND, MaTL),
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND),
+                FOREIGN KEY (MaTL) REFERENCES TAILIEU(MaTL)
+            )
+        `);
+        await createTableIfMissing('LICH_SU_XU', `
+            CREATE TABLE LICH_SU_XU (
+                MaGD INT AUTO_INCREMENT PRIMARY KEY,
+                MaND INT NOT NULL,
+                LoaiGiaoDich ENUM('NapXu', 'MuaTaiLieu', 'BanTaiLieu', 'TruXuAdmin', 'ThuongXu', 'HoanXu', 'PhatXu') NOT NULL,
+                SoXuThayDoi INT NOT NULL,
+                MoTa TEXT,
+                NgayGiaoDich DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND)
+            )
+        `);
+        
+        try {
+            await pool.execute("ALTER TABLE LICH_SU_XU MODIFY COLUMN LoaiGiaoDich ENUM('NapXu', 'MuaTaiLieu', 'BanTaiLieu', 'TruXuAdmin', 'ThuongXu', 'HoanXu', 'PhatXu') NOT NULL");
+            console.log("Updated ENUM for LICH_SU_XU.LoaiGiaoDich");
+        } catch (e) {
+            console.error("Error updating ENUM for LICH_SU_XU.LoaiGiaoDich", e.message);
+        }
+
+        await createTableIfMissing('YEU_CAU_GIAO_VIEN', `
+            CREATE TABLE YEU_CAU_GIAO_VIEN (
+                MaYeuCau INT AUTO_INCREMENT PRIMARY KEY,
+                MaND INT NOT NULL,
+                MinhChungURL VARCHAR(255) NOT NULL,
+                TrangThai ENUM('ChoDuyet', 'DaDuyet', 'TuChoi') DEFAULT 'ChoDuyet',
+                LyDoTuChoi TEXT DEFAULT NULL,
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                NgayCapNhat DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND)
+            )
+        `);
+        
+        await addColumnIfMissing('BINHLUAN', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
     } finally {
         await pool.end();
     }

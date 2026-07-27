@@ -75,6 +75,10 @@ let subjectsList = [];
 let currentGroupInfo = null;
 let currentPage = 1;
 let currentLimit = 12;
+let hasMore = true;
+let isInitialLoaded = false;
+let isLoading = false;
+let observer = null;
 let selectedKickMember = null;
 let contextMenuMember = null;
 let selectedRemoveDoc = null;
@@ -110,8 +114,8 @@ async function initGroupList() {
 
     const searchInput = document.getElementById('search-group');
     const filterSelect = document.getElementById('filter-subject');
-    if (searchInput) searchInput.addEventListener('input', applyFilters);
-    if (filterSelect) filterSelect.addEventListener('change', applyFilters);
+    if (searchInput) searchInput.addEventListener('input', () => applyFilters());
+    if (filterSelect) filterSelect.addEventListener('change', () => applyFilters());
 
     const tabExplore = document.getElementById('tab-all-groups');
     const tabMyGroups = document.getElementById('tab-my-groups');
@@ -220,6 +224,26 @@ async function initGroupList() {
         });
     }
 
+    function setupInfiniteScroll() {
+        const sentinelEl = document.getElementById('infiniteScrollSentinel');
+        if (!sentinelEl) return;
+        observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            if (entry.isIntersecting && !isLoading && hasMore && isInitialLoaded) {
+                if (currentTab === 'explore') {
+                    window.fetchGroups(currentPage + 1, true);
+                } else {
+                    window.fetchMyGroups(currentPage + 1, true);
+                }
+            }
+        }, {
+            rootMargin: '250px',
+            threshold: 0.1
+        });
+        observer.observe(sentinelEl);
+    }
+    setupInfiniteScroll();
+
     const btnConfirmEdit = document.getElementById('btn-confirm-edit-group');
     if (btnConfirmEdit) {
         btnConfirmEdit.addEventListener('click', async () => {
@@ -265,41 +289,87 @@ async function initGroupList() {
     }
 }
 
-window.fetchGroups = async function(page = 1) {
+window.fetchGroups = async function(page = 1, isAppend = false) {
+    if (isLoading) return;
+    isLoading = true;
     currentPage = page;
+    
     const titleEl = document.getElementById('main-group-title');
     if (titleEl) titleEl.textContent = 'Tất cả các nhóm';
     const grid = document.getElementById('group-grid');
-    if (grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải danh sách nhóm...</p></div>';
+    const scrollSpinner = document.getElementById('scrollSpinner');
+    const scrollEndMessage = document.getElementById('scrollEndMessage');
+    const sentinelEl = document.getElementById('infiniteScrollSentinel');
+    
+    if (scrollSpinner) scrollSpinner.style.display = 'flex';
+    if (scrollEndMessage) scrollEndMessage.style.display = 'none';
+
+    if (!isAppend && grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải danh sách nhóm...</p></div>';
     
     try {
         const res = await fetch(`${API_URL}/groups?page=${page}&limit=${currentLimit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        currentGroupsData = data.groups || [];
+        const newGroups = data.groups || [];
+        
+        if (isAppend) {
+            currentGroupsData = currentGroupsData.concat(newGroups);
+        } else {
+            currentGroupsData = newGroups;
+        }
+        
         populateSubjectFilter();
-        applyFilters();
-        if (data.pagination) renderPagination(data.pagination.totalPages, data.pagination.currentPage, 'window.fetchGroups');
+        applyFilters(isAppend ? newGroups : null);
+        
+        if (data.pagination) {
+            hasMore = currentPage < data.pagination.totalPages;
+        } else {
+            hasMore = false;
+        }
+        isInitialLoaded = true;
+
+        if (!hasMore && scrollEndMessage && (currentGroupsData.length > 0 || isAppend)) {
+            scrollEndMessage.style.display = 'block';
+        } else if (scrollEndMessage) {
+            scrollEndMessage.style.display = 'none';
+        }
+
+        if (observer && sentinelEl && hasMore) {
+            observer.unobserve(sentinelEl);
+            setTimeout(() => observer.observe(sentinelEl), 100);
+        }
         
         const recSection = document.getElementById('recommended-section');
         if (recSection && page === 1 && currentTab === 'explore') {
             window.fetchRecommendedGroups();
-        } else if (recSection) {
+        } else if (recSection && page === 1) {
             recSection.style.display = 'none';
         }
     } catch (err) {
         console.error('Lỗi lấy dữ liệu fetchGroups:', err);
-        if (grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-triangle-exclamation fa-2x" style="color:#ef4444;"></i><p style="margin-top:10px; color:var(--text-secondary);">Không thể tải danh sách nhóm. Vui lòng thử lại sau.</p><button class="btn-outline-primary" style="margin-top:10px;" onclick="window.fetchGroups()">Thử lại</button></div>';
+        if (grid && !isAppend) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-triangle-exclamation fa-2x" style="color:#ef4444;"></i><p style="margin-top:10px; color:var(--text-secondary);">Không thể tải danh sách nhóm. Vui lòng thử lại sau.</p><button class="btn-outline-primary" style="margin-top:10px;" onclick="window.fetchGroups()">Thử lại</button></div>';
+    } finally {
+        isLoading = false;
+        if (scrollSpinner) scrollSpinner.style.display = 'none';
     }
 }
 
-window.fetchMyGroups = async function(page = 1) {
+window.fetchMyGroups = async function(page = 1, isAppend = false) {
+    if (isLoading) return;
+    isLoading = true;
     currentPage = page;
     const titleEl = document.getElementById('main-group-title');
     if (titleEl) titleEl.textContent = 'Nhóm của tôi';
     const grid = document.getElementById('group-grid');
-    if (grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải nhóm của bạn...</p></div>';
+    const scrollSpinner = document.getElementById('scrollSpinner');
+    const scrollEndMessage = document.getElementById('scrollEndMessage');
+    const sentinelEl = document.getElementById('infiniteScrollSentinel');
+    
+    if (scrollSpinner) scrollSpinner.style.display = 'flex';
+    if (scrollEndMessage) scrollEndMessage.style.display = 'none';
+
+    if (!isAppend && grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải nhóm của bạn...</p></div>';
 
     const recSection = document.getElementById('recommended-section');
     if (recSection) recSection.style.display = 'none';
@@ -309,13 +379,40 @@ window.fetchMyGroups = async function(page = 1) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        currentGroupsData = data.groups || [];
+        const newGroups = data.groups || [];
+        
+        if (isAppend) {
+            currentGroupsData = currentGroupsData.concat(newGroups);
+        } else {
+            currentGroupsData = newGroups;
+        }
+        
         populateSubjectFilter();
-        applyFilters();
-        if (data.pagination) renderPagination(data.pagination.totalPages, data.pagination.currentPage, 'window.fetchMyGroups');
+        applyFilters(isAppend ? newGroups : null);
+        
+        if (data.pagination) {
+            hasMore = currentPage < data.pagination.totalPages;
+        } else {
+            hasMore = false;
+        }
+        isInitialLoaded = true;
+
+        if (!hasMore && scrollEndMessage && (currentGroupsData.length > 0 || isAppend)) {
+            scrollEndMessage.style.display = 'block';
+        } else if (scrollEndMessage) {
+            scrollEndMessage.style.display = 'none';
+        }
+
+        if (observer && sentinelEl && hasMore) {
+            observer.unobserve(sentinelEl);
+            setTimeout(() => observer.observe(sentinelEl), 100);
+        }
     } catch (err) {
         console.error('Lỗi fetchMyGroups:', err);
-        if (grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-triangle-exclamation fa-2x" style="color:#ef4444;"></i><p style="margin-top:10px; color:var(--text-secondary);">Không thể tải nhóm của bạn. Vui lòng thử lại sau.</p><button class="btn-outline-primary" style="margin-top:10px;" onclick="window.fetchMyGroups()">Thử lại</button></div>';
+        if (grid && !isAppend) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-triangle-exclamation fa-2x" style="color:#ef4444;"></i><p style="margin-top:10px; color:var(--text-secondary);">Không thể tải nhóm của bạn. Vui lòng thử lại sau.</p><button class="btn-outline-primary" style="margin-top:10px;" onclick="window.fetchMyGroups()">Thử lại</button></div>';
+    } finally {
+        isLoading = false;
+        if (scrollSpinner) scrollSpinner.style.display = 'none';
     }
 }
 
@@ -341,28 +438,7 @@ window.fetchRecommendedGroups = async function() {
     }
 }
 
-function renderPagination(totalPages, currentPage, fetchFunctionName) {
-    const container = document.getElementById('paginationContainer');
-    if (!container) return;
-    container.innerHTML = '';
 
-    if (totalPages <= 1) return;
-
-    for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = i;
-        btn.className = i === currentPage ? 'btn-primary' : 'btn-outline-primary';
-        btn.style.padding = '8px 16px';
-        btn.style.height = 'auto';
-        if (i !== currentPage) {
-            btn.onclick = () => {
-                if (fetchFunctionName === 'window.fetchGroups') window.fetchGroups(i);
-                else window.fetchMyGroups(i);
-            };
-        }
-        container.appendChild(btn);
-    }
-}
 
 function populateSubjectFilter() {
     const filterSelect = document.getElementById('filter-subject');
@@ -385,20 +461,23 @@ function populateSubjectFilter() {
     }
 }
 
-function applyFilters() {
+function applyFilters(newItemsOnly = null) {
+    if (newItemsOnly instanceof Event) newItemsOnly = null;
     const searchInput = document.getElementById('search-group');
     const filterSelect = document.getElementById('filter-subject');
     
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
     const subject = filterSelect ? filterSelect.value : '';
     
-    const filtered = currentGroupsData.filter(g => {
+    let itemsToFilter = newItemsOnly ? newItemsOnly : currentGroupsData;
+    
+    const filtered = itemsToFilter.filter(g => {
         const matchQuery = g.TenNhom.toLowerCase().includes(query) || (g.MoTa && g.MoTa.toLowerCase().includes(query));
         const matchSubject = subject === '' || g.TenMonHoc === subject;
         return matchQuery && matchSubject;
     });
     
-    renderGroups(filtered, 'group-grid');
+    renderGroups(filtered, 'group-grid', !!newItemsOnly);
 }
 
 let editInitialState = {};
@@ -503,12 +582,13 @@ window.deleteGroup = async (id) => {
     }
 };
 
-function renderGroups(groups, gridId = 'group-grid') {
+function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
     const grid = document.getElementById(gridId);
     if (!grid) return;
-    grid.innerHTML = '';
+    
+    if (!isAppend) grid.innerHTML = '';
 
-    if (groups.length === 0) {
+    if (groups.length === 0 && !isAppend) {
         let emptyMessage = currentTab === 'explore' ? 'Không có nhóm nào trong Khám phá.' : 'Bạn chưa tham gia nhóm nào.';
         if (gridId === 'recommended-group-grid') emptyMessage = 'Chưa có nhóm gợi ý phù hợp cho bạn.';
         grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary);"><i class="fa-solid fa-box-open fa-3x" style="color: #cbd5e1; margin-bottom:15px;"></i><p>${emptyMessage}</p></div>`;
@@ -559,7 +639,7 @@ window.joinGroup = async (maNhom, btnElement) => {
         const data = await res.json();
         
         if (res.ok) {
-            Swal.fire({ icon: 'success', title: 'Thành công', text: 'Tham gia nhóm thành công!' });
+            Swal.fire({ icon: 'success', title: 'Thành công', text: data.message });
             if (window.location.pathname.includes('groupDetails.html')) {
                 window.location.reload();
             } else if (currentTab === 'explore') {
@@ -835,8 +915,10 @@ async function initGroupDetails() {
 function initGroupDetailControls() {
     const editModal = document.getElementById('editGroupModal');
     const kickMemberModal = document.getElementById('kickMemberModal');
+    const requestsModal = document.getElementById('requestsModal');
     const btnEditGroup = document.getElementById('btn-edit-group');
     const btnDeleteGroup = document.getElementById('btn-delete-group');
+    const btnViewRequests = document.getElementById('btn-view-requests');
     const btnCloseEdit = document.getElementById('btn-close-edit-group');
     const btnCancelEdit = document.getElementById('btn-cancel-edit-group');
     const btnConfirmEdit = document.getElementById('btn-confirm-edit-group');
@@ -845,6 +927,8 @@ function initGroupDetailControls() {
     const btnConfirmKickMember = document.getElementById('btn-confirm-kick-member');
     const memberContextMenu = document.getElementById('memberContextMenu');
     const btnContextKickMember = document.getElementById('btn-context-kick-member');
+    const btnContextPromoteMember = document.getElementById('btn-context-promote-member');
+    const btnContextDemoteMember = document.getElementById('btn-context-demote-member');
     const btnContextViewProfile = document.getElementById('btn-context-view-profile');
     const memberToggle = document.getElementById('member-list-toggle');
     const memberPanel = document.getElementById('member-panel');
@@ -881,6 +965,20 @@ function initGroupDetailControls() {
         });
     }
 
+    if (btnContextPromoteMember) {
+        btnContextPromoteMember.addEventListener('click', () => {
+            if (contextMenuMember) changeMemberRole(contextMenuMember.MaND, 'PhoNhom');
+            hideMemberContextMenu();
+        });
+    }
+
+    if (btnContextDemoteMember) {
+        btnContextDemoteMember.addEventListener('click', () => {
+            if (contextMenuMember) changeMemberRole(contextMenuMember.MaND, 'ThanhVien');
+            hideMemberContextMenu();
+        });
+    }
+
     if (memberContextMenu) {
         memberContextMenu.addEventListener('click', (e) => e.stopPropagation());
     }
@@ -890,6 +988,31 @@ function initGroupDetailControls() {
 
     if (btnEditGroup) {
         btnEditGroup.addEventListener('click', () => window.openEditModal(currentGroupId));
+    }
+
+    if (btnViewRequests && requestsModal) {
+        const btnCloseRequests = document.getElementById('btn-close-requests');
+        const btnCancelRequests = document.getElementById('btn-cancel-requests');
+
+        const closeRequestsModal = () => {
+            requestsModal.style.opacity = '0';
+            setTimeout(() => { requestsModal.style.display = 'none'; }, 300);
+        };
+
+        if (btnCloseRequests) btnCloseRequests.addEventListener('click', closeRequestsModal);
+        if (btnCancelRequests) btnCancelRequests.addEventListener('click', closeRequestsModal);
+        window.addEventListener('click', (e) => {
+            if (e.target === requestsModal) closeRequestsModal();
+        });
+
+        btnViewRequests.addEventListener('click', () => {
+            groupMenuContent.classList.remove('show');
+            loadRequestsList();
+            requestsModal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                requestsModal.style.opacity = '1';
+            });
+        });
     }
 
     if (btnDeleteGroup) {
@@ -1018,6 +1141,10 @@ function initGroupDetailControls() {
             const expanded = memberToggle.getAttribute('aria-expanded') === 'true';
             memberToggle.setAttribute('aria-expanded', String(!expanded));
             memberPanel.classList.toggle('is-expanded', !expanded);
+            const icon = memberToggle.querySelector('i.fa-chevron-up, i.fa-chevron-down');
+            if (icon) {
+                icon.className = expanded ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-up';
+            }
         });
     }
 
@@ -1111,6 +1238,7 @@ async function fetchGroupInfo() {
         const group = data.group;
         currentGroupInfo = group;
         const isGroupAdmin = currentUserId && String(currentUserId) === String(group.MaND_QuanTri);
+        window.currentGroupRole = data.role; // Save role globally
         const isMember = data.isMember || isGroupAdmin;
         window.isCurrentMember = isMember;
         
@@ -1120,14 +1248,34 @@ async function fetchGroupInfo() {
         const btnLeaveGroup = document.getElementById('btn-leave-group');
         const groupDropdownMenu = document.getElementById('group-dropdown-menu');
         const btnJoinGroupDetail = document.getElementById('btn-join-group-detail');
+        const btnViewRequests = document.getElementById('btn-view-requests');
         
         if (btnEditGroup) btnEditGroup.style.display = isGroupAdmin ? 'block' : 'none';
         if (btnDeleteGroup) btnDeleteGroup.style.display = isGroupAdmin ? 'block' : 'none';
+        if (btnViewRequests) btnViewRequests.style.display = (data.role === 'QuanTri' || data.role === 'PhoNhom') ? 'block' : 'none';
         if (btnShareDoc) btnShareDoc.style.display = isMember ? 'inline-flex' : 'none';
         if (btnLeaveGroup) btnLeaveGroup.style.display = isMember ? 'block' : 'none';
 
         if (groupDropdownMenu) groupDropdownMenu.style.display = isMember ? 'block' : 'none';
-        if (btnJoinGroupDetail) btnJoinGroupDetail.style.display = isMember ? 'none' : 'inline-flex';
+        if (btnJoinGroupDetail) {
+            if (isMember) {
+                btnJoinGroupDetail.style.display = 'none';
+            } else if (data.hasRequested) {
+                btnJoinGroupDetail.style.display = 'inline-flex';
+                btnJoinGroupDetail.innerHTML = '<i class="fa-solid fa-clock" style="margin-right: 6px;"></i> Đã gửi yêu cầu';
+                btnJoinGroupDetail.disabled = true;
+                btnJoinGroupDetail.style.opacity = '0.7';
+                btnJoinGroupDetail.style.cursor = 'not-allowed';
+                btnJoinGroupDetail.onclick = null;
+            } else {
+                btnJoinGroupDetail.style.display = 'inline-flex';
+                btnJoinGroupDetail.innerHTML = '<i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i> Tham gia nhóm';
+                btnJoinGroupDetail.disabled = false;
+                btnJoinGroupDetail.style.opacity = '1';
+                btnJoinGroupDetail.style.cursor = 'pointer';
+                btnJoinGroupDetail.onclick = () => window.joinGroup(new URLSearchParams(window.location.search).get('id'));
+            }
+        }
 
         document.getElementById('group-header-info').innerHTML = `
             <div class="group-icon-lg"><i class="fa-solid fa-users-rectangle"></i></div>
@@ -1171,90 +1319,116 @@ async function fetchGroupMembers() {
         if (memberCount) memberCount.textContent = `(${members.length})`;
         container.innerHTML = '';
         
-        members.forEach(m => {
-            const memberDate = new Date(m.NgayThamGia);
-            const dateStr = `${String(memberDate.getDate()).padStart(2, '0')}/${String(memberDate.getMonth() + 1).padStart(2, '0')}/${memberDate.getFullYear()}`;
-            const initial = m.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
-            const avatarHtml = m.AvatarURL
-                ? `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${escapeHTML(getAssetUrl(m.AvatarURL))}" alt="${escapeHTML(m.HoTen)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`
-                : `<div class="avatar-sm">${escapeHTML(initial)}</div>`;
-            
-            let roleBadge = '';
-            if (m.VaiTroTrongNhom === 'QuanTri') {
-                roleBadge = '<span class="role-admin">Quản trị viên</span>';
-            } else {
-                roleBadge = '<span style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Thành viên</span>';
-            }
+        window.visibleMembersCount = 3;
 
-            const div = document.createElement('div');
-            div.className = 'member-item';
-            div.style.cursor = 'pointer';
-            div.title = 'Mở tuỳ chọn thành viên';
-            div.innerHTML = `
-                <div class="member-info">
-                  ${avatarHtml}
-                  <div>
-                    <div class="member-name">${escapeHTML(m.HoTen)}</div>
-                    <div class="member-role">Tham gia: ${dateStr}</div>
-                  </div>
-                </div>
-                ${roleBadge}
-            `;
-            div.addEventListener('click', (e) => {
-                if (e.button !== 0) return;
-                showMemberContextMenu(e, m);
+        const renderMembers = () => {
+            container.innerHTML = '';
+            const visibleMembers = members.slice(0, window.visibleMembersCount);
+
+            visibleMembers.forEach(m => {
+                const memberDate = new Date(m.NgayThamGia);
+                const dateStr = `${String(memberDate.getDate()).padStart(2, '0')}/${String(memberDate.getMonth() + 1).padStart(2, '0')}/${memberDate.getFullYear()}`;
+                const initial = m.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                const avatarHtml = m.AvatarURL
+                    ? `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${escapeHTML(getAssetUrl(m.AvatarURL))}" alt="${escapeHTML(m.HoTen)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`
+                    : `<div class="avatar-sm">${escapeHTML(initial)}</div>`;
+                
+                let roleBadge = '';
+                if (m.VaiTroTrongNhom === 'QuanTri') {
+                    roleBadge = '<span class="role-admin">Quản trị viên</span>';
+                } else if (m.VaiTroTrongNhom === 'PhoNhom') {
+                    roleBadge = '<span class="role-admin" style="background: rgba(99, 102, 241, 0.1); color: #6366F1;">Phó nhóm</span>';
+                } else {
+                    roleBadge = '<span style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Thành viên</span>';
+                }
+
+                const div = document.createElement('div');
+                div.className = 'member-item';
+                div.style.cursor = 'pointer';
+                div.title = 'Mở tuỳ chọn thành viên';
+                div.innerHTML = `
+                    <div class="member-info">
+                      ${avatarHtml}
+                      <div>
+                        <div class="member-name">${escapeHTML(m.HoTen)}</div>
+                        <div class="member-role">Tham gia: ${dateStr}</div>
+                      </div>
+                    </div>
+                    ${roleBadge}
+                `;
+                div.addEventListener('click', (e) => {
+                    if (e.button !== 0) return;
+                    showMemberContextMenu(e, m);
+                });
+                div.addEventListener('contextmenu', (event) => {
+                    showMemberContextMenu(event, m);
+                });
+                container.appendChild(div);
             });
-            div.addEventListener('contextmenu', (event) => {
-                showMemberContextMenu(event, m);
-            });
-            container.appendChild(div);
-        });
 
-        if (isGroupAdmin) {
-            Array.from(container.children).forEach((item, index) => {
-                const member = members[index];
-                if (!member || String(member.MaND) === String(currentUserId) || member.VaiTroTrongNhom === 'QuanTri') return;
+            if (isGroupAdmin) {
+                Array.from(container.children).forEach((item, index) => {
+                    const member = visibleMembers[index];
+                    if (!member || String(member.MaND) === String(currentUserId) || member.VaiTroTrongNhom === 'QuanTri') return;
 
-                item.style.cursor = 'pointer';
-                item.title = 'Mở tuỳ chọn thành viên';
+                    item.style.cursor = 'pointer';
+                    item.title = 'Mở tuỳ chọn thành viên';
 
-                const memberInfo = item.querySelector('.member-info');
-                const roleBadge = item.querySelector('.role-admin') || item.lastElementChild;
-                const originalName = memberInfo?.querySelector('.member-name')?.textContent || member.HoTen;
-                const memberDate = new Date(member.NgayThamGia);
-                const originalDate = memberInfo?.querySelector('.member-role')?.textContent || `Tham gia: ${String(memberDate.getDate()).padStart(2, '0')}/${String(memberDate.getMonth() + 1).padStart(2, '0')}/${memberDate.getFullYear()}`;
-                const memberInitial = member.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
-                const memberAvatarHtml = member.AvatarURL
-                    ? `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${escapeHTML(getAssetUrl(member.AvatarURL))}" alt="${escapeHTML(member.HoTen)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`
-                    : `<div class="avatar-sm">${escapeHTML(memberInitial)}</div>`;
+                    const memberInfo = item.querySelector('.member-info');
+                    const roleBadge = item.querySelector('.role-admin') || item.lastElementChild;
+                    const originalName = memberInfo?.querySelector('.member-name')?.textContent || member.HoTen;
+                    const memberDate = new Date(member.NgayThamGia);
+                    const originalDate = memberInfo?.querySelector('.member-role')?.textContent || `Tham gia: ${String(memberDate.getDate()).padStart(2, '0')}/${String(memberDate.getMonth() + 1).padStart(2, '0')}/${memberDate.getFullYear()}`;
+                    const memberInitial = member.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                    const memberAvatarHtml = member.AvatarURL
+                        ? `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${escapeHTML(getAssetUrl(member.AvatarURL))}" alt="${escapeHTML(member.HoTen)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`
+                        : `<div class="avatar-sm">${escapeHTML(memberInitial)}</div>`;
 
-                item.innerHTML = `
-                    <div class="member-main" title="Mở tuỳ chọn thành viên">
-                        <div class="member-info">
-                            ${memberAvatarHtml}
-                            <div>
-                                <div class="member-name">${escapeHTML(originalName)}</div>
-                                <div class="member-role">${escapeHTML(originalDate)}</div>
+                    item.innerHTML = `
+                        <div class="member-main" title="Mở tuỳ chọn thành viên">
+                            <div class="member-info">
+                                ${memberAvatarHtml}
+                                <div>
+                                    <div class="member-name">${escapeHTML(originalName)}</div>
+                                    <div class="member-role">${escapeHTML(originalDate)}</div>
+                                </div>
+                            </div>
+                            <div class="member-meta">
+                                ${roleBadge ? roleBadge.outerHTML : '<span style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Thành viên</span>'}
                             </div>
                         </div>
-                        <div class="member-meta">
-                            ${roleBadge ? roleBadge.outerHTML : '<span style="font-size: 11px; color: var(--text-secondary); font-weight: 500;">Thành viên</span>'}
-                        </div>
-                    </div>
-                    <button class="btn-kick-member" type="button" title="Đuổi thành viên"><i class="fa-solid fa-user-minus"></i></button>
-                `;
+                        <button class="btn-kick-member" type="button" title="Đuổi thành viên"><i class="fa-solid fa-user-minus"></i></button>
+                    `;
 
-                item.querySelector('.member-main').addEventListener('click', (e) => {
-                    if (e.button !== 0) return;
-                    showMemberContextMenu(e, member);
+                    item.querySelector('.member-main').addEventListener('click', (e) => {
+                        if (e.button !== 0) return;
+                        showMemberContextMenu(e, member);
+                    });
+                    item.querySelector('.btn-kick-member').addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        hideInlineKickActions();
+                        openKickMemberModal(member);
+                    });
                 });
-                item.querySelector('.btn-kick-member').addEventListener('click', (event) => {
-                    event.stopPropagation();
-                    hideInlineKickActions();
-                    openKickMemberModal(member);
+            }
+
+            if (window.visibleMembersCount < members.length) {
+                const loadMoreBtn = document.createElement('button');
+                loadMoreBtn.className = 'btn-outline-primary';
+                loadMoreBtn.style.width = '100%';
+                loadMoreBtn.style.marginTop = '10px';
+                loadMoreBtn.style.fontSize = '13px';
+                loadMoreBtn.style.padding = '8px';
+                loadMoreBtn.innerHTML = 'Xem thêm';
+                loadMoreBtn.addEventListener('click', () => {
+                    window.visibleMembersCount += 5;
+                    renderMembers();
                 });
-            });
-        }
+                container.appendChild(loadMoreBtn);
+            }
+        };
+
+        renderMembers();
     } catch (err) {
         console.error(err);
     }
@@ -1299,12 +1473,31 @@ function showMemberContextMenu(event, member) {
     contextMenuMember = member;
 
     const btnContextKickMember = document.getElementById('btn-context-kick-member');
-    const canKickMember = currentGroupInfo
-        && String(currentUserId) === String(currentGroupInfo.MaND_QuanTri)
-        && String(member.MaND) !== String(currentUserId)
-        && member.VaiTroTrongNhom !== 'QuanTri';
+    const btnContextPromoteMember = document.getElementById('btn-context-promote-member');
+    const btnContextDemoteMember = document.getElementById('btn-context-demote-member');
+    
+    let canKickMember = false;
+    let canPromote = false;
+    let canDemote = false;
+
+    if (String(member.MaND) !== String(currentUserId) && member.VaiTroTrongNhom !== 'QuanTri') {
+        if (window.currentGroupRole === 'QuanTri') {
+            canKickMember = true;
+            if (member.VaiTroTrongNhom === 'ThanhVien') canPromote = true;
+            if (member.VaiTroTrongNhom === 'PhoNhom') canDemote = true;
+        } else if (window.currentGroupRole === 'PhoNhom') {
+            if (member.VaiTroTrongNhom === 'ThanhVien') canKickMember = true;
+        }
+    }
+
     if (btnContextKickMember) {
         btnContextKickMember.style.display = canKickMember ? 'inline-flex' : 'none';
+    }
+    if (btnContextPromoteMember) {
+        btnContextPromoteMember.style.display = canPromote ? 'inline-flex' : 'none';
+    }
+    if (btnContextDemoteMember) {
+        btnContextDemoteMember.style.display = canDemote ? 'inline-flex' : 'none';
     }
     
     menu.style.display = 'block';
@@ -1325,6 +1518,32 @@ function showMemberContextMenu(event, member) {
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
     menu.classList.add('is-open');
+}
+
+async function changeMemberRole(memberId, newRole) {
+    if (!currentGroupId || !memberId) return;
+    
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/members/${memberId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ role: newRole })
+        });
+        
+        const data = await res.json();
+        if (res.ok) {
+            Swal.fire({ icon: 'success', title: 'Thành công', text: 'Cập nhật vai trò thành công', timer: 1500, showConfirmButton: false });
+            fetchGroupMembers();
+        } else {
+            Swal.fire('Lỗi', data.message, 'error');
+        }
+    } catch (err) {
+        console.error('Lỗi khi đổi vai trò:', err);
+        Swal.fire('Lỗi', 'Đã xảy ra lỗi khi cập nhật vai trò', 'error');
+    }
 }
 
 function hideMemberContextMenu() {
@@ -1513,7 +1732,7 @@ function showDocContextMenu(event, doc, isGroupAdmin) {
     const btnToggleStatus = document.getElementById('btn-doc-toggle-status');
     const btnRemove = document.getElementById('btn-doc-remove');
     
-    if (isGroupAdmin) {
+    if (isGroupAdmin || window.currentGroupRole === 'PhoNhom') {
         btnToggleStatus.style.display = 'block';
         btnToggleStatus.innerHTML = doc.TrangThaiNhom === 'Hien' 
             ? '<i class="fa-solid fa-eye-slash" style="margin-right: 8px;"></i> Ẩn tài liệu'

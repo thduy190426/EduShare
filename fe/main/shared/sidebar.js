@@ -1,5 +1,5 @@
 import { API_URL } from './config.js';
-import { decodeJWT, getAssetUrl, getToken, getAvatar, clearAuthSession, showToast } from './utils.js';
+import { decodeJWT, getAssetUrl, getToken, getRefreshToken, getAvatar, clearAuthSession, showToast, getTimeBasedGreeting } from './utils.js';
 
 const SIDEBAR_ITEMS = [
     { label: 'Trang chủ', icon: 'fa-house', href: '../user/userHome.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -7,16 +7,18 @@ const SIDEBAR_ITEMS = [
     { label: 'Tải tài liệu', icon: 'fa-upload', href: '../document/uploadDocument.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
-    { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien'], group: 'user' },
+    { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
-  
     { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin'], badge: 'pendingDocs', group: 'admin' },
+    { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin', 'GiaoVien'], badge: 'pendingDocs', group: 'admin' },
     { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], badge: 'pendingPayments', group: 'admin' },
+    { label: 'Duyệt giáo viên', icon: 'fa-id-card-clip', href: '../admin/adminTeacherRequests.html', roles: ['Admin'], badge: 'pendingTeachers', group: 'admin' },
     { label: 'Người dùng', icon: 'fa-users-gear', href: '../admin/adminUserManagement.html', roles: ['Admin'], group: 'admin' },
     { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Quản lý Nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Báo cáo', icon: 'fa-flag', href: '../admin/adminViolationReports.html', roles: ['Admin'], badge: 'pendingReports', group: 'admin' }
+    { label: 'Quản lý nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
+    { label: 'Báo cáo', icon: 'fa-flag', href: '../admin/adminViolationReports.html', roles: ['Admin'], badge: 'pendingReports', group: 'admin' },
+    { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], group: 'admin' }
 ];
 
 async function renderSidebar() {
@@ -99,13 +101,14 @@ async function renderSidebar() {
 
     const btnLogout = document.getElementById('btn-logout-sidebar');
     if (btnLogout) {
-        btnLogout.addEventListener('click', (e) => {
+        btnLogout.addEventListener('click', async (e) => {
             e.preventDefault();
             try {
                 if (typeof Swal !== 'undefined') {
+                    const logoutGreeting = getTimeBasedGreeting('logout');
                     Swal.fire({
                         title: 'Đang đăng xuất...',
-                        text: 'Vui lòng chờ giây lát',
+                        text: logoutGreeting,
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
@@ -118,6 +121,15 @@ async function renderSidebar() {
                     document.body.style.opacity = '0.5';
                 }
 
+                const currentRefreshToken = getRefreshToken();
+                if (currentRefreshToken) {
+                    await fetch('http://localhost:3000/api/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken: currentRefreshToken })
+                    });
+                }
+                
                 clearAuthSession();
                 setTimeout(() => {
                     window.location.href = '../auth/login.html';
@@ -161,7 +173,20 @@ async function renderSidebar() {
             }
         });
     }
-
+    const updateSidebarBadge = (id, count) => {
+        const badgeEl = document.getElementById(id);
+        if (!badgeEl) return;
+        const menuItem = badgeEl.closest('.menu-item');
+        if (count > 0) {
+            badgeEl.textContent = count > 99 ? '99+' : count;
+            badgeEl.style.display = 'flex';
+            if (menuItem) menuItem.classList.add('has-unread');
+        } else {
+            badgeEl.textContent = '0';
+            badgeEl.style.display = 'none';
+            if (menuItem) menuItem.classList.remove('has-unread');
+        }
+    };
     if (userRole === 'Admin') {
         try {
             const res = await fetch(`${API_URL}/admin/stats/overview`, {
@@ -169,49 +194,24 @@ async function renderSidebar() {
             });
             if (res.ok) {
                 const data = await res.json();
-                if (data.pendingDocs > 0) {
-                    const badgeDocs = document.getElementById('badge-pendingDocs');
-                    if (badgeDocs) {
-                        badgeDocs.textContent = data.pendingDocs > 99 ? '99+' : data.pendingDocs;
-                        badgeDocs.style.display = 'flex';
-                    }
-                } else {
-                    const badgeDocs = document.getElementById('badge-pendingDocs');
-                    if (badgeDocs) {
-                        badgeDocs.textContent = '0';
-                        badgeDocs.style.display = 'none';
-                    }
-                }
-                if (data.pendingReports > 0) {
-                    const badgeReports = document.getElementById('badge-pendingReports');
-                    if (badgeReports) {
-                        badgeReports.textContent = data.pendingReports > 99 ? '99+' : data.pendingReports;
-                        badgeReports.style.display = 'flex';
-                    }
-                } else {
-                    const badgeReports = document.getElementById('badge-pendingReports');
-                    if (badgeReports) {
-                        badgeReports.textContent = '0';
-                        badgeReports.style.display = 'none';
-                    }
-                }
-
-                if (data.pendingPayments > 0) {
-                    const badgePayments = document.getElementById('badge-pendingPayments');
-                    if (badgePayments) {
-                        badgePayments.textContent = data.pendingPayments > 99 ? '99+' : data.pendingPayments;
-                        badgePayments.style.display = 'flex';
-                    }
-                } else {
-                    const badgePayments = document.getElementById('badge-pendingPayments');
-                    if (badgePayments) {
-                        badgePayments.textContent = '0';
-                        badgePayments.style.display = 'none';
-                    }
-                }
+                updateSidebarBadge('badge-pendingDocs', data.pendingDocs || 0);
+                updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
+                updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
             }
         } catch (e) {
             console.error('Lỗi load Admin badges:', e);
+        }
+    } else if (userRole === 'GiaoVien') {
+        try {
+            const res = await fetch(`${API_URL}/admin/documents/counts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const counts = await res.json();
+                updateSidebarBadge('badge-pendingDocs', counts.ChoDuyet || 0);
+            }
+        } catch (e) {
+            console.error('Lỗi load teacher moderation badge:', e);
         }
     }
 
@@ -268,48 +268,51 @@ function setupSidebarNavigation(sidebarEl) {
 window.refreshSidebarBadges = async function () {
     const token = getToken();
     if (!token) return;
+    
+    const decoded = decodeJWT(token);
+    if (!decoded || !decoded.VaiTro) return;
 
-    try {
-        const res = await fetch(`${API_URL}/admin/stats/overview`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) return;
-
-        const data = await res.json();
-        const badgeDocs = document.getElementById('badge-pendingDocs');
-        if (badgeDocs) {
-            if (Number(data.pendingDocs || 0) > 0) {
-                badgeDocs.textContent = data.pendingDocs > 99 ? '99+' : data.pendingDocs;
-                badgeDocs.style.display = 'flex';
-            } else {
-                badgeDocs.textContent = '0';
-                badgeDocs.style.display = 'none';
-            }
+    const updateSidebarBadge = (id, count) => {
+        const badgeEl = document.getElementById(id);
+        if (!badgeEl) return;
+        const menuItem = badgeEl.closest('.menu-item');
+        if (count > 0) {
+            badgeEl.textContent = count > 99 ? '99+' : count;
+            badgeEl.style.display = 'flex';
+            if (menuItem) menuItem.classList.add('has-unread');
+        } else {
+            badgeEl.textContent = '0';
+            badgeEl.style.display = 'none';
+            if (menuItem) menuItem.classList.remove('has-unread');
         }
+    };
+    
+    if (decoded.VaiTro === 'Admin') {
+        try {
+            const res = await fetch(`${API_URL}/admin/stats/overview`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) return;
 
-        const badgeReports = document.getElementById('badge-pendingReports');
-        if (badgeReports) {
-            if (Number(data.pendingReports || 0) > 0) {
-                badgeReports.textContent = data.pendingReports > 99 ? '99+' : data.pendingReports;
-                badgeReports.style.display = 'flex';
-            } else {
-                badgeReports.textContent = '0';
-                badgeReports.style.display = 'none';
-            }
+            const data = await res.json();
+            updateSidebarBadge('badge-pendingDocs', data.pendingDocs || 0);
+            updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
+            updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
+        } catch (e) {
+            console.error('Lỗi refresh sidebar badges:', e);
         }
-
-        const badgePayments = document.getElementById('badge-pendingPayments');
-        if (badgePayments) {
-            if (Number(data.pendingPayments || 0) > 0) {
-                badgePayments.textContent = data.pendingPayments > 99 ? '99+' : data.pendingPayments;
-                badgePayments.style.display = 'flex';
-            } else {
-                badgePayments.textContent = '0';
-                badgePayments.style.display = 'none';
+    } else if (decoded.VaiTro === 'GiaoVien') {
+        try {
+            const res = await fetch(`${API_URL}/admin/documents/counts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const counts = await res.json();
+                updateSidebarBadge('badge-pendingDocs', counts.ChoDuyet || 0);
             }
+        } catch (e) {
+            console.error('Lỗi refresh teacher moderation badge:', e);
         }
-    } catch (e) {
-        console.error('Lá»—i refresh sidebar badges:', e);
     }
 };
 

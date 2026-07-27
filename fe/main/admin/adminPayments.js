@@ -1,7 +1,9 @@
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast, getAssetUrl } from "../shared/utils.js";
+import { getToken, showToast, getAssetUrl, escapeHTML, renderPagination } from "../shared/utils.js";
 
 let currentStatus = 'ChoDuyet';
+let currentPage = 1;
+const limit = 10;
 
 document.addEventListener("DOMContentLoaded", () => {
     setupTabs();
@@ -16,6 +18,7 @@ function setupTabs() {
             document.querySelector('.tab-item.active').classList.remove('active');
             tab.classList.add('active');
             currentStatus = tab.dataset.status;
+            currentPage = 1;
             fetchTransactions();
         });
     });
@@ -41,14 +44,21 @@ async function fetchCounts() {
 async function fetchTransactions() {
     const token = getToken();
     try {
-        const response = await fetch(`${API_URL}/payment/transactions?status=${currentStatus}`, {
+        const response = await fetch(`${API_URL}/payment/transactions?status=${currentStatus}&page=${currentPage}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!response.ok) throw new Error("Failed to fetch transactions");
         
         const data = await response.json();
-        renderTransactions(data);
+        renderTransactions(data.data || []);
+        
+        if (data.pagination) {
+            renderPagination('payment-pagination', data.pagination.totalPages, currentPage, (page) => {
+                currentPage = page;
+                fetchTransactions();
+            });
+        }
     } catch (error) {
         console.error(error);
         showToast("error", "Lỗi khi tải danh sách giao dịch.");
@@ -64,7 +74,7 @@ function renderTransactions(transactions) {
         return;
     }
 
-    transactions.forEach(tx => {
+    transactions.forEach((tx, index) => {
         const tr = document.createElement("tr");
         
         const d = new Date(tx.NgayTao);
@@ -87,15 +97,14 @@ function renderTransactions(transactions) {
             `;
         }
 
-        let avatarHtml = '';
-        if (tx.AvatarURL) {
-            avatarHtml = `<img src="${getAssetUrl(tx.AvatarURL)}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`;
-        } else {
-            const initial = tx.HoTen ? tx.HoTen.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
-            avatarHtml = `<div style="width:36px;height:36px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;">${initial}</div>`;
+        const initial = tx.HoTen ? tx.HoTen.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
+        let avatarHtml = `<div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary-light); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0;">${escapeHTML(initial)}</div>`;
+        if (tx.AvatarURL && tx.AvatarURL !== 'null') {
+            avatarHtml = `<img src="${escapeHTML(getAssetUrl(tx.AvatarURL))}" alt="${escapeHTML(tx.HoTen)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" />`;
         }
 
         tr.innerHTML = `
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td>
                 <div style="display:flex;align-items:center;gap:12px;">
                     ${avatarHtml}

@@ -58,10 +58,10 @@
           </div>
 
           <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9"></div>
+            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9" data-callback="enableSubmitBtn" data-expired-callback="disableSubmitBtn"></div>
           </div>
 
-          <button type="submit" class="btn btn-primary">Đăng nhập</button>
+          <button type="submit" id="submitBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">Đăng nhập</button>
           <div id="loginMessage" style="margin-top: 10px; font-size: 14px; text-align: center;"></div>
 
         </form>
@@ -75,6 +75,16 @@
   <script type="module" src="../../main/auth/login.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+  function enableSubmitBtn() {
+    window.isCaptchaSolved = true;
+    if (window.validateLoginForm) window.validateLoginForm();
+  }
+  function disableSubmitBtn() {
+    window.isCaptchaSolved = false;
+    if (window.validateLoginForm) window.validateLoginForm();
+  }
+</script>
 </body>
 </html>
 

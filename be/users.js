@@ -3,7 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Busboy = require('busboy');
 const { Readable } = require('stream');
-
+const multer = require('multer');
+const streamifier = require('streamifier');
 const router = express.Router();
 const { authMiddleware } = require('./middlewares/auth');
 const cloudinary = require('./config/cloudinary');
@@ -123,10 +124,41 @@ function normalizeGioiTinh(value) {
 }
 
 
+// API lấy top người đóng góp trong tháng
+router.get('/top-contributors', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        
+        const sql = `
+            SELECT 
+                ND.MaND, 
+                ND.HoTen, 
+                ND.AvatarURL, 
+                COUNT(TL.MaTL) AS TotalDocuments,
+                IFNULL(SUM(TL.SoLuotTai), 0) AS TotalDownloads,
+                (SELECT COUNT(*) FROM BINHLUAN BL WHERE BL.MaND = ND.MaND AND MONTH(BL.NgayBinhLuan) = MONTH(CURRENT_DATE()) AND YEAR(BL.NgayBinhLuan) = YEAR(CURRENT_DATE())) AS TotalComments
+            FROM NGUOIDUNG ND
+            JOIN TAILIEU TL ON ND.MaND = TL.MaND_NguoiDang
+            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' 
+              AND MONTH(TL.NgayDang) = MONTH(CURRENT_DATE()) 
+              AND YEAR(TL.NgayDang) = YEAR(CURRENT_DATE())
+            GROUP BY ND.MaND
+            ORDER BY TotalDocuments DESC, TotalDownloads DESC
+            LIMIT 5
+        `;
+        
+        const [rows] = await pool.execute(sql);
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Lỗi khi lấy top contributors:', error);
+        res.status(500).json({ message: 'Lỗi server' });
+    }
+});
+
 router.get('/profile', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu, HienThiLichSuTai, HienThiDanhGia FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
 
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
@@ -182,7 +214,7 @@ router.post('/send-change-password-otp', authMiddleware, async (req, res) => {
 
 
 router.put('/profile', authMiddleware, async (req, res) => {
-    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, otp } = req.body;
+    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, otp, hienThiLichSuTai, hienThiDanhGia } = req.body;
     const normalizedTruongHoc = typeof truongHoc === 'string' && truongHoc.trim() !== '' ? truongHoc.trim() : null;
     const normalizedKhoaNganh = typeof khoaNganh === 'string' && khoaNganh.trim() !== '' ? khoaNganh.trim() : null;
     const normalizedHoTen = typeof hoTen === 'string' ? hoTen.trim() : '';
@@ -231,12 +263,13 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(matKhauMoi, saltRounds);
-            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ? WHERE MaND = ?', [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, maND]);
+            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?', 
+                [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, hienThiLichSuTai, hienThiDanhGia, maND]);
             await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);
         } else {
             await pool.execute(
-                'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ? WHERE MaND = ?',
-                [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, maND]
+                'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?',
+                [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, hienThiLichSuTai, hienThiDanhGia, maND]
             );
         }
 
@@ -474,12 +507,15 @@ router.get('/my-documents', authMiddleware, async (req, res) => {
                 TL.MaTL,
                 TL.TenTL,
                 TL.MoTa,
+                TL.FileURL,
                 TL.LoaiFile,
                 TL.MaMonHoc,
                 TL.TrangThaiKiemDuyet,
                 TL.SoLuotTai,
                 TL.NgayDang,
                 TL.LaTaiLieuChinhThuc,
+                TL.LaTaiLieuDocQuyen,
+                TL.GiaXu,
                 TL.LyDoTuChoi,
                 MH.TenMonHoc,
                 COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
@@ -551,7 +587,7 @@ router.get('/:maND/profile', authMiddleware, async (req, res) => {
         const pool = req.app.locals.pool;
 
 
-        const [userRows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, TruongHoc, KhoaNganh FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
+        const [userRows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, TruongHoc, KhoaNganh, HienThiLichSuTai, HienThiDanhGia FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
         if (userRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
 
@@ -635,7 +671,7 @@ router.get('/download-history', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
-            SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, 
+            SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, TL.TrangThaiKiemDuyet,
                    TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                    MH.TenMonHoc, LST.NgayTai AS NgayTai,
                    COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
@@ -709,14 +745,16 @@ router.get('/purchased-documents', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
-            SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, 
+            SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, TL.TrangThaiKiemDuyet,
                    TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.LaTaiLieuDocQuyen, TL.GiaXu,
                    MH.TenMonHoc, TDM.NgayMua, TDM.GiaXuThoiDiemMua,
+                   ND.HoTen AS TenNguoiBan,
                    COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
                    (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM TAILIEU_DAMUA TDM
             JOIN TAILIEU TL ON TDM.MaTL = TL.MaTL
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
+            LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             WHERE TDM.MaND = ?
             ORDER BY TDM.NgayMua DESC
         `, [req.user.MaND]);
@@ -739,6 +777,161 @@ router.get('/transactions', authMiddleware, async (req, res) => {
         res.status(200).json({ transactions: rows });
     } catch (error) {
         console.error('Lỗi lấy lịch sử giao dịch:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/upgrade-teacher', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const maND = req.user.MaND;
+        const { minhChungURL } = req.body;
+
+        if (!minhChungURL) {
+            return res.status(400).json({ message: 'Vui lòng cung cấp link ảnh minh chứng.' });
+        }
+
+        const [existingReq] = await pool.execute('SELECT TrangThai FROM YEU_CAU_GIAO_VIEN WHERE MaND = ? ORDER BY NgayTao DESC LIMIT 1', [maND]);
+        
+        if (existingReq.length > 0 && existingReq[0].TrangThai === 'ChoDuyet') {
+            return res.status(400).json({ message: 'Bạn đang có một yêu cầu chờ duyệt.' });
+        }
+
+        await pool.execute(
+            'INSERT INTO YEU_CAU_GIAO_VIEN (MaND, MinhChungURL, TrangThai) VALUES (?, ?, ?)',
+            [maND, minhChungURL, 'ChoDuyet']
+        );
+
+        res.status(201).json({ message: 'Gửi yêu cầu thành công. Vui lòng chờ Admin duyệt.' });
+    } catch (error) {
+        console.error('Lỗi gửi yêu cầu nâng cấp giáo viên:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/upgrade-status', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const maND = req.user.MaND;
+
+        const [rows] = await pool.execute(
+            'SELECT MaYeuCau, MinhChungURL, TrangThai, LyDoTuChoi, NgayTao FROM YEU_CAU_GIAO_VIEN WHERE MaND = ? ORDER BY NgayTao DESC LIMIT 1',
+            [maND]
+        );
+
+        if (rows.length === 0) {
+            return res.status(200).json({ status: null });
+        }
+
+        res.status(200).json({ status: rows[0] });
+    } catch (error) {
+        console.error('Lỗi lấy trạng thái nâng cấp:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+const uploadImage = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Chỉ cho phép tải lên hình ảnh.'));
+        }
+    }
+});
+
+router.post('/upload-image', authMiddleware, uploadImage.single('image'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: 'Không tìm thấy file hình ảnh.' });
+    }
+    
+    try {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: 'edushare_kyc', resource_type: 'image' },
+            (error, result) => {
+                if (error) {
+                    console.error('Lỗi upload ảnh:', error);
+                    return res.status(500).json({ message: 'Lỗi tải ảnh lên server.' });
+                }
+                res.status(200).json({ url: result.secure_url });
+            }
+        );
+        streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+    } catch (err) {
+        console.error('Lỗi xử lý upload ảnh:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/:maND/downloaded-documents', authMiddleware, async (req, res) => {
+    const maND_Khac = req.params.maND;
+    try {
+        const pool = req.app.locals.pool;
+
+        if (parseInt(maND_Khac) !== req.user.MaND) {
+            const [userRows] = await pool.execute('SELECT HienThiLichSuTai FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
+            if (userRows.length === 0 || !userRows[0].HienThiLichSuTai) {
+                return res.status(403).json({ message: 'Người dùng đã ẩn danh sách này.' });
+            }
+        }
+
+        const [rows] = await pool.execute(`
+            SELECT 
+                TL.MaTL, TL.TieuDe, TL.MoTa, TL.FileDinhKem, 
+                TL.SoLuotTai, TL.Gia, TL.HinhThuc, TL.ThoiGianTaiLen, 
+                MH.TenMH, LND.TenLop, ND.HoTen AS NguoiDang, ND.AvatarURL,
+                COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
+            FROM LICH_SU_TAI LST
+            JOIN TAILIEU TL ON LST.MaTL = TL.MaTL
+            LEFT JOIN MONHOC MH ON TL.MaMH = MH.MaMH 
+            LEFT JOIN LOPHOC_NGANH LND ON TL.MaLop = LND.MaLop 
+            JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND 
+            WHERE LST.MaND = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
+            ORDER BY LST.NgayTai DESC
+        `, [maND_Khac]);
+
+        res.status(200).json({ documents: rows });
+    } catch (error) {
+        console.error('Lỗi lấy tài liệu đã tải xuống:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/:maND/rated-documents', authMiddleware, async (req, res) => {
+    const maND_Khac = req.params.maND;
+    try {
+        const pool = req.app.locals.pool;
+
+        if (parseInt(maND_Khac) !== req.user.MaND) {
+            const [userRows] = await pool.execute('SELECT HienThiDanhGia FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
+            if (userRows.length === 0 || !userRows[0].HienThiDanhGia) {
+                return res.status(403).json({ message: 'Người dùng đã ẩn danh sách này.' });
+            }
+        }
+
+        const [rows] = await pool.execute(`
+            SELECT 
+                TL.MaTL, TL.TieuDe, TL.MoTa, TL.FileDinhKem, 
+                TL.SoLuotTai, TL.Gia, TL.HinhThuc, TL.ThoiGianTaiLen, 
+                MH.TenMH, LND.TenLop, ND.HoTen AS NguoiDang, ND.AvatarURL,
+                COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia,
+                DG.SoSao AS UserRating
+            FROM DANHGIA DG
+            JOIN TAILIEU TL ON DG.MaTL = TL.MaTL
+            LEFT JOIN MONHOC MH ON TL.MaMH = MH.MaMH 
+            LEFT JOIN LOPHOC_NGANH LND ON TL.MaLop = LND.MaLop 
+            JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND 
+            WHERE DG.MaND = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
+            ORDER BY DG.NgayDanhGia DESC
+        `, [maND_Khac]);
+
+        res.status(200).json({ documents: rows });
+    } catch (error) {
+        console.error('Lỗi lấy tài liệu đã đánh giá:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

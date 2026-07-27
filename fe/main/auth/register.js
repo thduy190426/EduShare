@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const xacNhanMatKhau = document.getElementById('registerConfirmPassword')?.value || '';
         const agreeTerms = document.getElementById('registerAgreeTerms')?.checked || false;
         
-        if (isValidName(hoTen) && isValidEmail(email) && matKhau.length >= 6 && matKhau === xacNhanMatKhau && agreeTerms) {
+        if (isValidName(hoTen) && isValidEmail(email) && matKhau.length >= 6 && matKhau === xacNhanMatKhau && agreeTerms && window.isCaptchaSolved) {
             registerSubmitBtn.disabled = false;
             registerSubmitBtn.style.opacity = '1';
             registerSubmitBtn.style.cursor = 'pointer';
@@ -67,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerSubmitBtn.style.cursor = 'not-allowed';
         }
     };
+    window.validateRegisterForm = validateRegisterForm;
 
     if (registerForm) {
         document.getElementById('registerName')?.addEventListener('input', validateRegisterForm);
@@ -110,12 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('registerEmail').value.trim();
             const matKhau = document.getElementById('registerPassword').value;
             const xacNhanMatKhau = document.getElementById('registerConfirmPassword') ? document.getElementById('registerConfirmPassword').value : matKhau;
-            const selectedRole = document.querySelector('input[name="role"]:checked')?.value || 'student';
-            const roleMap = {
-                student: 'SinhVien',
-                teacher: 'GiaoVien'
-            };
-            const vaiTro = roleMap[selectedRole];
             
             const truongHoc = document.getElementById('registerSchool')?.value.trim() || '';
             const khoaNganh = document.getElementById('registerMajor')?.value.trim() || '';
@@ -166,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = '0.5';
                 submitBtn.style.cursor = 'not-allowed';
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i>&nbsp; Đang xử lý...';
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i>&nbsp; Đang đăng kí...';
 
                 const response = await fetch(`${API_URL}/register/send-otp`, {
                     method: 'POST',
@@ -183,18 +178,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!response.ok) {
                     if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
-                    Toast.fire({ icon: 'error', title: data.message || 'Lỗi gửi mã OTP' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Đăng ký thất bại',
+                        text: data.message || 'Lỗi gửi mã OTP'
+                    });
                 } else {
                     Toast.fire({ icon: 'success', title: data.message || 'Mã OTP đã được gửi' });
                     
                     const matKhau = document.getElementById('registerPassword').value;
-                    const selectedRole = document.querySelector('input[name="role"]:checked')?.value || 'student';
-                    const roleMap = { student: 'SinhVien', teacher: 'GiaoVien' };
-                    const vaiTro = roleMap[selectedRole];
                     const truongHoc = document.getElementById('registerSchool')?.value.trim() || '';
                     const khoaNganh = document.getElementById('registerMajor')?.value.trim() || '';
 
-                    const registerData = { hoTen, email, matKhau, vaiTro, truongHoc, khoaNganh };
+                    const registerData = { hoTen, email, matKhau, truongHoc, khoaNganh };
                     sessionStorage.setItem('registerData', JSON.stringify(registerData));
 
                     setTimeout(() => {
@@ -209,7 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.style.cursor = 'pointer';
                 submitBtn.innerHTML = 'Đăng ký tài khoản';
                 if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
-                Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ' });
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi kết nối',
+                    text: 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.'
+                });
             }
         });
     }

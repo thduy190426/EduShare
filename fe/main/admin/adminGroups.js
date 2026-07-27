@@ -1,4 +1,4 @@
-import { checkAuth, getToken, showToast } from '../shared/utils.js';
+import { checkAuth, getToken, showToast, renderPagination } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -12,13 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGroups();
 });
 
+let currentPage = 1;
+const limit = 10;
+
 async function loadGroups() {
     const tableBody = document.getElementById('groups-table-body');
     tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Đang tải dữ liệu...</td></tr>';
 
     try {
         const token = getToken();
-        const response = await fetch('http://localhost:3000/api/admin/groups', {
+        const response = await fetch(`http://localhost:3000/api/admin/groups?page=${currentPage}&limit=${limit}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -30,7 +33,14 @@ async function loadGroups() {
         }
 
         const data = await response.json();
-        renderGroups(data.groups);
+        renderGroups(data.data || []);
+        
+        if (data.pagination) {
+            renderPagination('group-pagination', data.pagination.totalPages, currentPage, (page) => {
+                currentPage = page;
+                loadGroups();
+            });
+        }
     } catch (error) {
         console.error('Lỗi khi tải danh sách nhóm:', error);
         tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: red;">Lỗi tải dữ liệu. Vui lòng thử lại sau.</td></tr>';
@@ -42,11 +52,11 @@ function renderGroups(groups) {
     tableBody.innerHTML = '';
 
     if (groups.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Không có nhóm học tập nào.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Không có nhóm nào</td></tr>';
         return;
     }
 
-    groups.forEach(group => {
+    groups.forEach((group, index) => {
         const isActive = group.TrangThai === 'HoatDong';
         const statusClass = isActive ? 'status-active' : 'status-locked';
         const statusText = isActive ? 'Hoạt động' : 'Ngừng hoạt động';
@@ -86,6 +96,7 @@ function renderGroups(groups) {
         }
 
         tr.innerHTML = `
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td style="font-weight: 600;">${group.TenNhom}</td>
             <td>${group.TenMonHoc || 'Không có'}</td>
             <td>${adminAvatarHtml}</td>

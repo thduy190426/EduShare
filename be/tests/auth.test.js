@@ -6,7 +6,7 @@ const { mockPoolExecute } = require('./testUtils');
 describe('Auth API - Đăng nhập và Đăng ký', () => {
 
     afterEach(() => {
-        jest.restoreAllMocks(); // Xóa mock sau mỗi test
+        jest.restoreAllMocks(); 
     });
 
     afterAll(async () => {
@@ -80,10 +80,10 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
     it('Nên đăng ký thành công người dùng mới', async () => {
         mockPoolExecute(app, (query, params) => {
             if (query.includes('SELECT Email FROM NGUOIDUNG WHERE Email = ?')) {
-                return Promise.resolve([[]]); // Email chưa tồn tại
+                return Promise.resolve([[]]); 
             }
             if (query.includes('INSERT INTO NGUOIDUNG')) {
-                return Promise.resolve([{ insertId: 99 }]); // Giả lập insert thành công
+                return Promise.resolve([{ insertId: 99 }]); 
             }
             return Promise.resolve([[]]);
         });

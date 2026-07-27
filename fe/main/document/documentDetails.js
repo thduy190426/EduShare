@@ -4,6 +4,7 @@ import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getA
 let currentMaTL = null;
 const token = getToken();
 let hasSubmittedRating = false;
+let currentUserMaND = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const payload = decodeJWT(token);
             if (payload) {
+                currentUserMaND = payload.MaND;
                 if (payload.VaiTro === 'GiaoVien' || payload.VaiTro === 'Admin') {
                     const btnVerify = document.getElementById('btn-verify');
                     if (btnVerify) btnVerify.style.display = 'flex';
@@ -278,28 +280,33 @@ function renderDocumentInfo(doc, hasPurchased) {
         badgesContainer.appendChild(officialBadge);
     }
 
+    let isAuthor = false;
+    let isPrivileged = false; 
+    if (token) {
+        try {
+            const payload = decodeJWT(token);
+            if (payload && payload.MaND === doc.MaND_NguoiDang) isAuthor = true;
+            if (payload && (payload.VaiTro === 'Admin' || payload.VaiTro === 'GiaoVien')) isPrivileged = true;
+        } catch(e) {}
+    }
+
     if (doc.LaTaiLieuDocQuyen) {
         const premiumBadge = document.createElement('span');
         premiumBadge.className = 'badge';
         premiumBadge.style.backgroundColor = '#FEF3C7';
         premiumBadge.style.color = '#B45309';
-        premiumBadge.innerHTML = `<i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM (${doc.GiaXu || 0} Xu)`;
+        if (isPrivileged) {
+            premiumBadge.innerHTML = `<i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM`;
+        } else {
+            premiumBadge.innerHTML = `<i class="fa-solid fa-crown" style="color: #F59E0B;"></i> PREMIUM (${doc.GiaXu || 0} Xu)`;
+        }
         badgesContainer.appendChild(premiumBadge);
     }
     
     const btnDownload = document.getElementById('btn-download');
     if (btnDownload) {
         if (doc.LaTaiLieuDocQuyen && !hasPurchased) {
-            let isAuthor = false;
-            let isAdmin = false;
-            if (token) {
-                try {
-                    const payload = decodeJWT(token);
-                    if (payload && payload.MaND === doc.MaND_NguoiDang) isAuthor = true;
-                    if (payload && payload.VaiTro === 'Admin') isAdmin = true;
-                } catch(e) {}
-            }
-            if (!isAuthor && !isAdmin) {
+            if (!isAuthor && !isPrivileged) {
                 btnDownload.innerHTML = `<span><i class="fa-solid fa-lock"></i></span> Mở khoá (${doc.GiaXu || 0} Xu)`;
                 btnDownload.style.backgroundColor = '#F59E0B';
                 btnDownload.onclick = async () => {
@@ -612,9 +619,34 @@ function setupEventListeners() {
     }
 }
 
+let lastCommentTime = 0;
+const COMMENT_COOLDOWN_MS = 10000;
+
 async function submitComment(noiDung, maBL_Cha) {
     if (!token) return Swal.fire('Vui lòng đăng nhập để bình luận.');
     if (!noiDung.trim()) return Swal.fire('Vui lòng nhập nội dung.');
+
+    const now = Date.now();
+    if (now - lastCommentTime < COMMENT_COOLDOWN_MS) {
+        const waitTime = Math.ceil((COMMENT_COOLDOWN_MS - (now - lastCommentTime)) / 1000);
+        return Swal.fire('Bình tĩnh nào!', `Bạn bình luận quá nhanh. Vui lòng đợi ${waitTime} giây nữa.`, 'warning');
+    }
+
+    let btn;
+    let originalHtml = '';
+    if (maBL_Cha) {
+        btn = document.getElementById(`btn-submit-reply-${maBL_Cha}`);
+    } else {
+        btn = document.getElementById('btn-submit-comment');
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+    }
 
     try {
         const res = await fetch(`${API_URL}/documents/${currentMaTL}/comments`, {
@@ -627,18 +659,31 @@ async function submitComment(noiDung, maBL_Cha) {
         });
         
         if (res.ok) {
+            lastCommentTime = Date.now();
             const inputEl = document.getElementById('comment-input');
-            if (inputEl) {
+            if (inputEl && !maBL_Cha) {
                 inputEl.value = '';
-                inputEl.dispatchEvent(new Event('input'));
             }
             fetchDocumentDetails(); 
         } else {
             const data = await res.json();
-            Swal.fire(data.message);
+            if (res.status === 429) {
+                Swal.fire('Quá tải', data.message || 'Bạn đã bình luận quá nhiều lần. Vui lòng thử lại sau.', 'warning');
+            } else {
+                Swal.fire('Thất bại', data.message || 'Có lỗi xảy ra', 'warning');
+            }
         }
     } catch (err) {
         console.error(err);
+        Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ.', 'error');
+    } finally {
+        if (btn) {
+            btn.innerHTML = originalHtml;
+            const inputEl = maBL_Cha ? document.getElementById(`reply-input-${maBL_Cha}`) : document.getElementById('comment-input');
+            if (inputEl) {
+                inputEl.dispatchEvent(new Event('input'));
+            }
+        }
     }
 }
 
@@ -675,6 +720,10 @@ function renderComments(comments, documentOwnerId) {
         const userInitial = escapeHTML(comment.TenNguoiBinhLuan).trim().split(' ').pop().charAt(0).toUpperCase();
 
         const isAuthor = Number(comment.MaND) === Number(documentOwnerId);
+        const isDocOwner = Number(currentUserMaND) === Number(documentOwnerId);
+        const isCommentOwner = Number(comment.MaND) === Number(currentUserMaND);
+        const canDelete = isCommentOwner || isDocOwner;
+        
         let avatarHtml = `<div class="comment-avatar" style="${isAuthor ? 'background:#FEE2E2; color:#EF4444' : ''}">${userInitial}</div>`;
         
         if (comment.AvatarURL) {
@@ -682,17 +731,29 @@ function renderComments(comments, documentOwnerId) {
         }
 
         const authorSuffix = isAuthor ? ' (Tác giả)' : '';
+        const pinnedBadge = comment.DaGhim ? `<span style="font-size: 11px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i class="fa-solid fa-thumbtack" style="margin-right: 4px;"></i> Đã ghim</span>` : '';
+        
+        const deleteBtnHtml = canDelete ? `<span class="comment-action delete-btn" data-id="${comment.MaBL}" style="color: #EF4444; margin-left: 12px;"><i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Xóa</span>` : '';
+        
+        let pinBtnHtml = '';
+        if (isDocOwner) {
+            const pinText = comment.DaGhim ? 'Bỏ ghim' : 'Ghim';
+            pinBtnHtml = `<span class="comment-action pin-btn" data-id="${comment.MaBL}" data-pinned="${comment.DaGhim ? '1' : '0'}" style="color: #F59E0B; margin-left: 12px;"><i class="fa-solid fa-thumbtack" style="margin-right: 4px;"></i> ${pinText}</span>`;
+        }
 
         item.innerHTML = `
             ${avatarHtml}
-            <div class="comment-content">
+            <div class="comment-content" ${comment.DaGhim ? 'style="border-left: 3px solid #FCD34D; padding-left: 8px;"' : ''}>
               <div class="comment-header">
                 <span class="comment-author">${escapeHTML(comment.TenNguoiBinhLuan)}${authorSuffix}</span>
+                ${pinnedBadge}
                 <span class="comment-time">${dateHtml}</span>
               </div>
               <div class="comment-text">${escapeHTML(comment.NoiDung)}</div>
               <div class="comment-actions">
-                <span class="comment-action reply-btn" data-id="${comment.MaBL}">Phản hồi</span>
+                <span class="comment-action reply-btn" data-id="${comment.MaBL}"><i class="fa-solid fa-reply" style="margin-right: 4px;"></i> Phản hồi</span>
+                ${deleteBtnHtml}
+                ${pinBtnHtml}
               </div>
             </div>
         `;
@@ -769,6 +830,79 @@ function renderComments(comments, documentOwnerId) {
             btnCancelReply.addEventListener('click', () => {
                 formContainer.remove();
             });
+        });
+    });
+
+    const deleteBtns = listEl.querySelectorAll('.delete-btn');
+    deleteBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            if (!token) return Swal.fire('Vui lòng đăng nhập.');
+            const commentId = e.currentTarget.getAttribute('data-id');
+            
+            const result = await Swal.fire({
+                title: 'Xóa bình luận?',
+                text: 'Bạn có chắc chắn muốn xóa bình luận này không?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Xóa',
+                cancelButtonText: 'Hủy'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`${API_URL}/documents/comments/${commentId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (res.ok) {
+                        fetchDocumentDetails();
+                    } else {
+                        const data = await res.json();
+                        Swal.fire('Lỗi', data.message, 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        });
+    });
+
+    const pinBtns = listEl.querySelectorAll('.pin-btn');
+    pinBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            if (!token) return Swal.fire('Vui lòng đăng nhập.');
+            const commentId = e.currentTarget.getAttribute('data-id');
+            const isPinned = e.currentTarget.getAttribute('data-pinned') === '1';
+            
+            const actionText = isPinned ? 'bỏ ghim' : 'ghim';
+            
+            const result = await Swal.fire({
+                title: `${isPinned ? 'Bỏ ghim' : 'Ghim'} bình luận?`,
+                text: `Bạn có chắc chắn muốn ${actionText} bình luận này không?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Đồng ý',
+                cancelButtonText: 'Hủy'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`${API_URL}/documents/comments/${commentId}/pin`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (res.ok) {
+                        fetchDocumentDetails();
+                    } else {
+                        const data = await res.json();
+                        Swal.fire('Lỗi', data.message, 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
         });
     });
 }

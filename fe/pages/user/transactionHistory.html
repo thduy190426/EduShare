@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch sử giao dịch — EduShare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link rel="stylesheet" href="../../css/user/transactionHistory.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+
+  <nav class="navbar">
+    <a href="userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">U</div>
+        <div class="user-info hide-on-tablet-mobile">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+    
+    <main class="content-area">
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <h1 class="page-title">Lịch sử giao dịch</h1>
+          <p class="page-desc" style="margin-bottom: 0;">Theo dõi toàn bộ biến động số dư EduCoin (Xu) của bạn.</p>
+        </div>
+        <div class="export-actions" style="display: flex; gap: 10px;">
+          <button id="btn-export-excel" class="btn-export"><i class="fa-solid fa-file-excel" style="color: #10B981;"></i> Xuất Excel</button>
+          <button id="btn-export-pdf" class="btn-export"><i class="fa-solid fa-file-pdf" style="color: #EF4444;"></i> Xuất PDF</button>
+        </div>
+      </div>
+
+      <div class="card" id="transaction-card">
+        <table class="transaction-table">
+          <thead>
+            <tr>
+              <th><i class="fa-regular fa-clock" style="margin-right: 6px;"></i> Thời gian</th>
+              <th><i class="fa-solid fa-tags" style="margin-right: 6px;"></i> Loại giao dịch</th>
+              <th><i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Số dư thay đổi</th>
+              <th><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i> Mô tả chi tiết</th>
+            </tr>
+          </thead>
+          <tbody id="transaction-list">
+            <tr>
+              <td colspan="4" class="empty-state">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p>Đang tải dữ liệu...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div id="pagination-container"></div>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module" src="../../main/user/transactionHistory.js"></script>
+</body>
+</html>

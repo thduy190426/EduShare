@@ -1,0 +1,107 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Mã Ưu Đãi — EduShare Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminUserManagement.css">
+  <link rel="stylesheet" href="../../css/admin/adminPromos.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<body>
+  
+  
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+                  <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+  </nav>
+
+  <div class="main-layout">
+    
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    
+    <main class="content-area">
+      
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="page-title">Quản lý Mã Ưu Đãi</h1>
+        <button id="btn-show-create-modal" class="btn-custom btn-custom-submit"><i class="fa-solid fa-plus"></i> Tạo mã mới</button>
+      </div>
+
+      
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="5%" style="text-align: center;">STT</th>
+              <th width="20%"><i class="fa-solid fa-ticket" style="margin-right: 6px;"></i> Mã giảm giá</th>
+              <th width="15%"><i class="fa-solid fa-percent" style="margin-right: 6px;"></i> Tỉ lệ (%)</th>
+              <th width="25%"><i class="fa-solid fa-align-left" style="margin-right: 6px;"></i> Mô tả</th>
+              <th width="15%"><i class="fa-solid fa-toggle-on" style="margin-right: 6px;"></i> Trạng thái</th>
+              <th style="white-space: nowrap;"><i class="fa-solid fa-gears" style="margin-right: 6px;"></i> Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="promos-table-body">
+            
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-container" id="promo-pagination"></div>
+
+    </main>
+  </div>
+
+  <!-- Custom Modern Modal -->
+  <div id="promo-custom-modal" class="promo-modal-overlay">
+    <div class="promo-modal-content">
+      <div class="promo-modal-header">
+        <h3 id="promo-modal-title"><i class="fa-solid fa-gift"></i> Tạo mã ưu đãi mới</h3>
+        <button id="btn-close-modal-x" class="promo-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="form-group">
+        <label><i class="fa-solid fa-barcode"></i> Mã Ưu Đãi</label>
+        <input type="text" id="custom-promo-code" class="form-input-custom" placeholder="Nhập mã viết hoa liền không dấu..." required>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fa-solid fa-percent"></i> Tỉ lệ tặng thêm (%)</label>
+        <input type="number" id="custom-promo-discount" class="form-input-custom" min="1" max="100" value="20" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-primary);"><i class="fa-solid fa-align-left"></i> Mô tả</label>
+        <textarea id="custom-promo-desc" class="form-input-custom" placeholder="Nhập mô tả (không bắt buộc)..." rows="3" style="width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; transition: border-color 0.2s;"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btn-cancel-custom" class="btn-custom btn-custom-cancel">
+          <i class="fa-solid fa-times"></i> Hủy
+        </button>
+        <button id="btn-submit-custom" class="btn-custom btn-custom-submit">
+          <i class="fa-solid fa-check"></i> Tạo mã
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../../main/admin/adminPromos.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+</body>
+</html>
+

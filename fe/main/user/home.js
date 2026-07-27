@@ -1,9 +1,13 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
+    fetchUserProfileForHero();
+    fetchRecommendedDocuments();
     fetchMySubjects();
+    fetchTrendingDocuments();
+    fetchTopContributors();
     fetchLatestDocuments();
     fetchRecommendedGroups();
     setupSearch();
@@ -86,6 +90,7 @@ function createSubjectChip(subjectId, label) {
     button.addEventListener('click', () => {
         selectedSubjectId = subjectId;
         renderSubjectChips();
+        fetchTrendingDocuments();
         fetchLatestDocuments();
     });
     return button;
@@ -257,6 +262,7 @@ async function removeSubject(subject) {
 
         if (selectedSubjectId === String(subject.MaMonHoc)) selectedSubjectId = '';
         await fetchMySubjects();
+        fetchTrendingDocuments();
         await fetchLatestDocuments();
     } catch (error) {
         Swal.fire({ icon: 'error', title: 'Lỗi', text: error.message });
@@ -302,6 +308,47 @@ function loadUserProfileNav() {
         }
     } catch (e) {
         console.error('Lỗi giải mã token:', e);
+    }
+}
+
+async function fetchUserProfileForHero() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        const response = await fetch(`${API_URL}/users/profile`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const profile = data.profile;
+            
+            const heroNameEl = document.getElementById('heroUserName');
+            const heroTitleEl = document.querySelector('.hero-title');
+            const heroCoinEl = document.getElementById('heroUserCoin');
+            const heroBanner = document.getElementById('homeHeroBanner');
+            
+            if (heroTitleEl && profile.HoTen) {
+                const nameParts = profile.HoTen.trim().split(' ');
+                const shortName = nameParts[nameParts.length - 1];
+                const greeting = getTimeBasedGreeting('home');
+                heroTitleEl.innerHTML = `${greeting}, <span id="heroUserName">${shortName}</span>!`;
+            } else if (heroNameEl && profile.HoTen) {
+                const nameParts = profile.HoTen.trim().split(' ');
+                heroNameEl.textContent = nameParts[nameParts.length - 1];
+            }
+            
+            if (heroCoinEl) {
+                heroCoinEl.textContent = Number(profile.SoDuXu || 0).toLocaleString();
+            }
+            
+            if (heroBanner) {
+                heroBanner.style.display = 'flex';
+            }
+        }
+    } catch (error) {
+        console.error('Lỗi lấy thông tin profile cho Hero Banner:', error);
     }
 }
 
@@ -420,6 +467,106 @@ async function joinRecommendedGroup(maNhom, button) {
     }
 }
 
+async function fetchRecommendedDocuments() {
+    try {
+        const token = getToken();
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        // If not logged in, it will fall back or we can just skip or handle 401
+        if(!token) {
+            document.getElementById('recommendedDocGrid').parentElement.style.display = 'none';
+            document.getElementById('recommendedDocGrid').style.display = 'none';
+            return;
+        }
+
+        const response = await fetch(`${API_URL}/documents/recommended`, { headers });
+        if (!response.ok) throw new Error('Lỗi fetch dữ liệu gợi ý');
+        
+        const data = await response.json();
+        const grid = document.getElementById('recommendedDocGrid');
+        if (!data.documents || data.documents.length === 0) {
+            grid.innerHTML = '<p style="text-align:center;width:100%;color:#6b7280;">Chưa có gợi ý nào cho bạn lúc này.</p>';
+        } else {
+            renderHomeDocuments(data.documents, 'recommendedDocGrid');
+        }
+    } catch (error) {
+        console.error('Lỗi tải tài liệu gợi ý:', error);
+        document.getElementById('recommendedDocGrid').innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải dữ liệu gợi ý.</p>';
+    }
+}
+
+async function fetchTopContributors() {
+    try {
+        const response = await fetch(`${API_URL}/users/top-contributors`);
+        if (!response.ok) throw new Error('Lỗi fetch dữ liệu leaderboard');
+        
+        const contributors = await response.json();
+        const list = document.getElementById('leaderboardList');
+        
+        if (!contributors || contributors.length === 0) {
+            list.innerHTML = '<p style="text-align:center;width:100%;color:rgba(255,255,255,0.7);">Chưa có đóng góp nào trong tháng này.</p>';
+            return;
+        }
+
+        let html = '';
+        contributors.forEach((user, index) => {
+            let rankClass = '';
+            if (index === 0) rankClass = 'rank-1';
+            else if (index === 1) rankClass = 'rank-2';
+            else if (index === 2) rankClass = 'rank-3';
+
+            const profileUrl = getUserProfileUrl(user.MaND);
+            
+            let avatarHtml;
+            const initial = escapeHTML(user.HoTen).trim().split(' ').pop().charAt(0).toUpperCase();
+            if (user.AvatarURL && user.AvatarURL !== 'null') {
+                const avatarUrl = getAssetUrl(user.AvatarURL);
+                avatarHtml = `<img src="${avatarUrl}" alt="${escapeHTML(user.HoTen)}" class="lb-avatar" onerror="this.outerHTML='<div class=\\'lb-avatar text-avatar\\'>${initial}</div>'">`;
+            } else {
+                avatarHtml = `<div class="lb-avatar text-avatar">${initial}</div>`;
+            }
+
+            html += `
+                <div class="leaderboard-item">
+                    <div class="lb-rank ${rankClass}">${index + 1}</div>
+                    ${avatarHtml}
+                    <div class="lb-info">
+                        <a href="${profileUrl}" style="color:inherit; text-decoration:none;"><div class="lb-name">${escapeHTML(user.HoTen)}</div></a>
+                        <div class="lb-stats">
+                            <span title="Tài liệu tải lên"><i class="fa-solid fa-file-arrow-up"></i> ${user.TotalDocuments}</span>
+                            <span title="Lượt tải về"><i class="fa-solid fa-download"></i> ${user.TotalDownloads}</span>
+                            <span title="Bình luận"><i class="fa-solid fa-comments"></i> ${user.TotalComments || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        list.innerHTML = html;
+    } catch (error) {
+        console.error('Lỗi tải leaderboard:', error);
+        const list = document.getElementById('leaderboardList');
+        if (list) list.innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải bảng xếp hạng.</p>';
+    }
+}
+
+async function fetchTrendingDocuments() {
+    try {
+        const params = new URLSearchParams({ sapXep: 'NoiBat', limit: '4' });
+        if (selectedSubjectId) params.set('maMonHoc', selectedSubjectId);
+        const response = await fetch(`${API_URL}/documents/search?${params.toString()}`);
+        if (!response.ok) throw new Error('Lỗi fetch dữ liệu');
+
+        const data = await response.json();
+        renderHomeDocuments(data.documents, 'trendingDocGrid');
+    } catch (error) {
+        console.error('Lỗi khi tải tài liệu xu hướng:', error);
+        const grid = document.getElementById('trendingDocGrid');
+        if (grid) {
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Không thể tải dữ liệu tài liệu lúc này.</p>';
+        }
+    }
+}
+
 async function fetchLatestDocuments() {
     try {
         const params = new URLSearchParams({ trang: '1', limit: '4' });
@@ -428,7 +575,7 @@ async function fetchLatestDocuments() {
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu');
 
         const data = await response.json();
-        renderHomeDocuments(data.documents);
+        renderHomeDocuments(data.documents, 'homeDocGrid');
     } catch (error) {
         console.error('Lỗi khi tải tài liệu mới nhất:', error);
         const grid = document.getElementById('homeDocGrid');
@@ -438,8 +585,8 @@ async function fetchLatestDocuments() {
     }
 }
 
-function renderHomeDocuments(documents) {
-    const grid = document.getElementById('homeDocGrid');
+function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
+    const grid = document.getElementById(containerId);
     if (!grid) return;
 
     grid.innerHTML = '';

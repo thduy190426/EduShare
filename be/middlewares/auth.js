@@ -42,14 +42,16 @@ const adminMiddleware = async (req, res, next) => {
 };
 
 const teacherMiddleware = async (req, res, next) => {
-    if (!req.user) {
-        return res.status(401).json({ message: 'Chưa xác thực người dùng.' });
-    }
-    if (req.user.VaiTro === 'GiaoVien' || req.user.VaiTro === 'Admin') {
-        next();
-    } else {
-        return res.status(403).json({ message: 'Bạn không có quyền thực hiện chức năng này.' });
-    }
+    await authMiddleware(req, res, () => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Chưa xác thực người dùng.' });
+        }
+        if (req.user.VaiTro === 'GiaoVien' || req.user.VaiTro === 'Admin') {
+            next();
+        } else {
+            return res.status(403).json({ message: 'Bạn không có quyền thực hiện chức năng này.' });
+        }
+    });
 };
 
 module.exports = {

@@ -50,24 +50,6 @@
 
         <form id="registerForm">
           
-          <div class="role-selector">
-            <label class="role-option">
-              <input type="radio" name="role" value="student" checked>
-              <div class="role-card">
-                <span class="role-icon"><i class="fa-solid fa-graduation-cap"></i></span>
-                <span class="role-title">Sinh viên / Học sinh</span>
-                <!-- <span class="role-desc">Tìm kiếm và tải tài liệu</span> -->
-              </div>
-            </label>
-            <label class="role-option">
-              <input type="radio" name="role" value="teacher">
-              <div class="role-card">
-                <span class="role-icon"><i class="fa-solid fa-user-tie"></i>‍<i class="fa-solid fa-building-columns"></i></span>
-                <span class="role-title">Giáo viên / Giảng viên</span>
-                <!-- <span class="role-desc">Chia sẻ tài liệu giảng dạy</span> -->
-              </div>
-            </label>
-          </div>
 
           <div class="form-group">
             <label class="form-label"><i class="fa-solid fa-user"></i> Họ và tên:</label>
@@ -127,10 +109,10 @@
           </div>
 
           <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9"></div>
+            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9" data-callback="enableSubmitBtn" data-expired-callback="disableSubmitBtn"></div>
           </div>
 
-          <button type="submit" class="btn btn-primary">Đăng ký tài khoản</button>
+          <button type="submit" id="submitBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">Đăng ký</button>
           <div id="registerMessage" style="margin-top: 10px; font-size: 14px; text-align: center;"></div>
 
         </form>
@@ -144,5 +126,15 @@
   <script type="module" src="../../main/auth/register.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script>
+  function enableSubmitBtn() {
+    window.isCaptchaSolved = true;
+    if (window.validateRegisterForm) window.validateRegisterForm();
+  }
+  function disableSubmitBtn() {
+    window.isCaptchaSolved = false;
+    if (window.validateRegisterForm) window.validateRegisterForm();
+  }
+</script>
 </body>
 </html>

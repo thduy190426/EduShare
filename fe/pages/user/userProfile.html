@@ -62,7 +62,8 @@
         <div class="profile-avatar-container">
           <div class="profile-avatar" id="header-avatar">U</div>
           <div class="btn-edit-avatar" title="Thay đổi ảnh đại diện"><i class="fa-solid fa-camera"></i></div>
-          <button type="button" class="btn-delete-avatar" id="btn-delete-avatar" title="Xoá ảnh đại diện" aria-label="Xoá ảnh đại diện">
+          <button type="button" class="btn-delete-avatar" id="btn-delete-avatar" title="Xoá ảnh đại diện"
+            aria-label="Xoá ảnh đại diện">
             <i class="fa-solid fa-trash-can"></i>
           </button>
           <input type="file" id="input-avatar" accept="image/png, image/jpeg, image/jpg, image/webp"
@@ -75,17 +76,22 @@
             <span class="role-badge" id="header-role">...</span>
           </h1>
           <div class="profile-desc">
-            <span><i class="fa-solid fa-envelope" style="width: 16px; text-align: center; margin-right: 6px;"></i> <span id="header-email">...</span></span>
+            <span><i class="fa-solid fa-envelope" style="width: 16px; text-align: center; margin-right: 6px;"></i> <span
+                id="header-email">...</span></span>
             <span style="margin: 0 10px; color: var(--border);">|</span>
             <span style="cursor:pointer; color: var(--primary);"
-              onclick="window.openFollowModal && window.openFollowModal('followers')"><i class="fa-solid fa-users " style="width: 16px; text-align: center; margin-right: 8px;"></i>
+              onclick="window.openFollowModal && window.openFollowModal('followers')"><i class="fa-solid fa-users "
+                style="width: 16px; text-align: center; margin-right: 8px;"></i>
               Người theo dõi: <strong id="count-followers">0</strong></span>
             <span style="margin: 0 10px; color: var(--border);">|</span>
             <span style="cursor:pointer; color: var(--primary);"
-              onclick="window.openFollowModal && window.openFollowModal('following')"><i
-                class="fa-solid fa-user-check" style="width: 16px; text-align: center; margin-right: 8px;"></i> Đang theo dõi: <strong id="count-following">0</strong></span>
+              onclick="window.openFollowModal && window.openFollowModal('following')"><i class="fa-solid fa-user-check"
+                style="width: 16px; text-align: center; margin-right: 8px;"></i> Đang theo dõi: <strong
+                id="count-following">0</strong></span>
             <span style="margin: 0 10px; color: var(--border);">|</span>
-            <span style="color: #D97706;" title="Số dư xu"><i class="fa-solid fa-coins" style="width: 16px; text-align: center; margin-right: 8px;"></i> Số dư: <strong id="header-soduxu">0</strong> Xu</span>
+            <span style="color: #D97706;" title="Số dư xu"><i class="fa-solid fa-coins"
+                style="width: 16px; text-align: center; margin-right: 8px;"></i> Số dư: <strong
+                id="header-soduxu">0</strong> Xu</span>
           </div>
         </div>
       </div>
@@ -99,17 +105,21 @@
               <input type="text" id="input-hoten" class="form-control">
             </div>
             <div class="form-group">
-              <label class="form-label" title="Email không thể thay đổi"><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Email: </label>
+              <label class="form-label" title="Email không thể thay đổi"><i class="fa-solid fa-envelope"
+                  style="margin-right: 6px;"></i> Email: </label>
               <input type="email" id="input-email" class="form-control" disabled>
             </div>
           </div>
           <div class="form-row" style="margin-top: 15px;">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-cake-candles" style="margin-right: 6px;"></i> Tuổi: </label>
-              <input type="number" id="input-tuoi" class="form-control" min="1" max="150" placeholder="Nhập tuổi của bạn">
+              <label class="form-label"><i class="fa-solid fa-cake-candles" style="margin-right: 6px;"></i> Tuổi:
+              </label>
+              <input type="number" id="input-tuoi" class="form-control" min="1" max="150"
+                placeholder="Nhập tuổi của bạn">
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-venus-mars" style="margin-right: 6px;"></i> Giới tính: </label>
+              <label class="form-label"><i class="fa-solid fa-venus-mars" style="margin-right: 6px;"></i> Giới tính:
+              </label>
               <select id="input-gioitinh" class="form-control">
                 <option value="Khac">Khác</option>
                 <option value="Nam">Nam</option>
@@ -119,27 +129,45 @@
           </div>
           <div class="form-row" style="margin-top: 15px; grid-template-columns: 1fr;">
             <div class="form-group" style="width: 100%;">
-              <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ: </label>
+              <label class="form-label"><i class="fa-solid fa-location-dot" style="margin-right: 6px;"></i> Địa chỉ:
+              </label>
               <input type="text" id="input-diachi" class="form-control" placeholder="Nhập địa chỉ của bạn">
             </div>
           </div>
           <div class="form-row" style="margin-top: 15px;">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-building-columns" style="margin-right: 6px;"></i> Trường học (Tùy chọn): </label>
+              <label class="form-label"><i class="fa-solid fa-building-columns" style="margin-right: 6px;"></i> Trường
+                học (Tùy chọn): </label>
               <select id="input-truonghoc" class="form-control">
                 <option value="">Chọn trường học</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-graduation-cap" style="margin-right: 6px;"></i> Khoa/Ngành (Tùy chọn): </label>
+              <label class="form-label"><i class="fa-solid fa-graduation-cap" style="margin-right: 6px;"></i> Khoa/Ngành
+                (Tùy chọn): </label>
               <select id="input-khoanganh" class="form-control">
                 <option value="">Chọn khoa/ngành</option>
               </select>
             </div>
           </div>
-
+          <div class="form-row" style="margin-top: 25px; margin-bottom: 10px; grid-template-columns: 1fr;">
+            <div class="form-group" style="padding: 15px; background: var(--bg-secondary); border-radius: var(--radius-btn); border: 1px solid var(--border);">
+              <label class="form-label" style="font-weight: 600; color: var(--primary); margin-bottom: 12px; display: block;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Quyền riêng tư (Privacy Settings)</label>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                  <input type="checkbox" id="input-privacy-downloads" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" checked>
+                  <span style="font-size: 14.5px;">Hiển thị danh sách <b>tài liệu đã tải xuống</b> trên trang cá nhân</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                  <input type="checkbox" id="input-privacy-ratings" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" checked>
+                  <span style="font-size: 14.5px;">Hiển thị danh sách <b>tài liệu đã đánh giá</b> trên trang cá nhân</span>
+                </label>
+              </div>
+            </div>
+          </div>
           <div class="form-actions">
-            <button type="button" id="btn-save-profile" class="btn-primary"><i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i> Lưu thay đổi</button>
+            <button type="button" id="btn-save-profile" class="btn-primary"><i class="fa-solid fa-floppy-disk"
+                style="margin-right: 6px;"></i> Lưu thay đổi</button>
           </div>
         </form>
       </div>
@@ -161,7 +189,8 @@
               <div style="position: relative;">
                 <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
                   autocomplete="current-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
-                <i class="fa-regular fa-eye-slash toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                <i class="fa-regular fa-eye-slash toggle-password"
+                  style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
               </div>
             </div>
             <div class="form-row">
@@ -170,7 +199,8 @@
                 <div style="position: relative;">
                   <input type="password" id="input-new-pw" class="form-control" placeholder="Mật khẩu mới"
                     autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
-                  <i class="fa-regular fa-eye-slash toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                  <i class="fa-regular fa-eye-slash toggle-password"
+                    style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
                 </div>
               </div>
               <div class="form-group">
@@ -178,21 +208,76 @@
                 <div style="position: relative;">
                   <input type="password" id="input-confirm-pw" class="form-control" placeholder="Nhập lại mật khẩu mới"
                     autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
-                  <i class="fa-regular fa-eye-slash toggle-password" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                  <i class="fa-regular fa-eye-slash toggle-password"
+                    style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
                 </div>
               </div>
             </div>
             <div class="form-group" style="margin-top: 16px;">
               <label class="form-label">Mã xác thực OTP</label>
               <div style="display: flex; gap: 12px;">
-                <input type="text" id="input-change-pw-otp" class="form-control" placeholder="Nhập mã OTP 6 số" style="flex: 1;" maxlength="6">
-                <button type="button" id="btn-send-pw-otp" class="btn-secondary" style="white-space: nowrap; margin-right: 4px">Gửi mã OTP</button>
+                <input type="text" id="input-change-pw-otp" class="form-control" placeholder="Nhập mã OTP 6 số"
+                  style="flex: 1;" maxlength="6">
+                <button type="button" id="btn-send-pw-otp" class="btn-secondary"
+                  style="white-space: nowrap; margin-right: 4px">Gửi mã OTP</button>
               </div>
-              <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email hiện tại của bạn để xác thực.</small>
+              <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email
+                hiện tại của bạn để xác thực.</small>
             </div>
             <div class="form-actions">
-              <button type="button" id="btn-change-pw" class="btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fa-solid fa-key"
-                  style="margin-right: 6px;"></i> Cập nhật mật khẩu</button>
+              <button type="button" id="btn-change-pw" class="btn-primary" disabled
+                style="opacity: 0.5; cursor: not-allowed;"><i class="fa-solid fa-key" style="margin-right: 6px;"></i>
+                Cập nhật mật khẩu</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="form-card" id="upgrade-teacher-section" style="display: none; border-left: 4px solid var(--primary);">
+        <div class="collapsible-header" id="upgrade-teacher-header" style="cursor: pointer;">
+          <div>
+            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-chalkboard-user" style="color: var(--primary);"></i> Trở thành Giáo viên
+            </h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Nâng cấp tài khoản để có quyền
+              xác minh và kiểm duyệt tài liệu.</p>
+          </div>
+          <span class="toggle-status"
+            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+            <span class="toggle-text">Mở rộng</span>
+            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+          </span>
+        </div>
+
+        <div class="collapsible-content" id="upgrade-teacher-content">
+          <div id="upgrade-status-container"
+            style="margin-bottom: 20px; display: none; padding: 12px 16px; border-radius: 8px; font-weight: 500; font-size: 14px;">
+
+          </div>
+
+          <form id="form-upgrade-teacher">
+            <div class="form-group">
+              <label class="form-label">Minh chứng Giáo viên (Ảnh)</label>
+              <div class="file-upload-wrapper"
+                style="border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; background: var(--bg-secondary); cursor: pointer;"
+                onclick="document.getElementById('input-upgrade-proof').click()">
+                <i class="fa-solid fa-cloud-arrow-up"
+                  style="font-size: 32px; color: var(--primary); margin-bottom: 12px;"></i>
+                <p style="font-weight: 500; margin-bottom: 4px;">Bấm để chọn ảnh minh chứng</p>
+                <p style="font-size: 13px; color: var(--text-secondary);">Thẻ giảng viên, chứng chỉ giảng dạy,... (Chỉ
+                  nhận file ảnh)</p>
+                <input type="file" id="input-upgrade-proof" accept="image/*" style="display: none;"
+                  onchange="document.getElementById('file-name-proof').textContent = this.files[0] ? this.files[0].name : ''">
+              </div>
+              <div id="file-name-proof"
+                style="margin-top: 8px; font-size: 14px; color: var(--primary); font-weight: 500; text-align: center;">
+              </div>
+            </div>
+
+            <div class="form-actions" style="margin-top: 16px;">
+              <button type="button" id="btn-submit-upgrade" class="btn-primary" style="width: 100%; opacity: 0.5; cursor: not-allowed;" disabled>
+                <i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi yêu cầu duyệt
+              </button>
             </div>
           </form>
         </div>
@@ -277,12 +362,17 @@
     <div class="modal-content"
       style="background: var(--white); width: 100%; max-width: 500px; border-radius: var(--radius-card); padding: 24px; display: flex; flex-direction: column; align-items: center;">
       <h2 style="margin-top: 0; margin-bottom: 20px; font-size: 20px;">Chỉnh sửa ảnh đại diện</h2>
-      <div style="width: 100%; max-height: 400px; overflow: hidden; display: flex; justify-content: center; background: #f0f0f0;">
+      <div
+        style="width: 100%; max-height: 400px; overflow: hidden; display: flex; justify-content: center; background: #f0f0f0;">
         <img id="image-to-crop" style="max-width: 100%; display: block;">
       </div>
       <div style="display: flex; gap: 12px; margin-top: 24px; width: 100%; justify-content: flex-end;">
-        <button type="button" id="btn-cancel-crop" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 500;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
-        <button type="button" id="btn-save-crop" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 500;"><i class="fa-solid fa-crop-simple" style="margin-right: 6px;"></i> Cắt & Lưu</button>
+        <button type="button" id="btn-cancel-crop" class="btn-secondary"
+          style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 500;"><i
+            class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
+        <button type="button" id="btn-save-crop" class="btn-primary"
+          style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 500;"><i
+            class="fa-solid fa-crop-simple" style="margin-right: 6px;"></i> Cắt & Lưu</button>
       </div>
     </div>
   </div>
@@ -292,24 +382,35 @@
     <div class="modal-content"
       style="background: var(--white); width: 100%; max-width: 450px; border-radius: var(--radius-card); padding: 24px; display: flex; flex-direction: column; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-        <div style="width: 48px; height: 48px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: flex; justify-content: center; align-items: center; font-size: 24px; flex-shrink: 0;">
+        <div
+          style="width: 48px; height: 48px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: flex; justify-content: center; align-items: center; font-size: 24px; flex-shrink: 0;">
           <i class="fa-solid fa-triangle-exclamation"></i>
         </div>
         <div>
           <h2 style="margin: 0; font-size: 20px; color: #111827; font-weight: 700;">Xoá vĩnh viễn tài khoản?</h2>
         </div>
       </div>
-      <p style="color: #4B5563; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Hành động này không thể hoàn tác. Toàn bộ dữ liệu của bạn sẽ bị xoá khỏi hệ thống. Vui lòng nhập mật khẩu để xác nhận.</p>
-      
+      <p style="color: #4B5563; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Hành động này không thể hoàn
+        tác. Toàn bộ dữ liệu của bạn sẽ bị xoá khỏi hệ thống. Vui lòng nhập mật khẩu để xác nhận.</p>
+
       <div class="form-group" style="margin-bottom: 24px;">
-        <label class="form-label" style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
-        <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..." autocomplete="current-password" style="width: 100%; box-sizing: border-box;">
-        <span id="delete-pw-error" style="color: #EF4444; font-size: 13px; display: none; margin-top: 6px; font-weight: 500;"><i class="fa-solid fa-circle-exclamation" style="margin-right: 4px;"></i> <span></span></span>
+        <label class="form-label"
+          style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i
+            class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
+        <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
+          autocomplete="current-password" style="width: 100%; box-sizing: border-box;">
+        <span id="delete-pw-error"
+          style="color: #EF4444; font-size: 13px; display: none; margin-top: 6px; font-weight: 500;"><i
+            class="fa-solid fa-circle-exclamation" style="margin-right: 4px;"></i> <span></span></span>
       </div>
 
       <div style="display: flex; gap: 12px; width: 100%; justify-content: flex-end;">
-        <button type="button" id="btn-cancel-delete" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 600; color: #4B5563; transition: all 0.2s;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
-        <button type="button" id="btn-confirm-delete" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; border: none; background: #EF4444; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;"><i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Xác nhận</button>
+        <button type="button" id="btn-cancel-delete" class="btn-secondary"
+          style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 600; color: #4B5563; transition: all 0.2s;"><i
+            class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
+        <button type="button" id="btn-confirm-delete" class="btn-primary"
+          style="padding: 10px 20px; border-radius: 8px; border: none; background: #EF4444; color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;"><i
+            class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Xác nhận</button>
       </div>
     </div>
   </div>
@@ -319,27 +420,41 @@
     <div class="modal-content"
       style="background: var(--white); width: 100%; max-width: 600px; border-radius: 16px; padding: 32px; display: flex; flex-direction: column; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-        <div style="width: 48px; height: 48px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: flex; justify-content: center; align-items: center; font-size: 24px; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);">
+        <div
+          style="width: 48px; height: 48px; border-radius: 50%; background: #FEE2E2; color: #EF4444; display: flex; justify-content: center; align-items: center; font-size: 24px; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);">
           <i class="fa-solid fa-file-circle-xmark"></i>
         </div>
         <div>
           <h2 style="margin: 0; font-size: 22px; color: #111827; font-weight: 700;">Lý do từ chối</h2>
         </div>
       </div>
-      <p style="color: #4B5563; font-size: 15px; margin-bottom: 24px; line-height: 1.6;">Tài liệu <strong id="reject-reason-doc-title" style="color: #111827;"></strong> của bạn đã bị từ chối với lý do sau:</p>
-      
-      <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-        <p id="reject-reason-content" style="color: #111827; font-size: 14px; margin: 0; font-style: italic; white-space: pre-wrap; word-break: break-word;"></p>
+      <p style="color: #4B5563; font-size: 15px; margin-bottom: 24px; line-height: 1.6;">Tài liệu <strong
+          id="reject-reason-doc-title" style="color: #111827;"></strong> của bạn đã bị từ chối với lý do sau:</p>
+
+      <div
+        style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+        <p id="reject-reason-content"
+          style="color: #111827; font-size: 14px; margin: 0; font-style: italic; white-space: pre-wrap; word-break: break-word;">
+        </p>
       </div>
 
       <div class="form-group" style="margin-bottom: 28px;">
-        <label class="form-label" style="font-weight: 600; color: #374151; display: flex; align-items: center; margin-bottom: 10px;"><i class="fa-solid fa-comment-dots" style="color: var(--primary); margin-right: 8px; font-size: 16px;"></i> Nhập khiếu nại / phản hồi</label>
-        <textarea id="input-reject-appeal" class="form-control" placeholder="Trình bày lý do bạn muốn quản trị viên xem xét lại tài liệu này..." rows="5" style="width: 100%; box-sizing: border-box; resize: vertical; min-height: 120px; font-size: 15px; padding: 12px;"></textarea>
+        <label class="form-label"
+          style="font-weight: 600; color: #374151; display: flex; align-items: center; margin-bottom: 10px;"><i
+            class="fa-solid fa-comment-dots" style="color: var(--primary); margin-right: 8px; font-size: 16px;"></i>
+          Nhập khiếu nại / phản hồi</label>
+        <textarea id="input-reject-appeal" class="form-control"
+          placeholder="Trình bày lý do bạn muốn quản trị viên xem xét lại tài liệu này..." rows="5"
+          style="width: 100%; box-sizing: border-box; resize: vertical; min-height: 120px; font-size: 15px; padding: 12px;"></textarea>
       </div>
 
       <div style="display: flex; gap: 12px; width: 100%; justify-content: flex-end;">
-        <button type="button" onclick="window.closeRejectReasonModal()" class="btn-secondary" style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 600; color: #4B5563; transition: all 0.2s;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Đóng</button>
-        <button type="button" id="btn-submit-appeal" class="btn-primary" style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: not-allowed; opacity: 0.5; font-weight: 600; transition: all 0.2s;" disabled><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi phản hồi</button>
+        <button type="button" onclick="window.closeRejectReasonModal()" class="btn-secondary"
+          style="padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); cursor: pointer; font-weight: 600; color: #4B5563; transition: all 0.2s;"><i
+            class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Đóng</button>
+        <button type="button" id="btn-submit-appeal" class="btn-primary"
+          style="padding: 10px 20px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: not-allowed; opacity: 0.5; font-weight: 600; transition: all 0.2s;"
+          disabled><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi phản hồi</button>
       </div>
     </div>
   </div>

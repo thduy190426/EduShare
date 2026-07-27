@@ -25,6 +25,10 @@ export const getToken = () => {
     return localStorage.getItem('token') || sessionStorage.getItem('token');
 };
 
+export const getRefreshToken = () => {
+    return localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+};
+
 export const getAvatar = () => {
     return localStorage.getItem('avatar') || sessionStorage.getItem('avatar');
 };
@@ -40,13 +44,18 @@ export const getUserProfileUrl = (maND, userPath = '../user/otherUserProfile.htm
     return `${userPath}?id=${encodeURIComponent(maND)}`;
 };
 
-export const saveLoginSession = ({ token, avatarURL, rememberLogin }) => {
+export const saveLoginSession = ({ token, refreshToken, avatarURL, rememberLogin }) => {
     const persistentStorage = rememberLogin ? localStorage : sessionStorage;
     const otherStorage = rememberLogin ? sessionStorage : localStorage;
 
     otherStorage.removeItem('token');
+    otherStorage.removeItem('refreshToken');
     otherStorage.removeItem('avatar');
+    
     persistentStorage.setItem('token', token);
+    if (refreshToken) {
+        persistentStorage.setItem('refreshToken', refreshToken);
+    }
 
     if (avatarURL) {
         persistentStorage.setItem('avatar', avatarURL);
@@ -66,8 +75,10 @@ export const setAvatarForCurrentSession = (avatarURL) => {
 
 export const clearAuthSession = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('avatar');
     sessionStorage.removeItem('token');
+    sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('avatar');
 };
 
@@ -106,3 +117,215 @@ export const showToast = (icon, title) => {
     }
 };
 
+let isSessionExpiredAlertShown = false;
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+    refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (token) => {
+    refreshSubscribers.map(cb => cb(token));
+    refreshSubscribers = [];
+};
+
+const originalFetch = window.fetch;
+window.fetch = async function () {
+    let url = arguments[0];
+    let options = arguments[1] || {};
+    
+    // Đảm bảo có header Authorization nếu đã lưu token
+    const token = getToken();
+    if (token && typeof url === 'string' && url.includes('/api/')) {
+        options.headers = {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`
+        };
+        arguments[1] = options;
+    }
+
+    let response = await originalFetch.apply(this, arguments);
+    
+    if (response.status === 401) {
+        if (typeof url === 'string' && url.includes('/api/') && !url.includes('/login') && !url.includes('/register') && !url.includes('/refresh-token')) {
+            const refreshToken = getRefreshToken();
+            
+            if (refreshToken) {
+                if (!isRefreshing) {
+                    isRefreshing = true;
+                    try {
+                        const refreshRes = await originalFetch('http://localhost:3000/api/refresh-token', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ refreshToken })
+                        });
+                        
+                        if (refreshRes.ok) {
+                            const data = await refreshRes.json();
+                            const newToken = data.token;
+                            // Cập nhật token vào storage tương ứng
+                            if (localStorage.getItem('refreshToken')) localStorage.setItem('token', newToken);
+                            else sessionStorage.setItem('token', newToken);
+                            
+                            isRefreshing = false;
+                            onRefreshed(newToken);
+                            
+                            // Gọi lại request ban đầu với token mới
+                            options.headers['Authorization'] = `Bearer ${newToken}`;
+                            return await originalFetch(url, options);
+                        } else {
+                            throw new Error('Refresh token invalid');
+                        }
+                    } catch (error) {
+                        isRefreshing = false;
+                        refreshSubscribers = [];
+                        clearAuthSession();
+                        redirectToLogin();
+                        return response;
+                    }
+                } else {
+                    // Đang refresh, chờ lấy token mới
+                    return new Promise((resolve) => {
+                        subscribeTokenRefresh((newToken) => {
+                            options.headers['Authorization'] = `Bearer ${newToken}`;
+                            resolve(originalFetch(url, options));
+                        });
+                    });
+                }
+            } else {
+                clearAuthSession();
+                redirectToLogin();
+            }
+        }
+    }
+    return response;
+};
+
+function redirectToLogin() {
+    if (!isSessionExpiredAlertShown) {
+        isSessionExpiredAlertShown = true;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Phiên đăng nhập hết hạn',
+                text: 'Phiên đăng nhập của bạn đã hết hạn, vui lòng đăng nhập lại để tiếp tục.',
+                confirmButtonText: 'Đăng nhập',
+                allowOutsideClick: false
+            }).then(() => {
+                window.location.href = '../auth/login.html';
+            });
+        } else {
+            alert('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+            window.location.href = '../auth/login.html';
+        }
+    }
+}
+
+export const getTimeBasedGreeting = (type = 'home') => {
+    const hour = new Date().getHours();
+    
+    let timeOfDay = '';
+    if (hour >= 5 && hour < 12) timeOfDay = 'morning';
+    else if (hour >= 12 && hour < 18) timeOfDay = 'afternoon';
+    else if (hour >= 18 && hour < 22) timeOfDay = 'evening';
+    else timeOfDay = 'night';
+
+    const greetings = {
+        home: {
+            morning: ["Chào buổi sáng", "Bắt đầu ngày mới đầy năng lượng nhé", "Chúc buổi sáng tốt lành", "Ngày mới vui vẻ"],
+            afternoon: ["Chào buổi chiều", "Nghỉ ngơi một chút rồi học tiếp nhé", "Buổi chiều hiệu quả", "Chào buổi chiều nắng ấm"],
+            evening: ["Chào buổi tối", "Buổi tối an lành", "Chúc bạn một buổi tối thư giãn", "Đã ăn tối chưa?"],
+            night: ["Chào cú đêm", "Đừng thức quá khuya nhé", "Học khuya vất vả rồi", "Chúc bạn ngủ ngon sau khi học xong"]
+        },
+        login: {
+            morning: ["Chào ngày mới! Bắt đầu học thôi.", "Đăng nhập thành công! Buổi sáng tốt lành.", "Chào buổi sáng năng lượng!"],
+            afternoon: ["Đăng nhập thành công! Chiều năng suất nhé.", "Chào buổi chiều! Cùng chia sẻ tài liệu nào.", "Đăng nhập thành công!"],
+            evening: ["Chào buổi tối! Bắt đầu học nhé.", "Đăng nhập thành công! Tối an lành.", "Buổi tối tuyệt vời để học tập!"],
+            night: ["Chăm chỉ quá! Đăng nhập thành công.", "Cú đêm à? Chúc bạn học tốt.", "Đăng nhập thành công! Nhớ giữ gìn sức khỏe nhé."]
+        },
+        logout: {
+            morning: ["Đăng xuất thành công. Hẹn gặp lại nhé!", "Tạm biệt! Chúc một ngày vui vẻ.", "Hẹn gặp lại bạn sớm nhé!"],
+            afternoon: ["Đăng xuất thành công. Hẹn gặp lại nhé!", "Tạm biệt! Chúc một buổi chiều tốt lành.", "Nghỉ ngơi nhé, hẹn gặp lại!"],
+            evening: ["Tạm biệt! Chúc buổi tối ấm áp.", "Đăng xuất thành công. Nghỉ ngơi nhé!", "Hẹn gặp lại vào ngày mai!"],
+            night: ["Ngủ ngon nhé! Hẹn gặp lại.", "Khuya rồi, nghỉ ngơi thôi. Đăng xuất thành công!", "Tạm biệt cú đêm, ngủ ngon!"]
+        }
+    };
+
+    const options = greetings[type][timeOfDay] || greetings[type]['morning'];
+    return options[Math.floor(Math.random() * options.length)];
+};
+
+export const renderPagination = (containerId, totalPages, currentPage, onPageChange) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    // Luôn hiển thị phân trang để người dùng xem giao diện
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'page-btn prev-btn';
+    prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+    prevBtn.disabled = currentPage === 1;
+    if (currentPage > 1) {
+        prevBtn.addEventListener('click', () => onPageChange(currentPage - 1));
+    }
+    container.appendChild(prevBtn);
+
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    if (startPage > 1) {
+        const firstPageBtn = document.createElement('button');
+        firstPageBtn.className = 'page-btn';
+        firstPageBtn.textContent = '1';
+        firstPageBtn.addEventListener('click', () => onPageChange(1));
+        container.appendChild(firstPageBtn);
+
+        if (startPage > 2) {
+            const dots = document.createElement('span');
+            dots.className = 'page-dots';
+            dots.textContent = '...';
+            container.appendChild(dots);
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        if (i !== currentPage) {
+            pageBtn.addEventListener('click', () => onPageChange(i));
+        }
+        container.appendChild(pageBtn);
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const dots = document.createElement('span');
+            dots.className = 'page-dots';
+            dots.textContent = '...';
+            container.appendChild(dots);
+        }
+
+        const lastPageBtn = document.createElement('button');
+        lastPageBtn.className = 'page-btn';
+        lastPageBtn.textContent = totalPages;
+        lastPageBtn.addEventListener('click', () => onPageChange(totalPages));
+        container.appendChild(lastPageBtn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'page-btn next-btn';
+    nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages;
+    if (currentPage < totalPages) {
+        nextBtn.addEventListener('click', () => onPageChange(currentPage + 1));
+    }
+    container.appendChild(nextBtn);
+};

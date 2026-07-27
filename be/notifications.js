@@ -8,15 +8,28 @@ router.get('/', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
         await pool.execute('DELETE FROM THONGBAO WHERE MaND = ? AND NgayTao < NOW() - INTERVAL 30 DAY', [req.user.MaND]);
+
+        const [countResult] = await pool.execute(`
+            SELECT COUNT(*) AS total FROM THONGBAO 
+            WHERE MaND = ?
+        `, [req.user.MaND]);
+        const total = countResult[0].total;
 
         const [rows] = await pool.execute(`
             SELECT * FROM THONGBAO 
             WHERE MaND = ? 
             ORDER BY NgayTao DESC
+            LIMIT ${limit} OFFSET ${offset}
         `, [req.user.MaND]);
 
-        res.status(200).json({ notifications: rows });
+        const hasMore = (offset + limit) < total;
+
+        res.status(200).json({ notifications: rows, hasMore, total });
     } catch (error) {
         console.error('Lỗi tải thông báo:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });

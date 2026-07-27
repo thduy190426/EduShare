@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btnResetPassword.disabled = true;
-        btnResetPassword.innerHTML = '&nbsp; Đang xử lý...';
+        btnResetPassword.innerHTML = '&nbsp; Đang gửi mã...';
 
         try {
             const response = await fetch(`${API_URL}/reset-password`, {

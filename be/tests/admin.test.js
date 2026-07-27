@@ -57,7 +57,7 @@ describe('Admin API', () => {
         mockPoolExecute(app, (query) => {
             if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             if (query.includes('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?')) {
-                return Promise.resolve([[]]); // User không tồn tại
+                return Promise.resolve([[]]); 
             }
             return Promise.resolve([[]]);
         });

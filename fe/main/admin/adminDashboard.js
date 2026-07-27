@@ -16,16 +16,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchStats() {
     try {
-        const res = await fetch(`${API_URL}/admin/stats/overview`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.status === 403) {
+        const [res, resAdv] = await Promise.all([
+            fetch(`${API_URL}/admin/stats/overview`, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(`${API_URL}/admin/stats/advanced`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (res.status === 403 || resAdv.status === 403) {
             Swal.fire('Bạn không có quyền truy cập trang này.');
             window.location.href = '../guest/guestHome.html';
             return;
         }
 
         const data = await res.json();
+        const dataAdv = await resAdv.json();
         
         document.getElementById('stat-users').textContent = Number(data.users || 0).toLocaleString();
         document.getElementById('stat-documents').textContent = Number(data.documents || 0).toLocaleString();
@@ -33,6 +36,7 @@ async function fetchStats() {
         document.getElementById('stat-reports').textContent = Number(data.pendingReports || 0).toLocaleString();
 
         drawChart(data);
+        drawAdvancedCharts(dataAdv);
         renderRankings(data);
 
     } catch (err) {
@@ -117,27 +121,79 @@ function drawChart(data) {
         });
     }
 
-    const ctxSubject = document.getElementById('subjectChart');
-    if (ctxSubject && data.docsBySubject) {
-        const labels = data.docsBySubject.map(item => item.TenMonHoc);
-        const counts = data.docsBySubject.map(item => item.count);
-        new Chart(ctxSubject, {
+}
+
+function drawAdvancedCharts(data) {
+    const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+    
+    // Revenue Chart (Line)
+    const ctxRevenue = document.getElementById('revenueChart');
+    if (ctxRevenue && data.revenueByMonth) {
+        const revData = new Array(12).fill(0);
+        data.revenueByMonth.forEach(item => { revData[item.month - 1] = item.revenue; });
+        
+        new Chart(ctxRevenue, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: revData,
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // User Growth Chart (Bar)
+    const ctxGrowth = document.getElementById('userGrowthChart');
+    if (ctxGrowth && data.userGrowth) {
+        const growthData = new Array(12).fill(0);
+        data.userGrowth.forEach(item => { growthData[item.month - 1] = item.newUsers; });
+        
+        new Chart(ctxGrowth, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Người dùng mới',
+                    data: growthData,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // Trending Subjects Chart (Bar)
+    const ctxTrending = document.getElementById('trendingSubjectChart');
+    if (ctxTrending && data.trendingSubjects) {
+        const labels = data.trendingSubjects.map(item => item.TenMonHoc);
+        const counts = data.trendingSubjects.map(item => item.totalDownloads);
+        new Chart(ctxTrending, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Số tài liệu',
+                    label: 'Tổng lượt tải',
                     data: counts,
-                    backgroundColor: 'rgba(99, 102, 241, 0.5)',
-                    borderColor: 'rgba(99, 102, 241, 1)',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(245, 158, 11, 0.6)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
                 }]
             },
             options: {
                 responsive: true,
-                scales: {
-                    y: { beginAtZero: true, ticks: { precision: 0 } }
-                }
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
             }
         });
     }
@@ -196,7 +252,7 @@ function renderRankings(data) {
                 }
                 <div class="ranking-info">
                     <div class="ranking-name">${user.HoTen || 'Người dùng ẩn danh'}</div>
-                    <div class="ranking-stat">${user.countDoc} TL, ${user.countComment} BL</div>
+                    <div class="ranking-stat">${user.countDoc} tài liệu, ${user.countComment} bình luận</div>
                 </div>
                 <div class="ranking-score">${score} đ</div>
             `;

@@ -1,8 +1,11 @@
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast, escapeHTML } from "../shared/utils.js";
+import { getToken, showToast, escapeHTML, renderPagination } from "../shared/utils.js";
 
 let currentRejectId = null;
+let currentBulkRejectIds = [];
 let currentTabStatus = 'ChoDuyet';
+let currentPage = 1;
+const limit = 10;
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchDocuments(currentTabStatus);
@@ -14,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
           e.currentTarget.classList.add('active');
           
           currentTabStatus = e.currentTarget.getAttribute('data-status');
+          currentPage = 1;
           fetchDocuments(currentTabStatus);
       });
   });
@@ -57,13 +61,74 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("error", "Vui lòng nhập lý do từ chối.");
         return;
       }
-      if (currentRejectId) {
+      if (currentBulkRejectIds && currentBulkRejectIds.length > 0) {
+        reviewBulkDocuments(currentBulkRejectIds, "TuChoi", reason);
+        closeModal();
+      } else if (currentRejectId) {
         reviewDocument(currentRejectId, "TuChoi", reason);
         closeModal();
       }
     });
   }
+
+  // Bulk actions handlers
+  const btnBulkApprove = document.getElementById("btn-bulk-approve");
+  if (btnBulkApprove) {
+      btnBulkApprove.addEventListener("click", async () => {
+          const selectedIds = getSelectedDocumentIds();
+          if (selectedIds.length === 0) return;
+
+          if (
+              (
+                  await Swal.fire({
+                      title: "Xác nhận duyệt hàng loạt",
+                      html: `Bạn có chắc chắn muốn duyệt <b>${selectedIds.length}</b> tài liệu đã chọn?`,
+                      icon: "info",
+                      showCancelButton: true,
+                      confirmButtonText: "Đồng ý",
+                      cancelButtonText: "Hủy",
+                  })
+              ).isConfirmed
+          ) {
+              reviewBulkDocuments(selectedIds, "Duyet");
+          }
+      });
+  }
+
+  const btnBulkReject = document.getElementById("btn-bulk-reject");
+  if (btnBulkReject) {
+      btnBulkReject.addEventListener("click", () => {
+          const selectedIds = getSelectedDocumentIds();
+          if (selectedIds.length === 0) return;
+
+          currentBulkRejectIds = selectedIds;
+          currentRejectId = null;
+          document.getElementById("reject-doc-title").textContent = `${selectedIds.length} tài liệu đã chọn`;
+          const reasonInput = document.getElementById("reject-reason-input");
+          if (reasonInput) reasonInput.value = "";
+          const btnConfirm = document.getElementById("btn-confirm-reject");
+          if (btnConfirm) btnConfirm.disabled = true;
+          const m = document.getElementById("reject-modal-overlay"); m.style.display = "flex"; m.classList.remove("hide");
+      });
+  }
 });
+
+function getSelectedDocumentIds() {
+    const checkboxes = document.querySelectorAll(".doc-checkbox:checked");
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function updateBulkToolbar() {
+    const selectedIds = getSelectedDocumentIds();
+    const toolbar = document.getElementById("bulk-actions-toolbar");
+    const countSpan = document.getElementById("bulk-selected-count");
+    if (selectedIds.length > 0 && currentTabStatus === 'ChoDuyet') {
+        toolbar.style.display = "flex";
+        countSpan.textContent = selectedIds.length;
+    } else {
+        toolbar.style.display = "none";
+    }
+}
 
 async function fetchDocuments(status) {
   const token = getToken();
@@ -78,7 +143,7 @@ async function fetchDocuments(status) {
   await new Promise(resolve => setTimeout(resolve, 200));
 
   try {
-    const response = await fetch(`${API_URL}/admin/documents/list?status=${status}`, {
+    const response = await fetch(`${API_URL}/admin/documents/list?status=${status}&page=${currentPage}&limit=${limit}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -91,8 +156,15 @@ async function fetchDocuments(status) {
     }
 
     const data = await response.json();
-    renderDocuments(data, status);
+    renderDocuments(data.data || [], status);
     fetchCounts();
+    
+    if (data.pagination) {
+        renderPagination('moderation-pagination', data.pagination.totalPages, currentPage, (page) => {
+            currentPage = page;
+            fetchDocuments(currentTabStatus);
+        });
+    }
   } catch (error) {
     console.error("Lỗi khi tải danh sách tài liệu:", error);
     showToast("error", "Lỗi hệ thống khi tải dữ liệu.");
@@ -131,17 +203,19 @@ function renderDocuments(documents, status) {
   if (!tbody) return;
 
   tbody.innerHTML = "";
+  
+  updateBulkToolbar();
 
   if (documents.length === 0) {
     let emptyText = "Không có tài liệu nào đang trong trạng thái chờ duyệt.";
     if (status === 'DaDuyet') emptyText = "Không có tài liệu nào đã duyệt.";
     else if (status === 'TuChoi') emptyText = "Không có tài liệu nào bị từ chối.";
-    tbody.innerHTML =
-      `<tr><td colspan="6" style="text-align: center; padding: 20px;">${emptyText}</td></tr>`;
-    return;
+      tbody.innerHTML =
+        `<tr><td colspan="7" style="text-align: center; padding: 20px;">${emptyText}</td></tr>`;
+      return;
   }
 
-  documents.forEach((doc) => {
+  documents.forEach((doc, index) => {
     const tr = document.createElement("tr");
 
     let icon = "fa-file";
@@ -228,6 +302,12 @@ function renderDocuments(documents, status) {
     }
 
         tr.innerHTML = `
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    ${status === 'ChoDuyet' ? `<input type="checkbox" class="doc-checkbox" value="${doc.MaTL}" style="cursor: pointer;">` : ''}
+                    <span>${index + 1}</span>
+                </div>
+            </td>
             <td>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <i class="fa-solid ${icon}" style="color: ${iconColor}; font-size: 1.4rem;"></i>
@@ -250,6 +330,13 @@ function renderDocuments(documents, status) {
             </td>
         `;
     tbody.appendChild(tr);
+  });
+
+  const rowCheckboxes = tbody.querySelectorAll(".doc-checkbox");
+  rowCheckboxes.forEach(cb => {
+      cb.addEventListener("change", () => {
+          updateBulkToolbar();
+      });
   });
 
   const approveBtns = tbody.querySelectorAll(".btn-approve");
@@ -341,7 +428,7 @@ function renderDocuments(documents, status) {
             html: `Bạn có chắc chắn muốn xóa vĩnh viễn tài liệu <b>${escapeHTML(title)}</b> không?<br><br><span style="color:var(--danger)">Cảnh báo: Hành động này sẽ xóa file và toàn bộ đánh giá, bình luận liên quan. Không thể hoàn tác!</span>`,
             icon: "error",
             showCancelButton: true,
-            confirmButtonText: "Đồng ý xóa",
+            confirmButtonText: "Xóa",
             confirmButtonColor: "#EF4444",
             cancelButtonText: "Hủy",
           })
@@ -375,6 +462,32 @@ async function reviewDocument(maTL, quyetDinh, lyDoTuChoi = "") {
     }
   } catch (error) {
     console.error("Lỗi khi duyệt/từ chối tài liệu:", error);
+    showToast("error", "Lỗi hệ thống.");
+  }
+}
+
+async function reviewBulkDocuments(documentIds, quyetDinh, lyDoTuChoi = "") {
+  const token = getToken();
+  try {
+    const response = await fetch(`${API_URL}/admin/documents/bulk-review`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ documentIds, quyetDinh, lyDoTuChoi }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast("success", result.message || "Thao tác thành công.");
+      await fetchDocuments(currentTabStatus);
+    } else {
+      showToast("error", result.message || "Lỗi khi xử lý hàng loạt.");
+    }
+  } catch (error) {
+    console.error("Lỗi khi duyệt/từ chối hàng loạt:", error);
     showToast("error", "Lỗi hệ thống.");
   }
 }

@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
+const crypto = require('crypto');
 const mysql   = require('mysql2/promise');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
@@ -76,7 +78,7 @@ const logger = {
     info:    (msg, ...a) => console.log(`${ts()}  ${BG_BLUE}${BOLD}${WHITE}  INFO  ${RESET}  ${WHITE}${msg}${RESET}\n`, ...a),
     success: (msg, ...a) => console.log(`${ts()}  ${BG_GREEN}${BOLD}${WHITE}  OK    ${RESET}  ${GREEN}${msg}${RESET}\n`, ...a),
     warn:    (msg, ...a) => console.warn(`${ts()}  ${BG_YELLOW}${BOLD}${WHITE}  WARN  ${RESET}  ${YELLOW}${msg}${RESET}\n`, ...a),
-    db:      (msg, ...a) => console.log(`${ts()}  ${BG_MAGENTA}${BOLD}${WHITE}  DB    ${RESET}  ${MAGENTA}${msg}${RESET}\n`, ...a),
+    db:      (msg, ...a) => console.log(`${ts()}  ${BG_MAGENTA}${BOLD}${WHITE}  DATABASE    ${RESET}  ${MAGENTA}${msg}${RESET}\n`, ...a),
     error: (msg, err) => {
         console.error(`${ts()}  ${BG_RED}${BOLD}${WHITE}  ERROR ${RESET}  ${RED}${msg}${RESET}\n`);
         if (err?.stack) console.error(`${DIM}${err.stack}${RESET}\n`);
@@ -92,7 +94,7 @@ const logger = {
 const logBanner = port => {
     const line = '─'.repeat(48);
     console.log(`\n${CYAN}${BOLD}┌${line}┐${RESET}`);
-    console.log(`${CYAN}${BOLD}│${RESET}  ${GREEN}${BOLD}🚀          EduShare API Server${RESET}${' '.repeat(15)}${CYAN}${BOLD}│${RESET}`);
+    console.log(`${CYAN}${BOLD}│${RESET}  ${GREEN}${BOLD}          EduShare API Server${RESET}${' '.repeat(17)}${CYAN}${BOLD}│${RESET}`);
     console.log(`${CYAN}${BOLD}├${'─'.repeat(48)}┤${RESET}`);
     console.log(`${CYAN}${BOLD}│${RESET}  ${GRAY}Port   ${RESET}${BOLD}${WHITE}http://localhost:${port}${RESET}${' '.repeat(Math.max(0, 40 - 16 - String(port).length - 2))}${CYAN}${BOLD}│${RESET}`);
     console.log(`${CYAN}${BOLD}│${RESET}  ${GRAY}Env    ${RESET}${BOLD}${YELLOW}${(process.env.NODE_ENV || 'development')}${RESET}${' '.repeat(Math.max(0, 47 - (process.env.NODE_ENV || 'development').length - 8))}${CYAN}${BOLD}│${RESET}`);
@@ -119,6 +121,7 @@ const requestLogger = (req, res, next) => {
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
@@ -233,15 +236,12 @@ app.post('/api/register/send-otp', registerLimiter, async (req, res) => {
 });
 
 app.post('/api/register', registerLimiter, async (req, res) => {
-    const { hoTen, email, matKhau, vaiTro, truongHoc, khoaNganh, otp } = req.body;
-    const allowedRoles   = ['SinhVien', 'GiaoVien'];
-    const normalizedRole = allowedRoles.includes(vaiTro) ? vaiTro : 'SinhVien';
+    const { hoTen, email, matKhau, truongHoc, khoaNganh, otp } = req.body;
+    
+    const normalizedRole = 'SinhVien';
 
     if (!hoTen || !email || !matKhau || !otp)
         return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin và mã OTP.' });
-
-    if (vaiTro && !allowedRoles.includes(vaiTro))
-        return res.status(400).json({ message: 'Vai trò tài khoản không hợp lệ.' });
 
     try {
         const [otpRows] = await pool.execute('SELECT * FROM REGISTER_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
@@ -299,17 +299,79 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         if (!isMatch)
             return res.status(401).json({ message: 'Mật khẩu không chính xác.' });
 
-        const token = jwt.sign(
+        const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
             process.env.JWT_SECRET,
-            { expiresIn: rememberLogin ? '30d' : '24h' }
+            { expiresIn: '15m' } // Access token short-lived
+        );
+
+        const refreshToken = crypto.randomBytes(40).toString('hex');
+        const expiresDays = rememberLogin ? 30 : 7;
+        const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
+
+        await pool.execute(
+            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt) VALUES (?, ?, ?)',
+            [user.MaND, refreshToken, expiresAt]
         );
 
         logger.success(`Login OK — id: ${user.MaND}  role: ${user.VaiTro}  remember: ${!!rememberLogin}`);
-        res.status(200).json({ message: 'Đăng nhập thành công.', token, avatarURL: user.AvatarURL || null });
+        res.status(200).json({ 
+            message: 'Đăng nhập thành công.', 
+            token: accessToken,
+            refreshToken: refreshToken,
+            avatarURL: user.AvatarURL || null 
+        });
 
     } catch (err) {
         logger.error('Login failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.post('/api/refresh-token', async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ message: 'Thiếu Refresh Token.' });
+
+    try {
+        const [rows] = await pool.execute(
+            'SELECT R.*, N.VaiTro, N.HoTen FROM REFRESH_TOKENS R JOIN NGUOIDUNG N ON R.MaND = N.MaND WHERE R.Token = ? AND R.Revoked = FALSE',
+            [refreshToken]
+        );
+
+        if (rows.length === 0) {
+            return res.status(401).json({ message: 'Refresh Token không hợp lệ hoặc đã bị thu hồi.' });
+        }
+
+        const tokenData = rows[0];
+
+        if (new Date() > new Date(tokenData.ExpiresAt)) {
+            await pool.execute('UPDATE REFRESH_TOKENS SET Revoked = TRUE WHERE Id = ?', [tokenData.Id]);
+            return res.status(401).json({ message: 'Refresh Token đã hết hạn. Vui lòng đăng nhập lại.' });
+        }
+
+        const newAccessToken = jwt.sign(
+            { MaND: tokenData.MaND, VaiTro: tokenData.VaiTro, HoTen: tokenData.HoTen },
+            process.env.JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        res.status(200).json({ token: newAccessToken });
+
+    } catch (err) {
+        logger.error('Refresh token failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.post('/api/logout', async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(200).json({ message: 'Đã đăng xuất.' });
+
+    try {
+        await pool.execute('UPDATE REFRESH_TOKENS SET Revoked = TRUE WHERE Token = ?', [refreshToken]);
+        res.status(200).json({ message: 'Đăng xuất thành công.' });
+    } catch (err) {
+        logger.error('Logout failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

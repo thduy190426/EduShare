@@ -1,8 +1,10 @@
 import { API_URL } from '../shared/config.js';
-import { escapeHTML, getAssetUrl, getToken, showToast } from '../shared/utils.js';
+import { escapeHTML, getAssetUrl, getToken, showToast, renderPagination } from '../shared/utils.js';
 
 
 const token = getToken();
+let currentPage = 1;
+const limit = 10;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!token) {
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ['input-search', 'filter-role', 'filter-status', 'filter-sort'].forEach(id => {
         document.getElementById(id)?.addEventListener(id === 'input-search' ? 'input' : 'change', () => {
+            currentPage = 1;
             fetchUsers();
             updateClearFilterButton();
         });
@@ -25,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('filter-role').value = '';
         document.getElementById('filter-status').value = '';
         document.getElementById('filter-sort').value = 'newest';
+        currentPage = 1;
         fetchUsers();
         updateClearFilterButton();
     });
@@ -71,9 +75,11 @@ async function fetchUsers() {
         Object.entries(filters).forEach(([key, value]) => {
             if (value) queryParams.append(key, value);
         });
+        queryParams.append('page', currentPage);
+        queryParams.append('limit', limit);
 
         const queryString = queryParams.toString();
-        const url = `${API_URL}/admin/users${queryString ? `?${queryString}` : ''}`;
+        const url = `${API_URL}/admin/users?${queryString}`;
 
         const res = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -86,7 +92,14 @@ async function fetchUsers() {
         }
 
         const data = await res.json();
-        renderUsers(data.users);
+        renderUsers(data.data || []);
+        
+        if (data.pagination) {
+            renderPagination('user-pagination', data.pagination.totalPages, currentPage, (newPage) => {
+                currentPage = newPage;
+                fetchUsers();
+            });
+        }
     } catch (err) {
         console.error(err);
     }
@@ -97,19 +110,19 @@ function renderUsers(users) {
     tbody.innerHTML = '';
 
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Không tìm thấy người dùng nào.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không tìm thấy người dùng nào.</td></tr>';
         return;
     }
 
-    users.forEach(user => {
+    users.forEach((user, index) => {
         const tr = document.createElement('tr');
         
-        const userName = user.HoTen || '';
+        const userName = user.HoTen || 'Người dùng ẩn danh';
         const userEmail = user.Email || '';
-        const initial = userName.charAt(0).toUpperCase();
+        const initial = userName.trim().split(' ').pop().charAt(0).toUpperCase();
         let avatarHtml = `<div class="user-initial">${escapeHTML(initial)}</div>`;
         if (user.AvatarURL && user.AvatarURL !== 'null') {
-            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${escapeHTML(getAssetUrl(user.AvatarURL))}" alt="${escapeHTML(userName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" /></div>`;
+            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${escapeHTML(getAssetUrl(user.AvatarURL))}" alt="${escapeHTML(userName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.parentElement.style.background='#EFF6FF'; this.parentElement.style.color='#2563EB'; this.parentElement.innerHTML='${escapeHTML(initial)}';" /></div>`;
         }
 
         let roleBadgeClass = 'role-student';
@@ -143,6 +156,7 @@ function renderUsers(users) {
         }
 
         tr.innerHTML = `
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td>
                 <div class="user-cell">
                   ${avatarHtml}
@@ -168,7 +182,7 @@ function renderUsers(users) {
                     <option value="Admin" ${user.VaiTro === 'Admin' ? 'selected' : ''}>Admin</option>
                 </select>
                 <button class="btn-action ${isActive ? 'btn-lock' : 'btn-unlock'}" onclick="toggleStatus(${user.MaND}, '${isActive ? 'BiKhoa' : 'HoatDong'}')">
-                    ${isActive ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-unlock"></i>'}
+                    ${isActive ? '<i class="fa-solid fa-lock-open"></i>' : '<i class="fa-solid fa-lock"></i>'}
                 </button>
                 <button class="btn-action btn-delete" onclick="deleteUser(${user.MaND}, '${escapeHTML(userName)}')">
                     <i class="fa-solid fa-trash"></i>
@@ -253,7 +267,7 @@ window.deleteUser = async (maND, userName) => {
         icon: 'error',
         showCancelButton: true,
         confirmButtonColor: '#EF4444',
-        confirmButtonText: 'Đồng ý xóa',
+        confirmButtonText: 'Xóa',
         cancelButtonText: 'Hủy'
     });
 

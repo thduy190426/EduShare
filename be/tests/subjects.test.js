@@ -46,7 +46,7 @@ describe('Subjects API', () => {
                 return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             }
             if (query.includes('SELECT MaMonHoc, TenMonHoc FROM MONHOC')) {
-                return Promise.resolve([[{ MaMonHoc: 2, TenMonHoc: 'Lý' }]]); // Môn học tồn tại
+                return Promise.resolve([[{ MaMonHoc: 2, TenMonHoc: 'Lý' }]]); 
             }
             if (query.includes('INSERT IGNORE INTO NGUOIDUNG_MONHOC')) {
                 return Promise.resolve([{ affectedRows: 1 }]);

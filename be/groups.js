@@ -188,13 +188,17 @@ router.post('/:maNhom/join', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Đã tham gia nhóm này.' });
         }
 
+        const [requestCheck] = await pool.execute('SELECT * FROM YEUCAUTHAMGIA_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (requestCheck.length > 0) {
+            return res.status(400).json({ message: 'Yêu cầu tham gia của bạn đang chờ duyệt.' });
+        }
 
         await pool.execute(
-            'INSERT INTO THANHVIEN_NHOM (MaND, MaNhom, VaiTroTrongNhom) VALUES (?, ?, ?)',
-            [maND, maNhom, 'ThanhVien']
+            'INSERT INTO YEUCAUTHAMGIA_NHOM (MaND, MaNhom) VALUES (?, ?)',
+            [maND, maNhom]
         );
 
-        res.status(200).json({ message: 'Tham gia nhóm thành công.' });
+        res.status(200).json({ message: 'Đã gửi yêu cầu tham gia. Vui lòng chờ phê duyệt.' });
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom/join:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -308,19 +312,28 @@ router.delete('/:maNhom/members/:memberId', authMiddleware, async (req, res) => 
         if (adminRows.length === 0) {
             return res.status(403).json({ message: 'Bạn không phải là thành viên của nhóm này.' });
         }
-        if (adminRows[0].VaiTroTrongNhom !== 'QuanTri') {
-            return res.status(403).json({ message: 'Chỉ quản trị viên mới có thể đuổi thành viên.' });
+        const adminRole = adminRows[0].VaiTroTrongNhom;
+        if (adminRole !== 'QuanTri' && adminRole !== 'PhoNhom') {
+            return res.status(403).json({ message: 'Chỉ Trưởng nhóm hoặc Phó nhóm mới có quyền đuổi thành viên.' });
         }
         if (String(adminId) === String(memberId)) {
             return res.status(400).json({ message: 'Bạn không thể tự đuổi chính mình khỏi nhóm.' });
         }
 
         const [memberRows] = await pool.execute(
-            'SELECT TV.MaND, ND.HoTen FROM THANHVIEN_NHOM TV JOIN NGUOIDUNG ND ON TV.MaND = ND.MaND WHERE TV.MaND = ? AND TV.MaNhom = ?',
+            'SELECT TV.MaND, TV.VaiTroTrongNhom, ND.HoTen FROM THANHVIEN_NHOM TV JOIN NGUOIDUNG ND ON TV.MaND = ND.MaND WHERE TV.MaND = ? AND TV.MaNhom = ?',
             [memberId, maNhom]
         );
         if (memberRows.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy thành viên trong nhóm.' });
+        }
+        
+        const targetRole = memberRows[0].VaiTroTrongNhom;
+        if (adminRole === 'PhoNhom' && targetRole !== 'ThanhVien') {
+            return res.status(403).json({ message: 'Phó nhóm chỉ có quyền đuổi Thành viên thường.' });
+        }
+        if (adminRole === 'QuanTri' && targetRole === 'QuanTri') {
+            return res.status(403).json({ message: 'Không thể đuổi Trưởng nhóm.' });
         }
 
         await pool.execute(
@@ -505,10 +518,13 @@ router.get('/:maNhom', authMiddleware, async (req, res) => {
 
 
         const [memberCheck] = await pool.execute('SELECT * FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
+        const [requestCheck] = await pool.execute('SELECT * FROM YEUCAUTHAMGIA_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
 
         res.status(200).json({
             group: rows[0],
-            isMember: memberCheck.length > 0
+            isMember: memberCheck.length > 0,
+            hasRequested: requestCheck.length > 0,
+            role: memberCheck.length > 0 ? memberCheck[0].VaiTroTrongNhom : null
         });
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom:', error);
@@ -572,9 +588,10 @@ router.delete('/:maNhom/documents/:maTL', authMiddleware, async (req, res) => {
             await conn.rollback();
             return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
         }
-        if (groupCheck[0].MaND_QuanTri !== maND) {
+        const [adminRows] = await conn.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (adminRows.length === 0 || (adminRows[0].VaiTroTrongNhom !== 'QuanTri' && adminRows[0].VaiTroTrongNhom !== 'PhoNhom')) {
             await conn.rollback();
-            return res.status(403).json({ message: 'Chỉ quản trị viên mới có thể xóa tài liệu khỏi nhóm.' });
+            return res.status(403).json({ message: 'Chỉ Trưởng nhóm hoặc Phó nhóm mới có thể xóa tài liệu khỏi nhóm.' });
         }
         const tenNhom = groupCheck[0].TenNhom;
 
@@ -614,6 +631,129 @@ router.delete('/:maNhom/documents/:maTL', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     } finally {
         conn.release();
+    }
+});
+
+router.get('/:maNhom/requests', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [adminRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (adminRows.length === 0 || (adminRows[0].VaiTroTrongNhom !== 'QuanTri' && adminRows[0].VaiTroTrongNhom !== 'PhoNhom')) {
+            return res.status(403).json({ message: 'Bạn không có quyền xem danh sách chờ duyệt.' });
+        }
+
+        const [rows] = await pool.execute(`
+            SELECT Y.NgayYeuCau, N.MaND, N.HoTen, N.Email, N.AvatarURL
+            FROM YEUCAUTHAMGIA_NHOM Y
+            JOIN NGUOIDUNG N ON Y.MaND = N.MaND
+            WHERE Y.MaNhom = ?
+            ORDER BY Y.NgayYeuCau ASC
+        `, [maNhom]);
+
+        res.status(200).json({ requests: rows });
+    } catch (error) {
+        console.error('Lỗi API GET /groups/:maNhom/requests:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maNhom/requests/:targetId/approve', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const targetId = req.params.targetId;
+    const maND = req.user.MaND;
+
+    const pool = req.app.locals.pool;
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        const [adminRows] = await conn.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (adminRows.length === 0 || (adminRows[0].VaiTroTrongNhom !== 'QuanTri' && adminRows[0].VaiTroTrongNhom !== 'PhoNhom')) {
+            await conn.rollback();
+            return res.status(403).json({ message: 'Bạn không có quyền duyệt yêu cầu này.' });
+        }
+
+        const [reqRows] = await conn.execute('SELECT * FROM YEUCAUTHAMGIA_NHOM WHERE MaND = ? AND MaNhom = ?', [targetId, maNhom]);
+        if (reqRows.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ message: 'Không tìm thấy yêu cầu.' });
+        }
+
+        await conn.execute('DELETE FROM YEUCAUTHAMGIA_NHOM WHERE MaND = ? AND MaNhom = ?', [targetId, maNhom]);
+        await conn.execute('INSERT INTO THANHVIEN_NHOM (MaND, MaNhom, VaiTroTrongNhom) VALUES (?, ?, ?)', [targetId, maNhom, 'ThanhVien']);
+
+        await conn.commit();
+        res.status(200).json({ message: 'Đã duyệt yêu cầu thành công.' });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API POST /groups/:maNhom/requests/:targetId/approve:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    } finally {
+        conn.release();
+    }
+});
+
+router.post('/:maNhom/requests/:targetId/reject', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const targetId = req.params.targetId;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [adminRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (adminRows.length === 0 || (adminRows[0].VaiTroTrongNhom !== 'QuanTri' && adminRows[0].VaiTroTrongNhom !== 'PhoNhom')) {
+            return res.status(403).json({ message: 'Bạn không có quyền từ chối yêu cầu này.' });
+        }
+
+        await pool.execute('DELETE FROM YEUCAUTHAMGIA_NHOM WHERE MaND = ? AND MaNhom = ?', [targetId, maNhom]);
+        res.status(200).json({ message: 'Đã từ chối yêu cầu.' });
+    } catch (error) {
+        console.error('Lỗi API POST /groups/:maNhom/requests/:targetId/reject:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/members/:targetId/role', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const targetId = req.params.targetId;
+    const maND = req.user.MaND;
+    const { role } = req.body;
+
+    if (!role || !['PhoNhom', 'ThanhVien'].includes(role)) {
+        return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
+    }
+
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [adminRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (adminRows.length === 0 || adminRows[0].VaiTroTrongNhom !== 'QuanTri') {
+            return res.status(403).json({ message: 'Chỉ Trưởng nhóm mới có quyền thay đổi vai trò.' });
+        }
+
+        if (String(maND) === String(targetId)) {
+            return res.status(400).json({ message: 'Bạn không thể thay đổi vai trò của chính mình.' });
+        }
+
+        const [targetRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [targetId, maNhom]);
+        if (targetRows.length === 0) {
+            return res.status(404).json({ message: 'Thành viên không tồn tại trong nhóm.' });
+        }
+        if (targetRows[0].VaiTroTrongNhom === 'QuanTri') {
+            return res.status(400).json({ message: 'Không thể thay đổi vai trò của Trưởng nhóm.' });
+        }
+
+        await pool.execute('UPDATE THANHVIEN_NHOM SET VaiTroTrongNhom = ? WHERE MaND = ? AND MaNhom = ?', [role, targetId, maNhom]);
+        res.status(200).json({ message: 'Cập nhật vai trò thành công.' });
+    } catch (error) {
+        console.error('Lỗi API PUT /groups/:maNhom/members/:targetId/role:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 

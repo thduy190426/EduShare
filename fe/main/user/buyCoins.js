@@ -1,9 +1,76 @@
 import { API_URL } from "../shared/config.js";
 import { getToken, showToast } from "../shared/utils.js";
 
+let activePromo = null;
+let promoDiscount = 0;
+let currentPackages = [];
+
 document.addEventListener("DOMContentLoaded", () => {
     fetchPackages();
+    setupPromoCode();
 });
+
+function setupPromoCode() {
+    const btnApply = document.getElementById("btn-apply-promo");
+    const inputCode = document.getElementById("promo-code-input");
+    
+    if (btnApply && inputCode) {
+        inputCode.addEventListener("input", (e) => {
+            if (e.target.value.trim().length > 0) {
+                btnApply.disabled = false;
+            } else {
+                btnApply.disabled = true;
+            }
+        });
+
+        btnApply.addEventListener("click", async () => {
+            const code = inputCode.value.trim().toUpperCase();
+            if (!code) {
+                activePromo = null;
+                promoDiscount = 0;
+                renderPackages(currentPackages);
+                return;
+            }
+
+            const originalText = btnApply.innerHTML;
+            btnApply.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+            btnApply.disabled = true;
+
+            try {
+                const token = getToken();
+                const res = await fetch(`${API_URL}/payment/promos/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    activePromo = code;
+                    promoDiscount = data.discountPercent / 100;
+                    showToast("success", `Đã áp dụng mã ${code} (Tặng ${data.discountPercent}% Xu)`);
+                } else {
+                    activePromo = null;
+                    promoDiscount = 0;
+                    showToast("error", data.message || "Mã ưu đãi không hợp lệ.");
+                }
+            } catch (err) {
+                console.error(err);
+                activePromo = null;
+                promoDiscount = 0;
+                showToast("error", "Lỗi kết nối máy chủ.");
+            } finally {
+                btnApply.innerHTML = originalText;
+                btnApply.disabled = false;
+                renderPackages(currentPackages);
+            }
+        });
+    }
+}
 
 async function fetchPackages() {
     try {
@@ -11,7 +78,8 @@ async function fetchPackages() {
         if (!response.ok) throw new Error("Failed to fetch packages");
         
         const data = await response.json();
-        renderPackages(data.packages);
+        currentPackages = data.packages || [];
+        renderPackages(currentPackages);
     } catch (error) {
         console.error(error);
         showToast("error", "Không thể tải danh sách gói nạp.");
@@ -24,10 +92,16 @@ function renderPackages(packages) {
 
     packages.forEach((pkg, index) => {
         const baseCoins = pkg.price / 100;
+        let finalCoins = pkg.coins;
+        
+        if (promoDiscount > 0) {
+            finalCoins = Math.floor(finalCoins * (1 + promoDiscount));
+        }
+
         let discountHtml = "";
         
-        if (pkg.coins > baseCoins) {
-            const bonus = pkg.coins - baseCoins;
+        if (finalCoins > baseCoins) {
+            const bonus = finalCoins - baseCoins;
             const percent = Math.round((bonus / baseCoins) * 100);
             discountHtml = `<div class="package-discount">Tặng ${percent}%</div>`;
         }
@@ -40,7 +114,7 @@ function renderPackages(packages) {
                 <div class="spinner"></div>
             </div>
             <i class="fa-solid fa-coins package-icon"></i>
-            <div class="package-coins">${pkg.coins.toLocaleString('vi-VN')} Xu</div>
+            <div class="package-coins">${finalCoins.toLocaleString('vi-VN')} Xu</div>
             <div class="package-price">${pkg.price.toLocaleString('vi-VN')} VNĐ</div>
             <button class="btn-buy" data-id="${pkg.id}"><i class="fa-solid fa-wallet" style="margin-right: 6px;"></i>Nạp ngay</button>
         `;
@@ -66,7 +140,7 @@ async function handleBuy(packageId, cardElement) {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
             },
-            body: JSON.stringify({ packageId })
+            body: JSON.stringify({ packageId, promoCode: activePromo })
         });
 
         const data = await response.json();

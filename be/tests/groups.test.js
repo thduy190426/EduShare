@@ -25,7 +25,7 @@ describe('Groups API', () => {
         const response = await request(app)
             .post('/api/groups')
             .set('Authorization', `Bearer ${token}`)
-            .send({ moTa: 'Nhóm học toán', maMonHoc: 1 }); // Thiếu tenNhom
+            .send({ moTa: 'Nhóm học toán', maMonHoc: 1 }); 
 
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Tên nhóm không được để trống.');
@@ -39,7 +39,7 @@ describe('Groups API', () => {
                 return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             }
             if (query.includes('SELECT MaMonHoc FROM MONHOC')) {
-                return Promise.resolve([[{ MaMonHoc: 1 }]]); // Môn học hợp lệ
+                return Promise.resolve([[{ MaMonHoc: 1 }]]); 
             }
             if (query.includes('INSERT INTO NHOM')) {
                 return Promise.resolve([{ insertId: 10 }]);

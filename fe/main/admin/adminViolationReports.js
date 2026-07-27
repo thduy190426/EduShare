@@ -1,7 +1,9 @@
 import { API_URL } from '../shared/config.js';
-import { getAssetUrl, getToken, showToast } from '../shared/utils.js';
+import { getAssetUrl, getToken, showToast, renderPagination } from '../shared/utils.js';
 
 const token = getToken();
+let currentPage = 1;
+const limit = 10;
 
 async function readErrorMessage(res, fallback) {
     const contentType = res.headers.get('content-type') || '';
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchReports() {
     try {
-        const res = await fetch(`${API_URL}/admin/reports`, {
+        const res = await fetch(`${API_URL}/admin/reports?page=${currentPage}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -36,7 +38,14 @@ async function fetchReports() {
         }
 
         const data = await res.json();
-        renderReports(data.reports);
+        renderReports(data.data || []);
+        
+        if (data.pagination) {
+            renderPagination('report-pagination', data.pagination.totalPages, currentPage, (page) => {
+                currentPage = page;
+                fetchReports();
+            });
+        }
     } catch (err) {
         console.error(err);
     }
@@ -51,7 +60,7 @@ function renderReports(reports) {
         return;
     }
 
-    reports.forEach(report => {
+    reports.forEach((report, index) => {
         const el = document.createElement('div');
         el.className = 'report-card';
         
@@ -91,7 +100,7 @@ function renderReports(reports) {
         el.innerHTML = `
           <div class="report-header">
             <div>
-              <span class="report-reason-badge">Báo cáo tài liệu</span>
+              <span class="report-reason-badge">STT: ${index + 1} | Báo cáo tài liệu</span>
               <div class="report-target">
                 <span class="report-target-icon"><i class="fa-solid fa-file-pdf"></i></span>
                 ${report.TenTL}
