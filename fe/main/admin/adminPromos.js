@@ -15,18 +15,18 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchPromos() {
     const tableBody = document.getElementById('promos-table-body');
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Đang tải...</td></tr>';
-    
+
     try {
         const token = getToken();
         const res = await fetch(`${API_URL}/admin/promos?page=${currentPage}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
             const data = await res.json();
             promos = data.data || [];
             renderPromos();
-            
+
             if (data.pagination) {
                 renderPagination('promo-pagination', data.pagination.totalPages, currentPage, (page) => {
                     currentPage = page;
@@ -48,7 +48,7 @@ function renderPromos() {
         tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Không có mã ưu đãi nào</td></tr>';
         return;
     }
-    
+
     tableBody.innerHTML = promos.map((promo, index) => {
         return `
             <tr>
@@ -76,15 +76,15 @@ function renderPromos() {
             </tr>
         `;
     }).join('');
-    
+
     document.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', (e) => openEditModal(e.currentTarget.dataset.id));
     });
-    
+
     document.querySelectorAll('.btn-toggle').forEach(btn => {
         btn.addEventListener('click', (e) => togglePromo(e.currentTarget.dataset.id));
     });
-    
+
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => deletePromo(e.currentTarget.dataset.id));
     });
@@ -100,13 +100,13 @@ function setupCreateModal() {
     const inputDiscount = document.getElementById('custom-promo-discount');
     const inputDesc = document.getElementById('custom-promo-desc');
     const modalTitle = document.getElementById('promo-modal-title');
-    
+
     if (!btnShow || !modal) return;
 
     window.openEditModal = (id) => {
         const promo = promos.find(p => p.MaPromo == id);
         if (!promo) return;
-        
+
         currentEditingId = id;
         originalPromoData = {
             Code: promo.Code,
@@ -116,10 +116,10 @@ function setupCreateModal() {
         inputCode.value = promo.Code;
         inputDiscount.value = promo.DiscountPercent;
         inputDesc.value = promo.Description || '';
-        
+
         modalTitle.innerHTML = '<i class="fa-solid fa-pen"></i> Chỉnh sửa mã ưu đãi';
         btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Lưu thay đổi';
-        
+
         validateForm();
         modal.classList.add('show');
     };
@@ -129,24 +129,21 @@ function setupCreateModal() {
     }
 
     function validateForm() {
-        // Auto convert code to uppercase
         inputCode.value = inputCode.value.toUpperCase();
-        
+
         const code = inputCode.value.trim();
         const discount = parseInt(inputDiscount.value, 10);
         const description = inputDesc.value.trim();
-        
-        // Validate: code is only A-Z, 0-9, and underscore. Not empty.
+
         const isValidCode = code.length > 0 && /^[A-Z0-9_]+$/.test(code);
-        
-        // Validate: discount between 1 and 100
+
         const isValidDiscount = !isNaN(discount) && discount >= 1 && discount <= 100;
 
         let isChanged = true;
         if (currentEditingId && originalPromoData) {
-            isChanged = (code !== originalPromoData.Code) || 
-                        (discount !== originalPromoData.DiscountPercent) || 
-                        (description !== originalPromoData.Description);
+            isChanged = (code !== originalPromoData.Code) ||
+                (discount !== originalPromoData.DiscountPercent) ||
+                (description !== originalPromoData.Description);
         }
 
         btnSubmit.disabled = !(isValidCode && isValidDiscount && isChanged);
@@ -162,11 +159,11 @@ function setupCreateModal() {
         inputCode.value = '';
         inputDiscount.value = '20';
         inputDesc.value = '';
-        
+
         modalTitle.innerHTML = '<i class="fa-solid fa-gift"></i> Tạo mã ưu đãi mới';
         btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Tạo mã';
-        
-        validateForm(); // Initial validate
+
+        validateForm();
         modal.classList.add('show');
         setTimeout(() => inputCode.focus(), 100);
     });
@@ -174,7 +171,6 @@ function setupCreateModal() {
     btnCloseX.addEventListener('click', closeModal);
     btnCancel.addEventListener('click', closeModal);
 
-    // Close when clicking outside
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             closeModal();
@@ -199,7 +195,7 @@ function setupCreateModal() {
             const token = getToken();
             let url = `${API_URL}/admin/promos`;
             let method = 'POST';
-            
+
             if (currentEditingId) {
                 url = `${API_URL}/admin/promos/${currentEditingId}`;
                 method = 'PUT';
@@ -213,7 +209,7 @@ function setupCreateModal() {
                 },
                 body: JSON.stringify({ Code: code, DiscountPercent: parseInt(discount), Description: description })
             });
-            
+
             const data = await res.json();
             if (res.ok) {
                 showToast('success', currentEditingId ? 'Cập nhật thành công' : 'Tạo mã thành công');
@@ -238,7 +234,7 @@ async function togglePromo(id) {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
             showToast('success', 'Đã cập nhật trạng thái');
             fetchPromos();
@@ -251,15 +247,25 @@ async function togglePromo(id) {
 }
 
 async function deletePromo(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa mã này?')) return;
-    
+    const confirmResult = await Swal.fire({
+        title: 'Xóa vĩnh viễn?',
+        html: 'Bạn có chắc chắn muốn xóa mã ưu đãi này không?<br><br><span style="color:var(--danger)">Cảnh báo: Hành động này không thể hoàn tác!</span>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xóa',
+        confirmButtonColor: '#EF4444',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
     try {
         const token = getToken();
         const res = await fetch(`${API_URL}/admin/promos/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
             showToast('success', 'Đã xóa mã');
             fetchPromos();

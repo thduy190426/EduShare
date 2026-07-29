@@ -4,6 +4,7 @@ import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getA
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
     fetchUserProfileForHero();
+    fetchFollowingFeed();
     fetchRecommendedDocuments();
     fetchMySubjects();
     fetchTrendingDocuments();
@@ -297,7 +298,7 @@ function loadUserProfileNav() {
         if (avatarEl && payload.HoTen) {
             const savedAvatar = getAvatar();
             if (savedAvatar && savedAvatar !== 'null') {
-                avatarEl.innerHTML = `<img src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                avatarEl.innerHTML = `<img loading="lazy" src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
                 avatarEl.style.background = 'transparent';
                 avatarEl.style.color = 'transparent';
             } else {
@@ -471,7 +472,6 @@ async function fetchRecommendedDocuments() {
     try {
         const token = getToken();
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        // If not logged in, it will fall back or we can just skip or handle 401
         if(!token) {
             document.getElementById('recommendedDocGrid').parentElement.style.display = 'none';
             document.getElementById('recommendedDocGrid').style.display = 'none';
@@ -491,6 +491,31 @@ async function fetchRecommendedDocuments() {
     } catch (error) {
         console.error('Lỗi tải tài liệu gợi ý:', error);
         document.getElementById('recommendedDocGrid').innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải dữ liệu gợi ý.</p>';
+    }
+}
+
+async function fetchFollowingFeed() {
+    try {
+        const token = getToken();
+        if(!token) return;
+
+        const response = await fetch(`${API_URL}/documents/feed`, { 
+            headers: { 'Authorization': `Bearer ${token}` } 
+        });
+        
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const header = document.getElementById('feedSectionHeader');
+        const grid = document.getElementById('feedDocGrid');
+        
+        if (data.documents && data.documents.length > 0) {
+            if (header) header.style.display = 'flex';
+            if (grid) grid.style.display = 'grid';
+            renderHomeDocuments(data.documents, 'feedDocGrid');
+        }
+    } catch (error) {
+        console.error('Lỗi tải bảng tin:', error);
     }
 }
 
@@ -520,7 +545,7 @@ async function fetchTopContributors() {
             const initial = escapeHTML(user.HoTen).trim().split(' ').pop().charAt(0).toUpperCase();
             if (user.AvatarURL && user.AvatarURL !== 'null') {
                 const avatarUrl = getAssetUrl(user.AvatarURL);
-                avatarHtml = `<img src="${avatarUrl}" alt="${escapeHTML(user.HoTen)}" class="lb-avatar" onerror="this.outerHTML='<div class=\\'lb-avatar text-avatar\\'>${initial}</div>'">`;
+                avatarHtml = `<img loading="lazy" src="${avatarUrl}" alt="${escapeHTML(user.HoTen)}" class="lb-avatar" onerror="this.outerHTML='<div class=\\'lb-avatar text-avatar\\'>${initial}</div>'">`;
             } else {
                 avatarHtml = `<div class="lb-avatar text-avatar">${initial}</div>`;
             }
@@ -614,7 +639,7 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
         const userInitial = doc.TenNguoiDang ? doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         let avatarHtml = `<div class="avatar-sm">${userInitial}</div>`;
         if (doc.AvatarURL) {
-            avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
+            avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img loading="lazy" src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
         }
 
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
@@ -627,7 +652,7 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
 
         if (previewTarget) {
             const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
+            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
             thumbClass = '';
         }
 

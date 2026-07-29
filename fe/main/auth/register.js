@@ -215,3 +215,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+window.handleGoogleLogin = async function(response) {
+    try {
+        const res = await fetch('http://localhost:3000/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userId', data.user.MaND);
+            localStorage.setItem('userRole', data.user.VaiTro);
+            localStorage.setItem('userAvatar', data.user.AvatarURL || '');
+            
+            Swal.fire({
+                title: 'Đăng nhập thành công',
+                text: 'Đang chuyển hướng...',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                if (data.user.VaiTro === 'Admin') {
+                    window.location.href = '../admin/adminDashboard.html';
+                } else {
+                    window.location.href = '../user/userHome.html';
+                }
+            });
+        } else {
+            Swal.fire('Lỗi', data.message || 'Đăng nhập Google thất bại', 'error');
+        }
+    } catch (error) {
+        console.error('Lỗi đăng nhập Google:', error);
+        Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
+    }
+};

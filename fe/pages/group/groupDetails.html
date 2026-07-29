@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../../css/document/searchResults.css">
   <link rel="stylesheet" href="../../css/group/groupDetails.css">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
   <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
@@ -34,8 +35,10 @@
     <aside id="app-sidebar" class="sidebar"></aside>
     <main class="content-area">
       <div class="container">
-        <div class="group-header-section">
-      <div class="group-header-info" id="group-header-info"></div>
+        <div class="group-header-section" id="group-header-section" style="position: relative;">
+          <input type="file" id="cover-upload-input" accept="image/*" style="display: none;">
+          <button id="btn-change-cover" style="display: none; position: absolute; right: 20px; top: 20px; background: rgba(255,255,255,0.9); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 500; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"><i class="fa-solid fa-camera" style="margin-right: 6px;"></i> Đổi ảnh bìa</button>
+          <div class="group-header-info" id="group-header-info"></div>
       <div class="group-actions" id="group-actions-container">
         <div class="dropdown" id="group-dropdown-menu">
           <button class="btn-outline-primary dropdown-toggle" id="btn-group-menu" aria-haspopup="true" aria-expanded="false" style="padding: 10px 14px;">
@@ -43,16 +46,16 @@
           </button>
           <div class="dropdown-menu" id="group-menu-content">
             <button class="dropdown-item" id="btn-edit-group" style="display:none;">
-              <i class="fa-solid fa-pen" style="width: 16px; text-align: center;"></i> Chỉnh sửa nhóm
+              <i class="fa-solid fa-pen" style="width: 20px; text-align: center; margin-right: 4px;"></i> Chỉnh sửa nhóm
             </button>
             <button class="dropdown-item" id="btn-view-requests" style="display:none;">
-              <i class="fa-solid fa-user-clock" style="width: 16px; text-align: center;"></i> Yêu cầu tham gia
+              <i class="fa-solid fa-user-clock" style="width: 20px; text-align: center; margin-right: 4px;"></i> Yêu cầu tham gia
             </button>
             <button class="dropdown-item text-danger" id="btn-delete-group" style="display:none;">
-              <i class="fa-solid fa-trash" style="width: 16px; text-align: center;"></i> Giải tán nhóm
+              <i class="fa-solid fa-trash" style="width: 20px; text-align: center; margin-right: 4px;"></i> Giải tán nhóm
             </button>
             <button class="dropdown-item text-danger" id="btn-leave-group">
-              <i class="fa-solid fa-arrow-right-from-bracket" style="width: 16px; text-align: center;"></i> Rời nhóm
+              <i class="fa-solid fa-arrow-right-from-bracket" style="width: 20px; text-align: center; margin-right: 4px;"></i> Rời nhóm
             </button>
           </div>
         </div>
@@ -63,31 +66,49 @@
     </div>
 
     <div class="main-col">
-      <div class="tabs-container">
-        <div class="tab-item active"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu nhóm</div>
+      <div class="tabs-container" style="position: relative;">
+        <div class="tab-item active" data-target="docs-tab"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu nhóm</div>
+        <div class="tab-item" data-target="discussions-tab"><i class="fa-solid fa-comments" style="margin-right: 6px;"></i> Thảo luận</div>
+        <div class="tab-indicator" id="tab-indicator"></div>
       </div>
 
-      <div class="doc-actions-bar">
-        <div style="font-weight: 500; color: var(--text-secondary);" id="doc-count">0 tài liệu được chia sẻ</div>
-        <button class="btn-primary" id="btn-share-doc">
-          <span><i class="fa-solid fa-plus"></i></span> Chia sẻ tài liệu vào nhóm
-        </button>
+      <div id="docs-tab" class="tab-content active">
+        <div class="doc-actions-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="font-weight: 500; color: var(--text-secondary);" id="doc-count">0 tài liệu được chia sẻ</div>
+          <div style="display: flex; gap: 12px; align-items: center; flex: 1; justify-content: flex-end;">
+            <div style="position: relative; max-width: 300px; width: 100%;">
+              <i class="fa-solid fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
+              <input type="text" id="search-group-doc" class="form-control" placeholder="Tìm kiếm tài liệu..." style="padding-left: 36px; width: 100%;">
+            </div>
+            <button class="btn-primary" id="btn-share-doc" style="white-space: nowrap;">
+              <span><i class="fa-solid fa-plus"></i></span> Chia sẻ tài liệu
+            </button>
+          </div>
+        </div>
+        <div class="doc-grid" id="doc-grid"></div>
+        <div id="docs-loading" style="text-align: center; padding: 20px; display: none;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thêm...</div>
       </div>
 
-      <div class="doc-grid" id="doc-grid"></div>
+      <div id="discussions-tab" class="tab-content" style="display: none;">
+        <div class="create-post-card" style="background: var(--white); padding: 20px; border-radius: var(--radius-card); border: 1px solid var(--border); margin-bottom: 20px;">
+          <div style="display: flex; gap: 12px;">
+            <div class="avatar" id="current-user-avatar" style="width: 40px; height: 40px; font-size: 16px;">?</div>
+            <div style="flex: 1;">
+              <textarea id="new-post-content" class="form-control" rows="3" placeholder="Bạn muốn thảo luận gì trong nhóm này?" style="width: 100%; border: none; resize: none; background: #F3F4F6;"></textarea>
+              <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                <button class="btn-primary" id="btn-create-post" style="padding: 8px 16px;">Đăng bài</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="posts-list" style="display: flex; flex-direction: column; gap: 16px;">
+          <!-- Posts render here -->
+        </div>
+        <div id="posts-loading" style="text-align: center; padding: 20px; display: none;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>
+      </div>
     </div>
 
-    <div class="group-sidebar">
-      <div class="sidebar-card">
-        <button class="sidebar-title member-toggle" id="member-list-toggle" type="button" aria-expanded="false">
-          <span style="display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-users"></i> Danh sách thành viên <span id="member-count"></span></span>
-          <i class="fa-solid fa-chevron-down"></i>
-        </button>
-        <div class="member-panel" id="member-panel">
-          <div class="member-list" id="member-list"></div>
-        </div>
-      </div>
-
+    <div class="group-sidebar" style="position: sticky; top: 100px; height: calc(100vh - 120px); display: flex; flex-direction: column; gap: 24px;">
       <div class="sidebar-card">
         <h3 class="sidebar-title" style="justify-content: flex-start; gap: 8px;"><i class="fa-solid fa-circle-info"></i> Giới thiệu nhóm</h3>
         <p id="group-desc" style="font-size:14px; color:var(--text-secondary); line-height:1.6; margin-bottom: 16px;">
@@ -96,6 +117,24 @@
         <div style="font-size:13px; color:var(--text-secondary); display:flex; flex-direction:column; gap:8px;">
           <div id="group-date"><i class="fa-solid fa-calendar" style="margin-right: 6px;"></i> Ngày tạo: </div>
           <div><i class="fa-solid fa-earth-americas" style="margin-right: 6px;"></i> Loại nhóm: Công khai</div>
+        </div>
+      </div>
+
+      <div class="sidebar-card" style="padding: 16px;">
+        <button type="button" class="sidebar-title member-toggle" id="btn-toggle-members" aria-expanded="false" style="margin-bottom: 0;">
+          <span style="display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-user-group"></i> Thành viên <span id="member-count" style="font-size: 14px; color: var(--text-secondary); font-weight: 500;"></span></span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div class="member-panel" id="member-panel">
+          <div class="member-panel-inner" style="padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; max-height: 500px; overflow: hidden;">
+            <div style="padding-bottom: 12px;">
+              <div style="position: relative;">
+                <i class="fa-solid fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 13px;"></i>
+                <input type="text" id="search-member" class="form-control" placeholder="Tìm thành viên..." style="width: 100%; padding: 6px 12px 6px 30px; font-size: 13px; border-radius: 6px; background: #F8FAFC;">
+              </div>
+            </div>
+            <div class="member-list" id="member-list" style="overflow-y: auto; padding-right: 4px; padding-bottom: 8px; flex: 1;"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -122,6 +161,10 @@
       <div class="form-group">
         <label class="form-label"><i class="fa-solid fa-align-left" style="margin-right: 6px;"></i> Mô tả</label>
         <textarea id="edit-group-desc" class="form-control" rows="4" placeholder="Nhập mô tả về nhóm..."></textarea>
+      </div>
+      <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="edit-group-is-private" style="width: 16px; height: 16px; cursor: pointer;">
+        <label for="edit-group-is-private" class="form-label" style="margin-bottom: 0; cursor: pointer;"><i class="fa-solid fa-lock" style="margin-right: 6px;"></i> Nhóm riêng tư</label>
       </div>
       <div class="modal-footer">
         <button type="button" id="btn-cancel-edit-group" class="btn-outline-primary" style="padding:8px 16px;"><i class="fa-solid fa-xmark"></i> Hủy</button>
@@ -273,7 +316,25 @@
     </div>
   </div>
 
+  <div id="crop-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 600px; text-align: center;">
+      <h3 class="modal-title" style="margin-bottom: 20px;">Cắt ảnh bìa</h3>
+      <div style="width: 100%; max-height: 400px; overflow: hidden; margin-bottom: 20px;">
+        <img id="image-to-crop" style="max-width: 100%; display: block;">
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button type="button" id="btn-cancel-crop" class="btn-secondary" style="margin-right: 12px; padding: 8px 16px;">
+          <i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy
+        </button>
+        <button type="button" id="btn-save-crop" class="btn-primary">
+          <i class="fa-solid fa-crop-simple" style="margin-right: 6px;"></i> Cắt & Lưu
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   <script type="module" src="../../main/group/groups.js"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
 </body>

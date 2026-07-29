@@ -221,7 +221,6 @@ function renderDocuments(docs, emptyMessage) {
         else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-chart-column'; thumbClass = 'thumb-pptx'; }
         else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-pen-to-square'; thumbClass = 'thumb-docx'; }
 
-        // Use the author from the document row if available (for downloads and ratings)
         let authorName = doc.NguoiDang || document.getElementById('header-name').textContent;
         let authorInitial = authorName.trim().split(' ').pop().charAt(0).toUpperCase();
         let avatarHtml = `<div class="avatar-sm">${authorInitial}</div>`;
@@ -245,7 +244,7 @@ function renderDocuments(docs, emptyMessage) {
 
         if (previewTarget) {
             const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
+            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
             thumbClass = '';
         }
 

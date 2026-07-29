@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -6,12 +6,18 @@
   <title>Đăng ký — EduShare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/auth/register.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
-<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+  <script>
+    if (localStorage.getItem('sidebar-collapsed') === 'true') {
+      document.documentElement.classList.add('sidebar-collapsed');
+    }
+  </script>
+</head>
 <body>
   <div class="auth-container">
     
+    <!-- Left Side -->
     <div class="auth-left">
       <a href="../guest/guestHome.html" class="auth-brand">
         <i class="fa-solid fa-book"></i> EduShare
@@ -40,7 +46,7 @@
       </div>
     </div>
 
-    
+    <!-- Right Side -->
     <div class="auth-right">
       <div class="auth-form-wrapper">
         <div class="auth-header">
@@ -49,8 +55,6 @@
         </div>
 
         <form id="registerForm">
-          
-
           <div class="form-group">
             <label class="form-label"><i class="fa-solid fa-user"></i> Họ và tên:</label>
             <div class="input-wrapper">
@@ -70,14 +74,18 @@
               <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu:</label>
               <div class="input-wrapper">
                 <input type="password" id="registerPassword" class="form-control" placeholder="Tạo mật khẩu" autocomplete="new-password" required>
-                <span class="toggle-password" id="toggleRegisterPassword"><i class="fa-solid fa-eye" id="toggleRegisterIcon"></i></span>
+                <span class="toggle-password" id="toggleRegisterPassword">
+                  <i class="fa-solid fa-eye" id="toggleRegisterIcon"></i>
+                </span>
               </div>
             </div>
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-lock"></i> Xác nhận mật khẩu:</label>
               <div class="input-wrapper">
                 <input type="password" id="registerConfirmPassword" class="form-control" placeholder="Nhập lại mật khẩu" autocomplete="new-password" required>
-                <span class="toggle-password" id="toggleConfirmPassword"><i class="fa-solid fa-eye" id="toggleConfirmIcon"></i></span>
+                <span class="toggle-password" id="toggleConfirmPassword">
+                  <i class="fa-solid fa-eye" id="toggleConfirmIcon"></i>
+                </span>
               </div>
             </div>
           </div>
@@ -109,12 +117,41 @@
           </div>
 
           <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9" data-callback="enableSubmitBtn" data-expired-callback="disableSubmitBtn"></div>
+            <div class="g-recaptcha" 
+                 data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9" 
+                 data-callback="enableSubmitBtn" 
+                 data-expired-callback="disableSubmitBtn">
+            </div>
           </div>
 
-          <button type="submit" id="submitBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">Đăng ký</button>
+          <button type="submit" id="submitBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">
+            Đăng ký
+          </button>
           <div id="registerMessage" style="margin-top: 10px; font-size: 14px; text-align: center;"></div>
 
+          <div class="google-auth-separator" style="display: flex; align-items: center; text-align: center; margin: 20px 0;">
+            <hr style="flex: 1; border: none; border-top: 1px solid #e0e0e0;">
+            <span style="padding: 0 10px; color: #666; font-size: 14px;">Hoặc đăng nhập bằng</span>
+            <hr style="flex: 1; border: none; border-top: 1px solid #e0e0e0;">
+          </div>
+          
+          <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+            <div id="g_id_onload"
+                 data-client_id="891380242693-mebda946u7bpcbbnjd8ro50lsaqp6unu.apps.googleusercontent.com"
+                 data-context="signin"
+                 data-ux_mode="popup"
+                 data-callback="handleGoogleLogin"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-shape="rectangular"
+                 data-theme="outline"
+                 data-text="signin_with"
+                 data-size="large"
+                 data-logo_alignment="left">
+            </div>
+          </div>
         </form>
 
         <div class="auth-footer">
@@ -123,18 +160,21 @@
       </div>
     </div>
   </div>
+
+  <!-- Scripts -->
   <script type="module" src="../../main/auth/register.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
-<script>
-  function enableSubmitBtn() {
-    window.isCaptchaSolved = true;
-    if (window.validateRegisterForm) window.validateRegisterForm();
-  }
-  function disableSubmitBtn() {
-    window.isCaptchaSolved = false;
-    if (window.validateRegisterForm) window.validateRegisterForm();
-  }
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <script>
+    function enableSubmitBtn() {
+      window.isCaptchaSolved = true;
+      if (window.validateRegisterForm) window.validateRegisterForm();
+    }
+    function disableSubmitBtn() {
+      window.isCaptchaSolved = false;
+      if (window.validateRegisterForm) window.validateRegisterForm();
+    }
+  </script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
 </html>

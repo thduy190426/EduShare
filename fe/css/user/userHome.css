@@ -321,7 +321,6 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
 
-/* Leaderboard Widget */
 .leaderboard-widget {
   background: linear-gradient(135deg, #1e3a8a, #3b82f6);
   border-radius: 16px;
@@ -394,9 +393,9 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
   justify-content: center;
 }
 
-.rank-1 { color: #fbbf24; } /* Gold */
-.rank-2 { color: #9ca3af; } /* Silver */
-.rank-3 { color: #b45309; } /* Bronze */
+.rank-1 { color: #fbbf24; }
+.rank-2 { color: #9ca3af; }
+.rank-3 { color: #b45309; }
 
 .lb-avatar {
   width: 40px;

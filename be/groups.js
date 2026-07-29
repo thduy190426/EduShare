@@ -19,6 +19,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const [rows] = await pool.execute(`
             SELECT N.*, ND.HoTen AS TenNguoiQuanTri, MH.TenMonHoc,
                    (SELECT COUNT(*) FROM THANHVIEN_NHOM WHERE MaNhom = N.MaNhom) AS SoLuongThanhVien,
+                   N.IsPrivate,
                    EXISTS(SELECT 1 FROM THANHVIEN_NHOM TV WHERE TV.MaNhom = N.MaNhom AND TV.MaND = ?) AS IsMember
             FROM NHOM N
             JOIN NGUOIDUNG ND ON N.MaND_QuanTri = ND.MaND
@@ -281,6 +282,19 @@ router.get('/:maNhom/members', authMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
+
+        const [groupCheck] = await pool.execute('SELECT MaND_QuanTri, IsPrivate FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
+
+        const isGroupAdmin = groupCheck[0].MaND_QuanTri === req.user.MaND;
+
+        if (req.user.VaiTro !== 'Admin' && !isGroupAdmin) {
+            const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
+            if (memberCheck.length === 0 && groupCheck[0].IsPrivate) {
+                return res.status(403).json({ message: 'Bạn không có quyền xem thành viên nhóm này.' });
+            }
+        }
+
         const [rows] = await pool.execute(`
             SELECT TV.VaiTroTrongNhom, TV.NgayThamGia, ND.MaND, ND.HoTen, ND.Email, ND.AvatarURL
             FROM THANHVIEN_NHOM TV
@@ -401,18 +415,42 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-        const [groupCheck] = await pool.execute('SELECT MaND_QuanTri FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        const [groupCheck] = await pool.execute('SELECT MaND_QuanTri, IsPrivate FROM NHOM WHERE MaNhom = ?', [maNhom]);
         if (groupCheck.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
         }
         const isGroupAdmin = groupCheck[0].MaND_QuanTri === req.user.MaND;
+        const isPrivate = groupCheck[0].IsPrivate;
 
         if (req.user.VaiTro !== 'Admin' && !isGroupAdmin) {
             const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
-            if (memberCheck.length === 0) {
+            if (memberCheck.length === 0 && isPrivate) {
                 return res.status(403).json({ message: 'Bạn không có quyền xem tài liệu của nhóm này.' });
             }
         }
+
+        const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 50);
+        const offset = (page - 1) * limit;
+        const searchQuery = req.query.query ? req.query.query.trim().toLowerCase() : '';
+
+        let countQuery = `
+            SELECT COUNT(*) AS totalCount
+            FROM TAILIEU_NHOM TN
+            JOIN TAILIEU T ON TN.MaTL = T.MaTL
+            WHERE TN.MaNhom = ? AND T.TrangThaiHienThi = 'Hien'
+        `;
+        let countParams = [maNhom];
+
+        if (!isGroupAdmin) {
+            countQuery += " AND TN.TrangThai = 'Hien'";
+        }
+        if (searchQuery) {
+            countQuery += " AND (LOWER(T.TenTL) LIKE ? OR LOWER(T.MoTa) LIKE ?)";
+            countParams.push(`%${searchQuery}%`, `%${searchQuery}%`);
+        }
+
+        const [[{ totalCount }]] = await pool.execute(countQuery, countParams);
 
         let query = `
             SELECT T.*, TN.NgayChiaSe, TN.TrangThai AS TrangThaiNhom, N.HoTen AS TenNguoiDang, N.AvatarURL, MH.TenMonHoc,
@@ -429,12 +467,25 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
         if (!isGroupAdmin) {
             query += " AND TN.TrangThai = 'Hien'";
         }
+        
+        if (searchQuery) {
+            query += " AND (LOWER(T.TenTL) LIKE ? OR LOWER(T.MoTa) LIKE ?)";
+            params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+        }
 
-        query += " ORDER BY TN.NgayChiaSe DESC";
+        query += ` ORDER BY TN.NgayChiaSe DESC LIMIT ${limit} OFFSET ${offset}`;
 
         const [rows] = await pool.execute(query, params);
 
-        res.status(200).json({ documents: rows });
+        res.status(200).json({ 
+            documents: rows,
+            pagination: {
+                totalCount,
+                totalPages: Math.ceil(totalCount / limit),
+                currentPage: page,
+                limit
+            }
+        });
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom/documents:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -535,7 +586,7 @@ router.get('/:maNhom', authMiddleware, async (req, res) => {
 router.put('/:maNhom', authMiddleware, async (req, res) => {
     const maNhom = req.params.maNhom;
     const maND = req.user.MaND;
-    const { tenNhom, moTa, maMonHoc } = req.body;
+    const { tenNhom, moTa, maMonHoc, anhBia, isPrivate } = req.body;
 
     if (!tenNhom) {
         return res.status(400).json({ message: 'Tên nhóm không được để trống.' });
@@ -548,7 +599,12 @@ router.put('/:maNhom', authMiddleware, async (req, res) => {
         if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
         if (groupCheck[0].MaND_QuanTri !== maND) return res.status(403).json({ message: 'Bạn không có quyền sửa nhóm này.' });
 
-        await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, maNhom]);
+        const isPrivateVal = isPrivate ? 1 : 0;
+        if (anhBia !== undefined) {
+            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, AnhBia = ?, IsPrivate = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, anhBia || null, isPrivateVal, maNhom]);
+        } else {
+            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, IsPrivate = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, isPrivateVal, maNhom]);
+        }
         res.status(200).json({ message: 'Cập nhật thành công.' });
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom:', error);
@@ -753,6 +809,184 @@ router.put('/:maNhom/members/:targetId/role', authMiddleware, async (req, res) =
         res.status(200).json({ message: 'Cập nhật vai trò thành công.' });
     } catch (error) {
         console.error('Lỗi API PUT /groups/:maNhom/members/:targetId/role:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/:maNhom/posts', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
+    const offset = (page - 1) * limit;
+
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [groupCheck] = await pool.execute('SELECT IsPrivate FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
+        
+        // check member
+        const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
+        if (memberCheck.length === 0 && req.user.VaiTro !== 'Admin' && groupCheck[0].IsPrivate) {
+            return res.status(403).json({ message: 'Bạn không có quyền xem nhóm này.' });
+        }
+
+        const [[{ totalCount }]] = await pool.execute('SELECT COUNT(*) AS totalCount FROM BAIVIET_NHOM WHERE MaNhom = ?', [maNhom]);
+
+        const [rows] = await pool.execute(`
+            SELECT BV.*, N.HoTen, N.AvatarURL,
+                   (SELECT COUNT(*) FROM BINHLUAN_BAIVIET WHERE MaBaiViet = BV.MaBaiViet) AS SoBinhLuan
+            FROM BAIVIET_NHOM BV
+            JOIN NGUOIDUNG N ON BV.MaND = N.MaND
+            WHERE BV.MaNhom = ?
+            ORDER BY BV.DaGhim DESC, BV.NgayDang DESC
+            LIMIT ${limit} OFFSET ${offset}
+        `, [maNhom]);
+
+        res.status(200).json({
+            posts: rows,
+            pagination: {
+                totalCount,
+                totalPages: Math.ceil(totalCount / limit),
+                currentPage: page,
+                limit
+            }
+        });
+    } catch (error) {
+        console.error('Lỗi API GET /groups/:maNhom/posts:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maNhom/posts', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const { noiDung } = req.body;
+    const maND = req.user.MaND;
+
+    if (!noiDung || !noiDung.trim()) return res.status(400).json({ message: 'Nội dung bài viết không được để trống.' });
+
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, maND]);
+        if (memberCheck.length === 0) {
+            return res.status(403).json({ message: 'Bạn không phải là thành viên nhóm này.' });
+        }
+
+        const [result] = await pool.execute(
+            'INSERT INTO BAIVIET_NHOM (MaND, MaNhom, NoiDung) VALUES (?, ?, ?)',
+            [maND, maNhom, noiDung.trim()]
+        );
+
+        res.status(201).json({ message: 'Đăng bài thành công.', maBaiViet: result.insertId });
+    } catch (error) {
+        console.error('Lỗi API POST /groups/:maNhom/posts:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/posts/:postId/pin', authMiddleware, async (req, res) => {
+    const { maNhom, postId } = req.params;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        // Check if user is admin
+        const [adminCheck] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (adminCheck.length === 0 || (adminCheck[0].VaiTroTrongNhom !== 'QuanTri' && adminCheck[0].VaiTroTrongNhom !== 'PhoNhom')) {
+            return res.status(403).json({ message: 'Chỉ quản trị viên mới có quyền ghim bài viết.' });
+        }
+
+        // Get current pin state
+        const [postCheck] = await pool.execute('SELECT DaGhim FROM BAIVIET_NHOM WHERE MaBaiViet = ? AND MaNhom = ?', [postId, maNhom]);
+        if (postCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy bài viết.' });
+
+        const newPinState = postCheck[0].DaGhim ? false : true;
+        await pool.execute('UPDATE BAIVIET_NHOM SET DaGhim = ? WHERE MaBaiViet = ?', [newPinState, postId]);
+
+        res.status(200).json({ message: newPinState ? 'Đã ghim bài viết.' : 'Đã bỏ ghim bài viết.', DaGhim: newPinState });
+    } catch (error) {
+        console.error('Lỗi API PUT /groups/:maNhom/posts/:postId/pin:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/:maNhom/posts/:postId', authMiddleware, async (req, res) => {
+    const { maNhom, postId } = req.params;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [postCheck] = await pool.execute('SELECT MaND FROM BAIVIET_NHOM WHERE MaBaiViet = ? AND MaNhom = ?', [postId, maNhom]);
+        if (postCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy bài viết.' });
+        
+        const isAuthor = postCheck[0].MaND === maND;
+        let isGroupAdmin = false;
+        
+        if (!isAuthor) {
+            const [adminCheck] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+            if (adminCheck.length > 0 && (adminCheck[0].VaiTroTrongNhom === 'QuanTri' || adminCheck[0].VaiTroTrongNhom === 'PhoNhom')) {
+                isGroupAdmin = true;
+            }
+        }
+        
+        if (!isAuthor && !isGroupAdmin && req.user.VaiTro !== 'Admin') {
+            return res.status(403).json({ message: 'Bạn không có quyền xóa bài viết này.' });
+        }
+
+        await pool.execute('DELETE FROM BAIVIET_NHOM WHERE MaBaiViet = ?', [postId]);
+
+        res.status(200).json({ message: 'Xóa bài viết thành công.' });
+    } catch (error) {
+        console.error('Lỗi API DELETE /groups/:maNhom/posts/:postId:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) => {
+    const { maNhom, postId } = req.params;
+
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT BL.*, N.HoTen, N.AvatarURL
+            FROM BINHLUAN_BAIVIET BL
+            JOIN NGUOIDUNG N ON BL.MaND = N.MaND
+            WHERE BL.MaBaiViet = ?
+            ORDER BY BL.NgayBinhLuan ASC
+        `, [postId]);
+
+        res.status(200).json({ comments: rows });
+    } catch (error) {
+        console.error('Lỗi API GET /groups/:maNhom/posts/:postId/comments:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) => {
+    const { maNhom, postId } = req.params;
+    const { noiDung } = req.body;
+    const maND = req.user.MaND;
+
+    if (!noiDung || !noiDung.trim()) return res.status(400).json({ message: 'Nội dung bình luận không được để trống.' });
+
+    try {
+        const pool = req.app.locals.pool;
+        const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, maND]);
+        if (memberCheck.length === 0) {
+            return res.status(403).json({ message: 'Bạn không phải là thành viên nhóm này.' });
+        }
+
+        const [result] = await pool.execute(
+            'INSERT INTO BINHLUAN_BAIVIET (MaBaiViet, MaND, NoiDung) VALUES (?, ?, ?)',
+            [postId, maND, noiDung.trim()]
+        );
+
+        res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId });
+    } catch (error) {
+        console.error('Lỗi API POST /groups/:maNhom/posts/:postId/comments:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

@@ -5,7 +5,7 @@
 .sidebar-animated .navbar .logo { transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
 .menu-group { margin-bottom: 24px; }
 .menu-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-left: 12px; }
-.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-btn); color: var(--text-primary); font-weight: 500; font-size: 15px; transition: background-color 0.18s ease, color 0.18s ease; margin-bottom: 4px; position: relative; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-btn); color: var(--text-primary); font-weight: 500; font-size: 15px; transition: background-color 0.18s ease, color 0.18s ease; margin-bottom: 4px; position: relative; cursor: pointer; }
 .menu-item:hover { background: #F1F5F9; color: var(--primary); }
 .menu-item.active { background: var(--primary-light); color: var(--primary); }
 .menu-item .menu-icon { font-size: 20px; width: 24px; text-align: center; }
@@ -81,7 +81,6 @@
 
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
 
-/* Pagination Styles */
 .pagination-container { display: flex; justify-content: center; align-items: center; margin-top: 20px; margin-bottom: 20px; gap: 8px; }
 .page-btn { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; color: #475569; cursor: pointer; transition: all 0.2s; font-size: 14px; font-weight: 500; }
 .page-btn:hover:not(:disabled) { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }

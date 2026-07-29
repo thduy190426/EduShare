@@ -100,6 +100,10 @@ async function fetchUsers() {
                 fetchUsers();
             });
         }
+        
+        const selectAll = document.getElementById('selectAllUsers');
+        if (selectAll) selectAll.checked = false;
+        updateSelectedCount();
     } catch (err) {
         console.error(err);
     }
@@ -110,7 +114,7 @@ function renderUsers(users) {
     tbody.innerHTML = '';
 
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không tìm thấy người dùng nào.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Không tìm thấy người dùng nào.</td></tr>';
         return;
     }
 
@@ -156,6 +160,7 @@ function renderUsers(users) {
         }
 
         tr.innerHTML = `
+            <td style="text-align: center;"><input type="checkbox" class="user-checkbox" value="${user.MaND}" style="cursor: pointer; transform: scale(1.2);" onchange="updateSelectedCount()"></td>
             <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td>
                 <div class="user-cell">
@@ -248,17 +253,103 @@ window.toggleEmail = (btn) => {
     const cell = btn.closest('.email-cell');
     const textSpan = cell.querySelector('.email-text');
     const icon = btn.querySelector('i');
-    
-    if (icon.classList.contains('fa-eye')) {
-        textSpan.textContent = cell.getAttribute('data-full');
+    const full = cell.getAttribute('data-full');
+    const masked = cell.getAttribute('data-masked');
+
+    if (textSpan.textContent === masked) {
+        textSpan.textContent = full;
         icon.classList.remove('fa-eye');
         icon.classList.add('fa-eye-slash');
     } else {
-        textSpan.textContent = cell.getAttribute('data-masked');
+        textSpan.textContent = masked;
         icon.classList.remove('fa-eye-slash');
         icon.classList.add('fa-eye');
     }
 };
+
+window.updateSelectedCount = () => {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const selectAllBtn = document.getElementById('selectAllUsers');
+    const bulkContainer = document.getElementById('bulk-actions-container');
+    const countDisplay = document.getElementById('selected-count');
+
+    if (selectAllBtn) {
+        selectAllBtn.checked = checkboxes.length > 0 && checkboxes.length === checkedBoxes.length;
+    }
+    
+    if (countDisplay) {
+        countDisplay.textContent = checkedBoxes.length;
+    }
+    
+    if (bulkContainer) {
+        bulkContainer.style.display = checkedBoxes.length > 0 ? 'flex' : 'none';
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const selectAllBtn = document.getElementById('selectAllUsers');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.user-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            updateSelectedCount();
+        });
+    }
+
+    const btnBulkLock = document.getElementById('btn-bulk-lock');
+    if (btnBulkLock) {
+        btnBulkLock.addEventListener('click', () => handleBulkAction('BiKhoa'));
+    }
+
+    const btnBulkUnlock = document.getElementById('btn-bulk-unlock');
+    if (btnBulkUnlock) {
+        btnBulkUnlock.addEventListener('click', () => handleBulkAction('HoatDong'));
+    }
+});
+
+async function handleBulkAction(newStatus) {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const userIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    if (userIds.length === 0) return;
+
+    const actionText = newStatus === 'BiKhoa' ? 'KHÓA' : 'MỞ KHÓA';
+    const confirmRes = await Swal.fire({
+        title: 'Xác nhận thao tác',
+        text: `Bạn có chắc chắn muốn ${actionText} ${userIds.length} tài khoản đã chọn?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: newStatus === 'BiKhoa' ? '#ef4444' : '#10b981'
+    });
+
+    if (!confirmRes.isConfirmed) return;
+
+    try {
+        const res = await fetch(`${API_URL}/admin/users/bulk-status`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ userIds, trangThai: newStatus })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast('success', data.message);
+            fetchUsers();
+        } else {
+            showToast('error', data.message);
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('error', 'Có lỗi xảy ra khi thực hiện thao tác.');
+    }
+}
 
 window.deleteUser = async (maND, userName) => {
     const confirmDelete = await Swal.fire({

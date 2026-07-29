@@ -4,6 +4,26 @@ import { isValidEmail, saveLoginSession, getTimeBasedGreeting } from '../shared/
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     
+    const lastLoginMethod = localStorage.getItem('lastLoginMethod');
+    if (lastLoginMethod && loginForm) {
+        let badgeHtml = '';
+        if (lastLoginMethod === 'email') {
+            badgeHtml = `<div class="last-login-badge" style="background-color: #E8F5E9; color: #2E7D32; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 24px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #C8E6C9; box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);"><i class="fa-solid fa-envelope" style="font-size: 15px;"></i> Lần trước bạn đã dùng Email</div>`;
+        } else if (lastLoginMethod === 'google') {
+            badgeHtml = `<div class="last-login-badge" style="background-color: #FFF8E1; color: #F57F17; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 24px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #FFECB3; box-shadow: 0 2px 4px rgba(245, 127, 23, 0.1);"><i class="fa-brands fa-google" style="font-size: 15px;"></i> Lần trước bạn đã dùng Google</div>`;
+        } else if (lastLoginMethod === 'facebook') {
+            badgeHtml = `<div class="last-login-badge" style="background-color: #E3F2FD; color: #1565C0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 24px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #BBDEFB; box-shadow: 0 2px 4px rgba(21, 101, 192, 0.1);"><i class="fa-brands fa-facebook" style="font-size: 15px;"></i> Lần trước bạn đã dùng Facebook</div>`;
+        }
+        loginForm.insertAdjacentHTML('beforebegin', `<div style="text-align:center; animation: fadeInDown 0.5s ease-out;">${badgeHtml}</div>`);
+        
+        if (!document.getElementById('badge-animation')) {
+            const style = document.createElement('style');
+            style.id = 'badge-animation';
+            style.innerHTML = `@keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }`;
+            document.head.appendChild(style);
+        }
+    }
+    
     const loginSubmitBtn = loginForm?.querySelector('button[type="submit"]');
     if (loginSubmitBtn) {
         loginSubmitBtn.disabled = true;
@@ -130,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const greeting = getTimeBasedGreeting('login');
                     Toast.fire({ icon: 'success', title: greeting });
+                    localStorage.setItem('lastLoginMethod', 'email');
                     
                     saveLoginSession({
                         token: data.token,
@@ -174,3 +195,129 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+window.handleGoogleLogin = async function(response) {
+    try {
+        const res = await fetch('http://localhost:3000/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            localStorage.setItem('lastLoginMethod', 'google');
+            saveLoginSession({
+                token: data.token,
+                refreshToken: null,
+                avatarURL: data.user.AvatarURL,
+                rememberLogin: true
+            });
+            localStorage.setItem('userId', data.user.MaND);
+            localStorage.setItem('userRole', data.user.VaiTro);
+            Swal.fire({
+                title: 'Đăng nhập thành công',
+                text: 'Đang chuyển hướng...',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                if (data.user.VaiTro === 'Admin') {
+                    window.location.href = '../admin/adminDashboard.html';
+                } else {
+                    window.location.href = '../user/userHome.html';
+                }
+            });
+        } else {
+            Swal.fire('Lỗi', data.message || 'Đăng nhập Google thất bại', 'error');
+        }
+    } catch (error) {
+        console.error('Lỗi đăng nhập Google:', error);
+        Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
+    }
+};
+
+window.fbAsyncInit = function() {
+    FB.init({
+        appId      : '3186808704838717',
+        cookie     : true,
+        xfbml      : true,
+        version    : 'v20.0'
+    });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const facebookLoginBtn = document.getElementById('facebookLoginBtn');
+    if (facebookLoginBtn) {
+        facebookLoginBtn.addEventListener('click', () => {
+            FB.login(function(response) {
+                if (response.authResponse) {
+                    handleFacebookLogin(response.authResponse.accessToken);
+                } else {
+                    console.log('User cancelled login or did not fully authorize.');
+                }
+            }, {scope: 'public_profile,email'});
+        });
+    }
+});
+
+window.handleFacebookLogin = async function(accessToken) {
+    try {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Đang đăng nhập...',
+                text: 'Vui lòng chờ giây lát',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+
+        const res = await fetch(`${API_URL}/auth/facebook`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            localStorage.setItem('lastLoginMethod', 'facebook');
+            saveLoginSession({
+                token: data.token,
+                refreshToken: null,
+                avatarURL: data.user.AvatarURL,
+                rememberLogin: true
+            });
+            localStorage.setItem('userId', data.user.MaND);
+            localStorage.setItem('userRole', data.user.VaiTro);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Đăng nhập thành công',
+                    text: 'Đang chuyển hướng...',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    if (data.user.VaiTro === 'Admin') {
+                        window.location.href = '../admin/adminDashboard.html';
+                    } else {
+                        window.location.href = '../user/userHome.html';
+                    }
+                });
+            } else {
+                if (data.user.VaiTro === 'Admin') {
+                    window.location.href = '../admin/adminDashboard.html';
+                } else {
+                    window.location.href = '../user/userHome.html';
+                }
+            }
+        } else {
+            if (typeof Swal !== 'undefined') Swal.fire('Lỗi', data.message || 'Đăng nhập Facebook thất bại', 'error');
+        }
+    } catch (error) {
+        console.error('Lỗi đăng nhập Facebook:', error);
+        if (typeof Swal !== 'undefined') Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
+    }
+};

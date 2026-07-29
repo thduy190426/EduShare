@@ -20,7 +20,7 @@ async function fetchStats() {
 
         const formatNum = (num) => {
             if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M+';
-            if (num > 1000) return Math.floor(num / 1000) + '.000+'; // Giả lập số chẵn như 50.000+
+            if (num > 1000) return Math.floor(num / 1000) + '.000+';
             return num + '+';
         };
 
@@ -140,14 +140,14 @@ function renderFeaturedDocuments(documents) {
 
         if (previewTarget) {
             const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1"></iframe>`;
+            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
             thumbClass = '';
         }
 
         const authorInitial = doc.TenNguoiDang ? doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         let avatarHtml = `<div class="avatar-sm">${authorInitial}</div>`;
         if (doc.AvatarURL) {
-            avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
+            avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img loading="lazy" src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
         }
 
         let dateText = 'Khong ro';

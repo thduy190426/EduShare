@@ -1,5 +1,5 @@
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast, renderPagination } from "../shared/utils.js";
+import { getToken, showToast, renderPagination, getAssetUrl, escapeHTML } from "../shared/utils.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchRequests();
@@ -48,26 +48,34 @@ function renderRequests(requests) {
         const tr = document.createElement("tr");
         
         const d = new Date(req.NgayTao);
-        const date = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} | ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+        const date = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")} | ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
         
         let statusHtml = "";
-        if (req.TrangThai === "ChoDuyet") statusHtml = `<span style="color:#f59e0b; font-weight: 500;">Chờ duyệt</span>`;
-        if (req.TrangThai === "DaDuyet") statusHtml = `<span style="color:#10b981; font-weight: 500;">Đã duyệt</span>`;
-        if (req.TrangThai === "TuChoi") statusHtml = `<span style="color:#ef4444; font-weight: 500;">Từ chối</span><div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${req.LyDoTuChoi || ""}</div>`;
+        if (req.TrangThai === "ChoDuyet") statusHtml = `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></div><span style="color:#f59e0b; font-weight: 500;">Chờ duyệt</span></div>`;
+        if (req.TrangThai === "DaDuyet") statusHtml = `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div><span style="color:#10b981; font-weight: 500;">Đã duyệt</span></div>`;
+        if (req.TrangThai === "TuChoi") statusHtml = `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div><span style="color:#ef4444; font-weight: 500;">Từ chối</span></div><div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">${req.LyDoTuChoi || ""}</div>`;
 
         let actionHtml = "";
         if (req.TrangThai === "ChoDuyet") {
             actionHtml = `
-                <button class="btn-approve" style="background:#10b981; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; margin-right:4px;">Duyệt</button>
-                <button class="btn-reject" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Từ chối</button>
+                <button class="btn-approve" title="Duyệt" style="background:#10b981; color:white; border:none; width:32px; height:32px; border-radius:4px; cursor:pointer; margin-right:4px;"><i class="fa-solid fa-check"></i></button>
+                <button class="btn-reject" title="Từ chối" style="background:#ef4444; color:white; border:none; width:32px; height:32px; border-radius:4px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
             `;
         }
 
         tr.innerHTML = `
             <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td>
-                <div><strong>${req.HoTen}</strong></div>
-                <div style="font-size: 13px; color: var(--text-secondary);">${req.Email}</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    ${req.AvatarURL && req.AvatarURL !== 'null'
+                        ? `<img src="${escapeHTML(getAssetUrl(req.AvatarURL))}" alt="${escapeHTML(req.HoTen)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border);" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:36px;height:36px;border-radius:50%;background:var(--primary-light);color:var(--secondary);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;\\'>${escapeHTML(req.HoTen.trim().split(' ').pop().charAt(0).toUpperCase())}</div>';">`
+                        : `<div style="width: 36px; height: 36px; border-radius: 50%; background: var(--primary-light); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">${escapeHTML(req.HoTen.trim().split(' ').pop().charAt(0).toUpperCase())}</div>`
+                    }
+                    <div>
+                        <div style="font-weight: 500; color: var(--text-primary);">${req.HoTen}</div>
+                        <div style="font-size: 13px; color: var(--text-secondary);">${req.Email}</div>
+                    </div>
+                </div>
             </td>
             <td>${date}</td>
             <td>
@@ -76,14 +84,20 @@ function renderRequests(requests) {
                 </button>
             </td>
             <td>${statusHtml}</td>
-            <td style="text-align: right;">${actionHtml}</td>
+            <td style="text-align: right; white-space: nowrap;">${actionHtml}</td>
         `;
 
         const btnView = tr.querySelector(".btn-view-proof");
         if (btnView) {
             btnView.addEventListener("click", () => {
-                document.getElementById("proof-image").src = btnView.dataset.url;
-                document.getElementById("proof-modal").style.display = "block";
+                Swal.fire({
+                    title: 'Minh chứng Giáo viên',
+                    imageUrl: btnView.dataset.url,
+                    imageAlt: 'Minh chứng',
+                    width: '600px',
+                    showConfirmButton: false,
+                    showCloseButton: true
+                });
             });
         }
 
@@ -97,23 +111,17 @@ function renderRequests(requests) {
 }
 
 function setupModals() {
-    const proofModal = document.getElementById("proof-modal");
-    const rejectModal = document.getElementById("reject-modal");
+    const rejectModal = document.getElementById("reject-modal-overlay");
     
-    document.getElementById("close-proof-modal").addEventListener("click", () => {
-        proofModal.style.display = "none";
-    });
-    
-    document.getElementById("close-reject-modal").addEventListener("click", () => {
+    document.getElementById("btn-close-modal").addEventListener("click", () => {
         rejectModal.style.display = "none";
     });
     
-    document.getElementById("btn-cancel-reject").addEventListener("click", () => {
+    document.getElementById("btn-cancel-modal").addEventListener("click", () => {
         rejectModal.style.display = "none";
     });
     
     window.addEventListener("click", (e) => {
-        if (e.target === proofModal) proofModal.style.display = "none";
         if (e.target === rejectModal) rejectModal.style.display = "none";
     });
 }
@@ -122,17 +130,19 @@ let currentRejectId = null;
 
 function openRejectModal(id, hoTen) {
     currentRejectId = id;
-    document.getElementById("reject-reason").value = "";
-    document.getElementById("reject-modal").style.display = "block";
+    document.getElementById("reject-reason-input").value = "";
+    const titleEl = document.getElementById("reject-doc-title");
+    if (titleEl) titleEl.textContent = hoTen;
+    document.getElementById("reject-modal-overlay").style.display = "flex";
 }
 
 document.getElementById("btn-confirm-reject").addEventListener("click", () => {
-    const reason = document.getElementById("reject-reason").value.trim();
+    const reason = document.getElementById("reject-reason-input").value.trim();
     if (!reason) {
         showToast("warning", "Vui lòng nhập lý do từ chối.");
         return;
     }
-    document.getElementById("reject-modal").style.display = "none";
+    document.getElementById("reject-modal-overlay").style.display = "none";
     handleReview(currentRejectId, "TuChoi", reason);
 });
 
@@ -166,7 +176,7 @@ async function handleReview(id, status, reason = null) {
         
         if (response.ok) {
             showToast("success", `Đã ${actionText} yêu cầu thành công.`);
-            fetchRequests(); // Reload
+            fetchRequests(); 
         } else {
             showToast("error", data.message || `Lỗi khi ${actionText} yêu cầu.`);
         }

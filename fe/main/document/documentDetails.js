@@ -1,5 +1,6 @@
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { updateSEO } from '../shared/seo.js';
 
 let currentMaTL = null;
 const token = getToken();
@@ -87,6 +88,7 @@ async function fetchDocumentDetails() {
 
         const data = await response.json();
         renderDocumentInfo(data.document, data.hasPurchased);
+        updateSEO(data.document.TenTL, data.document.MoTa);
         renderComments(data.comments, data.document.MaND_NguoiDang);
         fetchRelatedDocuments();
 
@@ -243,13 +245,30 @@ function renderDocumentInfo(doc, hasPurchased) {
         previewContainer.style.border = '';
     }
     if (loaiFile === 'pdf' || (doc.PreviewURL && doc.PreviewURL !== 'null')) {
-        let rawUrl = doc.PreviewURL || doc.FileURL;
-        const fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
-        previewContainer.innerHTML = `<iframe src="${fileUrlFull}#toolbar=0" style="width: 100%; height: 100%; border: none;"></iframe>`;
-        previewContainer.style.width = '100%';
-        previewContainer.style.height = 'calc(100% - 44px)';
-        previewContainer.style.marginTop = '44px';
-        previewContainer.style.boxShadow = 'none';
+        let rawUrl = doc.FileURL || doc.PreviewURL;
+        if (rawUrl) {
+            const fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
+            
+            // Render PDF.js
+            renderPdfToCanvas(fileUrlFull, previewContainer);
+            previewContainer.style.width = '100%';
+            previewContainer.style.height = 'calc(100% - 44px)';
+            previewContainer.style.marginTop = '44px';
+            previewContainer.style.boxShadow = 'none';
+            previewContainer.style.overflowY = 'auto';
+            previewContainer.style.display = 'flex';
+            previewContainer.style.flexDirection = 'column';
+            previewContainer.style.alignItems = 'center';
+            previewContainer.style.gap = '10px';
+            previewContainer.style.backgroundColor = '#e5e7eb';
+            previewContainer.style.padding = '20px 0';
+        } else {
+            previewContainer.innerHTML = `
+              <i class="fa-solid fa-lock" style="font-size: 64px; color: #F59E0B; margin-bottom: 16px;"></i>
+              <p style="color: #6B7280; font-size: 16px; font-weight: 500;">Đây là tài liệu độc quyền.</p>
+              <p style="color: #9CA3AF; font-size: 14px; margin-top: 8px;">Bạn cần mua tài liệu này để xem nội dung.</p>
+            `;
+        }
     } else {
         previewContainer.innerHTML = `
           <i class="fa-solid ${icon}" style="font-size: 64px; color: #9CA3AF; margin-bottom: 16px;"></i>
@@ -336,7 +355,7 @@ function renderDocumentInfo(doc, hasPurchased) {
                             }
                         } catch (err) {
                             console.error(err);
-                            Swal.fire('Lỗi server', 'Không thể xử lý giao dịch lúc này.', 'error');
+                            Swal.fire('Lỗi máy chủ', 'Không thể xử lý giao dịch lúc này.', 'error');
                         }
                     }
                 };
@@ -955,4 +974,67 @@ async function handleDownload() {
         console.error(err);
         Swal.fire('Lỗi kết nối máy chủ.');
     }
+}
+
+
+// === Render PDF.js ===
+async function renderPdfToCanvas(url, container) {
+    container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang tải và xử lý tài liệu (PDF.js)...</div>';
+    try {
+        if (!window.pdfjsLib) {
+            console.error('PDF.js library is not loaded');
+            container.innerHTML = '<div style="margin:auto; color:red;">Lỗi tải thư viện đọc PDF.</div>';
+            return;
+        }
+        
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+        container.innerHTML = ''; 
+        
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            
+            const containerWidth = container.clientWidth - 40;
+            const unscaledViewport = page.getViewport({ scale: 1.0 });
+            let scale = containerWidth / unscaledViewport.width;
+            if (scale > 1.5) scale = 1.5;
+            if (scale < 0.5) scale = 1.0;
+            
+            const viewport = page.getViewport({ scale });
+            
+            const canvas = document.createElement('canvas');
+            canvas.className = 'pdf-page-canvas';
+            canvas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+            canvas.style.marginBottom = '10px';
+            canvas.style.maxWidth = '100%';
+            
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            container.appendChild(canvas);
+            
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            
+            await page.render(renderContext).promise;
+        }
+        
+        container.oncontextmenu = e => { e.preventDefault(); return false; };
+        container.style.userSelect = 'none';
+        container.addEventListener('dragstart', e => e.preventDefault());
+        
+    } catch (err) {
+        console.error('Error rendering PDF:', err);
+        container.innerHTML = '<div style="margin:auto; padding:20px; color:#EF4444;">Không thể hiển thị bản xem trước. Bạn có thể tải tài liệu để xem toàn bộ.</div>';
+    }
+}
+
+// === Responsive Mobile Sidebar ===
+if (window.innerWidth <= 768) {
+    document.documentElement.classList.add('sidebar-collapsed');
 }

@@ -197,6 +197,7 @@ async function renderSidebar() {
                 updateSidebarBadge('badge-pendingDocs', data.pendingDocs || 0);
                 updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
                 updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
+                updateSidebarBadge('badge-pendingTeachers', data.pendingTeachers || 0);
             }
         } catch (e) {
             console.error('Lỗi load Admin badges:', e);
@@ -298,6 +299,7 @@ window.refreshSidebarBadges = async function () {
             updateSidebarBadge('badge-pendingDocs', data.pendingDocs || 0);
             updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
             updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
+            updateSidebarBadge('badge-pendingTeachers', data.pendingTeachers || 0);
         } catch (e) {
             console.error('Lỗi refresh sidebar badges:', e);
         }
@@ -330,7 +332,7 @@ function renderNavbarUserProfile() {
         if (avatarEl && payload.HoTen) {
             const savedAvatar = getAvatar();
             if (savedAvatar && savedAvatar !== 'null') {
-                avatarEl.innerHTML = `<img src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                avatarEl.innerHTML = `<img src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" referrerpolicy="no-referrer">`;
                 avatarEl.style.background = 'transparent';
                 avatarEl.style.color = 'transparent';
             } else {

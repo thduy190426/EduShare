@@ -71,7 +71,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Bulk actions handlers
   const btnBulkApprove = document.getElementById("btn-bulk-approve");
   if (btnBulkApprove) {
       btnBulkApprove.addEventListener("click", async () => {

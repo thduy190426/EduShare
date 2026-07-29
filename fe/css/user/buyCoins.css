@@ -287,7 +287,6 @@ body {
   .content-area { margin-left: 0; padding-bottom: 80px; }
 }
 
-/* QR Modal Specific Styles */
 .qr-modal-title { font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }
 .qr-modal-desc { font-size: 15px; color: #64748b; margin-bottom: 24px; }
 .qr-image-wrapper { background: #F8FAFC; padding: 20px; border-radius: 12px; margin-bottom: 24px; display: inline-block; border: 1px dashed #CBD5E1; }

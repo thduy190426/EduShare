@@ -126,7 +126,6 @@ function drawChart(data) {
 function drawAdvancedCharts(data) {
     const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
     
-    // Revenue Chart (Line)
     const ctxRevenue = document.getElementById('revenueChart');
     if (ctxRevenue && data.revenueByMonth) {
         const revData = new Array(12).fill(0);
@@ -150,7 +149,6 @@ function drawAdvancedCharts(data) {
         });
     }
 
-    // User Growth Chart (Bar)
     const ctxGrowth = document.getElementById('userGrowthChart');
     if (ctxGrowth && data.userGrowth) {
         const growthData = new Array(12).fill(0);
@@ -173,7 +171,6 @@ function drawAdvancedCharts(data) {
         });
     }
 
-    // Trending Subjects Chart (Bar)
     const ctxTrending = document.getElementById('trendingSubjectChart');
     if (ctxTrending && data.trendingSubjects) {
         const labels = data.trendingSubjects.map(item => item.TenMonHoc);

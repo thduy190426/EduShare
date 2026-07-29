@@ -123,7 +123,6 @@ router.put('/documents/bulk-review', teacherMiddleware, async (req, res) => {
 
             const taiLieu = docRows[0];
             
-            // Giáo viên chỉ duyệt được tài liệu của Sinh viên
             if (req.user.VaiTro === 'GiaoVien' && taiLieu.VaiTro !== 'SinhVien') {
                 failCount++;
                 continue;
@@ -453,7 +452,6 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
             const placeholders = documentIds.map(() => '?').join(',');
             await conn.execute(`DELETE FROM TAILIEU WHERE MaTL IN (${placeholders})`, documentIds);
 
-            // Xoá file vật lý của tất cả tài liệu này
             try {
                 for (const doc of docRows) {
                     if (doc.FileURL) {
@@ -482,6 +480,61 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
         await conn.rollback();
         console.error('Lỗi API DELETE /users/:maND:', error);
         res.status(500).json({ message: 'Lỗi máy chủ khi xoá người dùng.' });
+    } finally {
+        conn.release();
+    }
+});
+
+router.put('/users/bulk-status', adminMiddleware, async (req, res) => {
+    const { userIds, trangThai } = req.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+        return res.status(400).json({ message: 'Danh sách người dùng không hợp lệ.' });
+    }
+
+    if (trangThai !== 'HoatDong' && trangThai !== 'BiKhoa') {
+        return res.status(400).json({ message: 'Trạng thái không hợp lệ.' });
+    }
+
+    if (userIds.includes(req.user.MaND.toString()) || userIds.includes(req.user.MaND)) {
+        return res.status(403).json({ message: 'Bạn không thể khóa/mở khóa tài khoản của chính mình trong thao tác hàng loạt.' });
+    }
+
+    const pool = req.app.locals.pool;
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        if (trangThai === 'BiKhoa') {
+            const placeholders = userIds.map(() => '?').join(',');
+            const [adminRows] = await conn.execute(`SELECT MaND FROM NGUOIDUNG WHERE MaND IN (${placeholders}) AND VaiTro = 'Admin'`, userIds);
+            
+            if (adminRows.length > 0) {
+                const [activeAdmins] = await conn.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong'");
+                if (activeAdmins[0].total <= adminRows.length) {
+                    await conn.rollback();
+                    return res.status(403).json({ message: 'Không thể khóa Admin cuối cùng của hệ thống.' });
+                }
+            }
+        }
+
+        const placeholders = userIds.map(() => '?').join(',');
+        await conn.execute(`UPDATE NGUOIDUNG SET TrangThai = ? WHERE MaND IN (${placeholders})`, [trangThai, ...userIds]);
+
+        for (const maND of userIds) {
+            await conn.execute(
+                'INSERT INTO AUDIT_LOG (MaND_ThucHien, MaND_BiTacDong, HanhDong, ChiTiet) VALUES (?, ?, ?, ?)',
+                [req.user.MaND, maND, trangThai === 'BiKhoa' ? 'KhoaTaiKhoan' : 'MoKhoaTaiKhoan', `Đổi trạng thái thành ${trangThai} (Hàng loạt)`]
+            );
+        }
+
+        await conn.commit();
+        res.status(200).json({ message: `Đã ${trangThai === 'BiKhoa' ? 'khóa' : 'mở khóa'} ${userIds.length} tài khoản.` });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API /users/bulk-status:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     } finally {
         conn.release();
     }
@@ -673,7 +726,6 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
                     }
                 }
 
-                // Xoá file vật lý
                 try {
                     if (doc.FileURL) {
                         const filePath = path.join(__dirname, 'public', doc.FileURL);
@@ -859,6 +911,8 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
         const [reportCount] = await pool.execute('SELECT COUNT(*) as count FROM BAOCAOVIPHAM WHERE TrangThai = "ChoXuLy"');
         const [pendingDocCount] = await pool.execute('SELECT COUNT(*) as count FROM TAILIEU WHERE TrangThaiKiemDuyet = "ChoDuyet"');
         const [pendingPaymentCount] = await pool.execute('SELECT COUNT(*) as count FROM GIAODICH_NAPXU WHERE TrangThai = "ChoDuyet"');
+        const [pendingTeacherCount] = await pool.execute('SELECT COUNT(*) as count FROM YEU_CAU_GIAO_VIEN WHERE TrangThai = "ChoDuyet"');
+
 
         const [usersByRoleRows] = await pool.execute('SELECT VaiTro, COUNT(*) as count FROM NGUOIDUNG GROUP BY VaiTro');
         
@@ -877,7 +931,7 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
             SELECT ND.MaND, ND.HoTen, ND.AvatarURL, SUM(G.SoXu) as totalXu
             FROM GIAODICH_NAPXU G
             JOIN NGUOIDUNG ND ON G.MaND = ND.MaND
-            WHERE G.TrangThai = 'DaDuyet'
+            WHERE G.TrangThai = 'DaDuyet' AND ND.VaiTro != 'Admin'
             GROUP BY ND.MaND, ND.HoTen, ND.AvatarURL
             ORDER BY totalXu DESC
             LIMIT 5
@@ -888,6 +942,7 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
                 (SELECT COUNT(*) FROM TAILIEU TL WHERE TL.MaND_NguoiDang = ND.MaND AND TL.TrangThaiKiemDuyet = 'DaDuyet') AS countDoc,
                 (SELECT COUNT(*) FROM BINHLUAN BL WHERE BL.MaND = ND.MaND) AS countComment
             FROM NGUOIDUNG ND
+            WHERE ND.VaiTro != 'Admin'
             ORDER BY (countDoc * 10 + countComment) DESC
             LIMIT 5
         `);
@@ -899,6 +954,7 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
             pendingReports: reportCount[0].count,
             pendingDocs: pendingDocCount[0].count,
             pendingPayments: pendingPaymentCount[0].count,
+            pendingTeachers: pendingTeacherCount[0].count,
             usersByRole: usersByRoleRows,
             docsByStatus: docsByStatusRows,
             docsBySubject: docsBySubjectRows,
@@ -1194,7 +1250,7 @@ router.get('/teacher-requests', adminMiddleware, async (req, res) => {
 
         const sql = `
             SELECT Y.MaYeuCau, Y.MinhChungURL, Y.TrangThai, Y.NgayTao, Y.LyDoTuChoi,
-                   N.MaND, N.HoTen, N.Email
+                   N.MaND, N.HoTen, N.Email, N.AvatarURL
             FROM YEU_CAU_GIAO_VIEN Y
             JOIN NGUOIDUNG N ON Y.MaND = N.MaND
             ORDER BY Y.NgayTao DESC
@@ -1271,7 +1327,6 @@ router.put('/teacher-requests/:id/review', adminMiddleware, async (req, res) => 
 });
 
 module.exports = router;
-// --- PROMO CODE MANAGEMENT ---
 router.get('/promos', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;

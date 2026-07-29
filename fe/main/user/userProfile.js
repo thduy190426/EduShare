@@ -43,7 +43,7 @@ function renderCurrentUserAvatar(profile) {
 
     if (profile.AvatarURL) {
         setAvatarForCurrentSession(profile.AvatarURL);
-        const avatarHtml = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        const avatarHtml = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" referrerpolicy="no-referrer">`;
         headerAvatar.innerHTML = avatarHtml;
         navAvatar.innerHTML = avatarHtml;
         headerAvatar.style.background = 'transparent';
@@ -138,7 +138,7 @@ window.openFollowModal = function(type) {
         list.forEach(user => {
             const avatarHtml = user.AvatarURL 
                 ? `<img src="${getAssetUrl(user.AvatarURL)}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` 
-                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:white; display:flex; justify-content:center; align-items:center; font-weight:bold;">${user.HoTen.trim().split(' ').pop().charAt(0).toUpperCase()}</div>`;
+                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--primary-light); color:var(--primary); display:flex; justify-content:center; align-items:center; font-weight:bold;">${user.HoTen.trim().split(' ').pop().charAt(0).toUpperCase()}</div>`;
 
             const roleStr = user.VaiTro === 'SinhVien' ? 'Sinh viên' : (user.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên');
             
@@ -242,6 +242,11 @@ async function initProfile() {
         document.getElementById('input-khoanganh').value = profile.KhoaNganh || '';
         document.getElementById('input-privacy-downloads').checked = profile.HienThiLichSuTai !== 0;
         document.getElementById('input-privacy-ratings').checked = profile.HienThiDanhGia !== 0;
+
+        if (profile.AuthType !== 'Local') {
+            const changePasswordSection = document.getElementById('change-password-section');
+            if (changePasswordSection) changePasswordSection.style.display = 'none';
+        }
         
         initialProfileState = {
             hoTen: profile.HoTen || '',
@@ -278,7 +283,10 @@ async function initUpgradeTeacher() {
         if (data.status) {
             statusContainer.style.display = 'block';
             if (data.status.TrangThai === 'ChoDuyet') {
-                statusContainer.innerHTML = `<i class="fa-solid fa-clock" style="color: #F59E0B; margin-right: 8px;"></i> Yêu cầu của bạn đang chờ Admin xét duyệt (Gửi lúc: ${new Date(data.status.NgayTao).toLocaleString()}).`;
+                const d = new Date(data.status.NgayTao);
+                const timeStr = d.toLocaleTimeString('vi-VN', { hour12: false });
+                const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                statusContainer.innerHTML = `<i class="fa-solid fa-clock" style="color: #F59E0B; margin-right: 8px;"></i> Yêu cầu của bạn đang chờ Admin xét duyệt (Gửi lúc: ${timeStr} ${dateStr}).`;
                 statusContainer.style.backgroundColor = '#FEF3C7';
                 statusContainer.style.border = '1px solid #FDE68A';
                 statusContainer.style.color = '#B45309';
@@ -445,10 +453,28 @@ function openDeleteAccountModal() {
     if (!modal) return;
     
     const inputPw = document.getElementById('input-delete-pw');
+    const deletePwWrapper = document.getElementById('delete-pw-wrapper');
+    const inputOtp = document.getElementById('input-delete-otp');
     const errorMsg = document.getElementById('delete-pw-error');
     const btnConfirm = document.getElementById('btn-confirm-delete');
+    const btnSendOtp = document.getElementById('btn-send-delete-otp');
+
+    if (currentProfile && currentProfile.AuthType !== 'Local') {
+        if (deletePwWrapper) deletePwWrapper.style.display = 'none';
+    } else {
+        if (deletePwWrapper) deletePwWrapper.style.display = 'block';
+    }
     
-    inputPw.value = '';
+    if(inputPw) inputPw.value = '';
+    if(inputOtp) inputOtp.value = '';
+    
+    if (btnSendOtp) {
+        btnSendOtp.disabled = false;
+        btnSendOtp.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP';
+        btnSendOtp.style.opacity = '1';
+        btnSendOtp.style.cursor = 'pointer';
+        clearInterval(deleteOtpTimer);
+    }
     errorMsg.style.display = 'none';
     
     if (btnConfirm) {
@@ -478,16 +504,83 @@ function closeDeleteAccountModal() {
     }, 300);
 }
 
+let deleteOtpTimer;
+
+async function sendDeleteAccountOtp() {
+    const btnSendOtp = document.getElementById('btn-send-delete-otp');
+    
+    btnSendOtp.disabled = true;
+    btnSendOtp.style.opacity = '0.5';
+    btnSendOtp.style.cursor = 'not-allowed';
+    const originalHTML = btnSendOtp.innerHTML;
+    btnSendOtp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+    try {
+        const res = await fetch(`${API_URL}/users/profile/delete-otp`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            Toast.fire({ icon: 'error', title: data.message || 'Lỗi gửi OTP.' });
+            btnSendOtp.disabled = false;
+            btnSendOtp.style.opacity = '1';
+            btnSendOtp.style.cursor = 'pointer';
+            btnSendOtp.innerHTML = originalHTML;
+            return;
+        }
+
+        Toast.fire({ icon: 'success', title: data.message });
+
+        let timeLeft = 60;
+        btnSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi lại (${timeLeft}s)`;
+        
+        clearInterval(deleteOtpTimer);
+        deleteOtpTimer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(deleteOtpTimer);
+                btnSendOtp.disabled = false;
+                btnSendOtp.style.opacity = '1';
+                btnSendOtp.style.cursor = 'pointer';
+                btnSendOtp.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP';
+            } else {
+                btnSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi lại (${timeLeft}s)`;
+            }
+        }, 1000);
+
+    } catch (err) {
+        console.error('Lỗi gửi OTP xoá tài khoản:', err);
+        Toast.fire({ icon: 'error', title: 'Lỗi máy chủ khi gửi OTP.' });
+        btnSendOtp.disabled = false;
+        btnSendOtp.style.opacity = '1';
+        btnSendOtp.style.cursor = 'pointer';
+        btnSendOtp.innerHTML = originalHTML;
+    }
+}
+
 async function processDeleteAccount() {
     if (isDeletingAccount) return;
     
     const inputPw = document.getElementById('input-delete-pw');
+    const inputOtp = document.getElementById('input-delete-otp');
     const errorMsg = document.getElementById('delete-pw-error');
-    const matKhau = inputPw.value.trim();
+    const matKhau = inputPw ? inputPw.value.trim() : '';
+    const otp = inputOtp ? inputOtp.value.trim() : '';
     const errorTextSpan = errorMsg.querySelector('span');
     
-    if (!matKhau) {
+    const isLocal = !currentProfile || currentProfile.AuthType === 'Local';
+
+    if (isLocal && !matKhau) {
         errorTextSpan.textContent = 'Vui lòng nhập mật khẩu để xác nhận.';
+        errorMsg.style.display = 'block';
+        return;
+    }
+    if (!otp) {
+        errorTextSpan.textContent = 'Vui lòng nhập mã OTP để xác nhận.';
         errorMsg.style.display = 'block';
         return;
     }
@@ -509,7 +602,7 @@ async function processDeleteAccount() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ matKhau })
+            body: JSON.stringify({ matKhau, otp })
         });
         const data = await res.json();
 
@@ -1031,7 +1124,10 @@ function checkPasswordChanges() {
     const otp = document.getElementById('input-change-pw-otp').value;
     const btn = document.getElementById('btn-change-pw');
     
-    if (matKhauCu.trim() && matKhauMoi.trim() && confirm.trim() && otp.trim() && matKhauMoi === confirm) {
+    const isLocal = !currentProfile || currentProfile.AuthType === 'Local';
+    const oldPwValid = isLocal ? matKhauCu.trim().length > 0 : true;
+
+    if (oldPwValid && matKhauMoi.trim() && confirm.trim() && otp.trim() && matKhauMoi === confirm) {
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
@@ -1044,11 +1140,17 @@ function checkPasswordChanges() {
 
 function checkDeleteAccountPassword() {
     const inputPw = document.getElementById('input-delete-pw');
+    const inputOtp = document.getElementById('input-delete-otp');
     const btnConfirm = document.getElementById('btn-confirm-delete');
     
-    if (inputPw && btnConfirm) {
+    if (inputPw && inputOtp && btnConfirm) {
         const matKhau = inputPw.value.trim();
-        if (matKhau.length >= 6) {
+        const otp = inputOtp.value.trim();
+        
+        const isLocal = !currentProfile || currentProfile.AuthType === 'Local';
+        const pwValid = isLocal ? matKhau.length >= 6 : true;
+        
+        if (pwValid && otp.length === 6) {
             btnConfirm.disabled = false;
             btnConfirm.style.opacity = '1';
             btnConfirm.style.cursor = 'pointer';
@@ -1073,6 +1175,12 @@ function setupEventListeners() {
     
     const inputDeletePw = document.getElementById('input-delete-pw');
     if (inputDeletePw) inputDeletePw.addEventListener('input', checkDeleteAccountPassword);
+
+    const inputDeleteOtp = document.getElementById('input-delete-otp');
+    if (inputDeleteOtp) inputDeleteOtp.addEventListener('input', checkDeleteAccountPassword);
+    
+    const btnSendDeleteOtp = document.getElementById('btn-send-delete-otp');
+    if (btnSendDeleteOtp) btnSendDeleteOtp.addEventListener('click', sendDeleteAccountOtp);
     
     const modalOverlay = document.getElementById('delete-account-modal');
     if (modalOverlay) {
@@ -1337,7 +1445,7 @@ async function sendChangePasswordOtp() {
                     btn.innerHTML = originalText;
                     btn.disabled = false;
                 } else {
-                    btn.innerHTML = `Gửi lại sau ${timeLeft}s`;
+                    btn.innerHTML = `<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi lại sau ${timeLeft}s`;
                     timeLeft--;
                 }
             }, 1000);
@@ -1412,40 +1520,59 @@ if (upgradeHeader) {
 }
 const fileInput = document.getElementById('input-upgrade-proof');
 const btnSubmitUpgrade = document.getElementById('btn-submit-upgrade');
+const uploadZone = document.getElementById('proof-upload-zone');
+const previewZone = document.getElementById('proof-preview-zone');
+const previewImg = document.getElementById('proof-preview-img');
+const btnRemoveProof = document.getElementById('btn-remove-proof');
+
 if (fileInput && btnSubmitUpgrade) {
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
-        const fileNameEl = document.getElementById('file-name-proof');
         if (file) {
             if (!file.type.startsWith('image/')) {
                 Toast.fire({ icon: 'warning', title: 'Vui lòng chọn file hình ảnh hợp lệ.' });
                 fileInput.value = '';
-                fileNameEl.textContent = '';
-                btnSubmitUpgrade.disabled = true;
-                btnSubmitUpgrade.style.opacity = '0.5';
-                btnSubmitUpgrade.style.cursor = 'not-allowed';
+                resetPreview();
                 return;
             }
             if (file.size > 5 * 1024 * 1024) { 
                 Toast.fire({ icon: 'warning', title: 'Dung lượng ảnh không được vượt quá 5MB.' });
                 fileInput.value = '';
-                fileNameEl.textContent = '';
-                btnSubmitUpgrade.disabled = true;
-                btnSubmitUpgrade.style.opacity = '0.5';
-                btnSubmitUpgrade.style.cursor = 'not-allowed';
+                resetPreview();
                 return;
             }
-            fileNameEl.textContent = file.name;
-            btnSubmitUpgrade.disabled = false;
-            btnSubmitUpgrade.style.opacity = '1';
-            btnSubmitUpgrade.style.cursor = 'pointer';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                if (uploadZone) uploadZone.style.display = 'none';
+                if (previewZone) previewZone.style.display = 'block';
+                
+                btnSubmitUpgrade.disabled = false;
+                btnSubmitUpgrade.style.opacity = '1';
+                btnSubmitUpgrade.style.cursor = 'pointer';
+            }
+            reader.readAsDataURL(file);
         } else {
-            fileNameEl.textContent = '';
-            btnSubmitUpgrade.disabled = true;
-            btnSubmitUpgrade.style.opacity = '0.5';
-            btnSubmitUpgrade.style.cursor = 'not-allowed';
+            resetPreview();
         }
     });
+
+    if (btnRemoveProof) {
+        btnRemoveProof.addEventListener('click', () => {
+            fileInput.value = '';
+            resetPreview();
+        });
+    }
+    
+    function resetPreview() {
+        if (uploadZone) uploadZone.style.display = 'block';
+        if (previewZone) previewZone.style.display = 'none';
+        if (previewImg) previewImg.src = '';
+        btnSubmitUpgrade.disabled = true;
+        btnSubmitUpgrade.style.opacity = '0.5';
+        btnSubmitUpgrade.style.cursor = 'not-allowed';
+    }
 }
 
 if (btnSubmitUpgrade) {
@@ -1493,7 +1620,6 @@ if (btnSubmitUpgrade) {
 
             Toast.fire({ icon: 'success', title: submitData.message });
             fileInput.value = '';
-            document.getElementById('file-name-proof').textContent = '';
             initUpgradeTeacher();
         } catch (err) {
             console.error(err);

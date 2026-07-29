@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fromDate = document.getElementById('fromDate');
     const toDate = document.getElementById('toDate');
     const authorInput = document.getElementById('authorInput');
+    const subjectSearch = document.getElementById('subjectSearch');
     const activeFilters = document.getElementById('activeFilters');
     const btnClearFilter = document.getElementById('btnClearFilter');
     const resultsGrid = document.getElementById('resultsGrid');
@@ -73,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (avatarEl && payload.HoTen) {
                 const savedAvatar = getAvatar();
                 if (savedAvatar && savedAvatar !== 'null') {
-                    avatarEl.innerHTML = `<img src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    avatarEl.innerHTML = `<img loading="lazy" src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
                     avatarEl.style.background = 'transparent';
                     avatarEl.style.color = 'transparent';
                 } else {
@@ -409,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const userInitial = doc.TenNguoiDang ? escapeHTML(doc.TenNguoiDang).trim().split(' ').pop().charAt(0).toUpperCase() : '?';
                     let avatarHtml = `<div class="avatar-sm">${userInitial}</div>`;
                     if (doc.AvatarURL) {
-                        avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
+                        avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img loading="lazy" src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
                     }
 
                     let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
@@ -424,8 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         thumbHtml = `
                             <iframe
                                 src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
-                                style="width: 100%; height: 100%; border: none; pointer-events: none; opacity: 0.9;"
+                                style="position: absolute; top: 0; left: 0; width: calc(100% + 20px); height: calc(100% + 20px); max-width: none; border: none; pointer-events: none; opacity: 0.9; overflow: hidden;"
                                 loading="lazy"
+                                scrolling="no"
                             ></iframe>
                         `;
                     }

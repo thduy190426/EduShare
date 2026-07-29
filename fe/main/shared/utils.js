@@ -135,7 +135,6 @@ window.fetch = async function () {
     let url = arguments[0];
     let options = arguments[1] || {};
     
-    // Đảm bảo có header Authorization nếu đã lưu token
     const token = getToken();
     if (token && typeof url === 'string' && url.includes('/api/')) {
         options.headers = {
@@ -164,14 +163,12 @@ window.fetch = async function () {
                         if (refreshRes.ok) {
                             const data = await refreshRes.json();
                             const newToken = data.token;
-                            // Cập nhật token vào storage tương ứng
                             if (localStorage.getItem('refreshToken')) localStorage.setItem('token', newToken);
                             else sessionStorage.setItem('token', newToken);
                             
                             isRefreshing = false;
                             onRefreshed(newToken);
                             
-                            // Gọi lại request ban đầu với token mới
                             options.headers['Authorization'] = `Bearer ${newToken}`;
                             return await originalFetch(url, options);
                         } else {
@@ -185,7 +182,6 @@ window.fetch = async function () {
                         return response;
                     }
                 } else {
-                    // Đang refresh, chờ lấy token mới
                     return new Promise((resolve) => {
                         subscribeTokenRefresh((newToken) => {
                             options.headers['Authorization'] = `Bearer ${newToken}`;
@@ -262,7 +258,6 @@ export const renderPagination = (containerId, totalPages, currentPage, onPageCha
 
     container.innerHTML = '';
     
-    // Luôn hiển thị phân trang để người dùng xem giao diện
     const prevBtn = document.createElement('button');
     prevBtn.className = 'page-btn prev-btn';
     prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';

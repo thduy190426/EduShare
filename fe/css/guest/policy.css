@@ -81,3 +81,26 @@ input, textarea {
 }
 
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+
+@media (max-width: 768px) {
+  .policy-header {
+    padding: 60px 20px 80px;
+  }
+  .policy-header h1 {
+    font-size: 28px;
+  }
+  .policy-header p {
+    font-size: 16px;
+  }
+  .policy-container {
+    margin: -40px 16px 60px;
+    padding: 24px 20px;
+  }
+  .policy-content h2 {
+    font-size: 20px;
+    margin: 24px 0 12px;
+  }
+  .policy-content p, .policy-content li {
+    font-size: 15px;
+  }
+}

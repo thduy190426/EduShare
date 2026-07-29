@@ -7,6 +7,9 @@ const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
 const cors    = require('cors');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '891380242693-mebda946u7bpcbbnjd8ro50lsaqp6unu.apps.googleusercontent.com');
+
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -121,7 +124,11 @@ const requestLogger = (req, res, next) => {
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: false,
+  frameguard: false
+}));
 app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
@@ -160,6 +167,9 @@ pool.getConnection()
     .catch(err  => logger.error('MySQL connection failed', err));
 
 app.locals.pool = pool;
+
+const { initCronJobs } = require('./services/cronJobs');
+initCronJobs(pool);
 
 logger.divider('Routes');
 const routes = [
@@ -274,6 +284,142 @@ app.post('/api/register', registerLimiter, async (req, res) => {
     }
 });
 
+
+app.post('/api/auth/google', loginLimiter, async (req, res) => {
+    const { credential } = req.body;
+    if (!credential) {
+        return res.status(400).json({ message: 'Missing credential' });
+    }
+    
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        const email = payload.email;
+        const hoTen = payload.name;
+        const avatar = payload.picture;
+
+        const [users] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
+        let user;
+        if (users.length > 0) {
+            user = users[0];
+            if (user.TrangThai === 'BiKhoa') {
+                return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
+            }
+            if (user.AuthType !== 'Google') {
+                await pool.execute('UPDATE NGUOIDUNG SET AuthType = "Google" WHERE MaND = ?', [user.MaND]);
+                user.AuthType = 'Google';
+            }
+        } else {
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+            
+            const [result] = await pool.execute(
+                'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro, AvatarURL, TrangThai, AuthType) VALUES (?, ?, ?, "SinhVien", ?, "HoatDong", "Google")',
+                [hoTen, email, hashedPassword, avatar]
+            );
+            const [newUsers] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE MaND = ?', [result.insertId]);
+            user = newUsers[0];
+            logger.success(`New user registered via Google - id: ${result.insertId}`);
+        }
+
+        const token = jwt.sign(
+            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        logger.success(`Google Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
+        
+        res.json({
+            message: 'Đăng nhập thành công',
+            token,
+            user: {
+                MaND: user.MaND,
+                HoTen: user.HoTen,
+                VaiTro: user.VaiTro,
+                AvatarURL: user.AvatarURL
+            }
+        });
+    } catch (error) {
+        logger.error('Google auth error', error);
+        res.status(400).json({ message: 'Đăng nhập Google thất bại. Vui lòng thử lại.' });
+    }
+});
+
+app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
+    const { accessToken } = req.body;
+    if (!accessToken) {
+        return res.status(400).json({ message: 'Missing Facebook access token' });
+    }
+    
+    try {
+        const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`);
+        const fbUser = await response.json();
+        
+        if (fbUser.error) {
+            logger.error('Facebook Graph API error', fbUser.error);
+            return res.status(400).json({ message: 'Đăng nhập Facebook thất bại.' });
+        }
+        
+        const email = fbUser.email;
+        const hoTen = fbUser.name;
+        const avatar = fbUser.picture?.data?.url || null;
+        
+        if (!email) {
+            return res.status(400).json({ message: 'Tài khoản Facebook của bạn không có email công khai. Vui lòng thêm email vào tài khoản Facebook hoặc sử dụng phương thức đăng nhập khác.' });
+        }
+
+        const [users] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
+        let user;
+        if (users.length > 0) {
+            user = users[0];
+            if (user.TrangThai === 'BiKhoa') {
+                return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
+            }
+            if (user.AuthType !== 'Facebook') {
+                await pool.execute('UPDATE NGUOIDUNG SET AuthType = "Facebook" WHERE MaND = ?', [user.MaND]);
+                user.AuthType = 'Facebook';
+            }
+        } else {
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            const hashedPassword = await bcrypt.hash(randomPassword, 10);
+            
+            const [result] = await pool.execute(
+                'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro, AvatarURL, TrangThai, AuthType) VALUES (?, ?, ?, "SinhVien", ?, "HoatDong", "Facebook")',
+                [hoTen, email, hashedPassword, avatar]
+            );
+            const [newUsers] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE MaND = ?', [result.insertId]);
+            user = newUsers[0];
+            logger.success(`New user registered via Facebook - id: ${result.insertId}`);
+        }
+
+        const token = jwt.sign(
+            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        logger.success(`Facebook Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
+        
+        res.json({
+            message: 'Đăng nhập thành công',
+            token,
+            user: {
+                MaND: user.MaND,
+                HoTen: user.HoTen,
+                VaiTro: user.VaiTro,
+                AvatarURL: user.AvatarURL
+            }
+        });
+    } catch (error) {
+        logger.error('Facebook auth error', error);
+        res.status(400).json({ message: 'Đăng nhập Facebook thất bại. Vui lòng thử lại.' });
+    }
+});
+
 app.post('/api/login', loginLimiter, async (req, res) => {
     const { email, matKhau, rememberLogin, recaptchaToken } = req.body;
 
@@ -302,7 +448,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' } // Access token short-lived
+            { expiresIn: '15m' }
         );
 
         const refreshToken = crypto.randomBytes(40).toString('hex');

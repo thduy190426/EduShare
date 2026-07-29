@@ -209,8 +209,12 @@ function renderTable() {
                     <button class="btn-action btn-delete" title="Xóa tài liệu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash" style="color: var(--danger);"></i></button>
                 `;
             } else {
+                if (doc.TrangThaiKiemDuyet === 'DaDuyet') {
+                    actionBtns += `
+                        <button class="btn-action btn-update-file" title="Cập nhật bản mới" data-id="${doc.MaTL}"><i class="fa-solid fa-cloud-arrow-up" style="color: #6366F1;"></i></button>
+                    `;
+                }
                 actionBtns += `
-                    <button class="btn-action btn-update-file" title="Cập nhật bản mới" data-id="${doc.MaTL}"><i class="fa-solid fa-cloud-arrow-up" style="color: #6366F1;"></i></button>
                     <button class="btn-action btn-edit" title="Sửa thông tin" data-id="${doc.MaTL}"><i class="fa-solid fa-pen"></i></button>
                     <button class="btn-action btn-delete" title="Xóa tài liệu" data-id="${doc.MaTL}"><i class="fa-solid fa-trash" style="color: var(--danger);"></i></button>
                 `;

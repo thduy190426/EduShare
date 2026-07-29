@@ -1,155 +1,177 @@
-<div align="center">
-  <h1>EduShare</h1>
-  <p><strong>Nền Tảng Chia Sẻ Tài Liệu Học Tập Toàn Diện</strong></p>
-  <p>Một dự án hỗ trợ học sinh, sinh viên và giáo viên lưu trữ, chia sẻ và kinh doanh tài liệu học tập.</p>
-</div>
+﻿# EduShare
+
+**Nền tảng Chia sẻ Tài liệu Học tập & Cộng đồng Sinh viên Trực tuyến**
 
 ---
 
-## 1. Tổng Quan Dự Án (Project Overview)
+## 1. Giới thiệu dự án
 
-**EduShare** là một hệ thống ứng dụng web chuyên dụng cho lĩnh vực giáo dục, cho phép người dùng chia sẻ và khai thác kho tài liệu học tập một cách hiệu quả. Dự án được phát triển trên kiến trúc Node.js/Express (Backend) và Vanilla JavaScript (Frontend).
+EduShare là một nền tảng website giáo dục được thiết kế nhằm kết nối sinh viên và giảng viên thông qua việc chia sẻ tài liệu, trao đổi kiến thức và xây dựng cộng đồng học tập. Dự án không chỉ là kho lưu trữ tài liệu đơn thuần mà còn tích hợp hệ thống điểm thưởng (Xu), quản lý nhóm, và cơ chế kiểm duyệt chặt chẽ, đảm bảo một môi trường học thuật chất lượng cao và minh bạch.
 
-Hệ thống phân chia quyền rõ ràng thành 3 nhóm: **Sinh Viên**, **Giáo Viên** và **Admin**. Điểm nổi bật của EduShare là hệ thống kinh tế vi mô tích hợp (hệ thống Xu), cho phép **Giáo Viên** và **Admin** đóng gói các tài liệu chất lượng cao thành nội dung **PREMIUM**. Người dùng có thể mở khóa thông qua Xu, tạo ra môi trường học tập chia sẻ nhưng vẫn có phần thưởng xứng đáng cho công sức biên soạn.
+## 2. Mục tiêu cốt lõi
 
----
-
-## 2. Các Tính Năng Nổi Bật (Key Features)
-
-### Phân Hệ Người Dùng (User Module)
-
-* **Xác Thực Đa Tầng:** Đăng nhập, đăng ký, khôi phục mật khẩu thông qua JSON Web Token (JWT). Tích hợp xác thực OTP qua Email (sử dụng Mailtrap).
-* **Định Danh & Nâng Cấp Giáo Viên (KYC):** Học sinh/Sinh viên có thể tải lên ảnh minh chứng (thẻ giáo viên, chứng chỉ) để gửi yêu cầu nâng cấp tài khoản lên Giáo Viên (GiaoVien) nhằm mở khóa tính năng đăng tài liệu thu phí.
-* **Động Cơ Tìm Kiếm Thông Minh:** Tích hợp bộ lọc đa chiều (môn học, phân loại, cấp độ) và tính năng tìm kiếm toàn văn bản (Full-text Search).
-* **Quản Lý Nhóm & Tương Tác:**
-  * **Đánh Giá & Bình Luận:** Chấm điểm 5 sao và bình luận đa tầng. Đặc biệt: **Tác giả bài viết** có quyền kiểm duyệt (Xóa) và **Ghim** các bình luận nổi bật trên tài liệu của mình.
-  * **Mạng Lưới Nhóm Học Tập:** Khởi tạo nhóm kín, chia sẻ mã mời, trao đổi và chia sẻ tài liệu lưu trữ nội bộ cho nhóm.
-
-### Hệ Thống Giao Dịch & Tài Chính (Financial System)
-
-* **Ví Điện Tử (Xu):** Giao diện hiển thị số dư, quản lý và nạp Xu thông qua hệ thống admin duyệt.
-* **Thưởng & Mua Bán:** 
-  * Sinh viên đăng tài liệu hoàn toàn miễn phí, và sẽ được **thưởng +1 Xu** cho mỗi lượt tải của người khác.
-  * Tài liệu PREMIUM do Giáo viên/Admin đăng có thể tự định giá.
-* **Giao Dịch An Toàn:** Các nghiệp vụ nhạy cảm như Mua tài liệu, Trừ Xu, Thưởng Xu được bảo vệ hoàn toàn bằng cơ chế **Database Transactions (Row-level lock / FOR UPDATE)**, chống lại hoàn toàn rủi ro Race Condition, trùng lặp giao dịch và hack Xu âm.
-
-### Phân Hệ Quản Trị & Kiểm Duyệt (Admin Dashboard)
-
-* **Bảng Điều Khiển Tổng Quan:** Cung cấp biểu đồ trực quan, số liệu thống kê thời gian thực.
-* **Kiểm Duyệt Báo Cáo (Report Moderation):** Hệ thống cho phép người dùng báo cáo tài liệu vi phạm. Admin có quyền xem xét, nếu xóa tài liệu thì hệ thống sẽ **tự động Refund (hoàn tiền)** lại toàn bộ Xu cho những người đã mua, đồng thời thu hồi Xu từ tác giả.
-* **Bảo Mật Hệ Thống:** Triển khai **Rate Limiting** nghiêm ngặt cho toàn bộ các luồng quan trọng: Đăng nhập, Gửi OTP, Tải xuống tài liệu, Báo cáo vi phạm (Chống Spam/DDoS). Quét virus trực tiếp cho mọi file upload (thông qua API bên thứ ba).
-* **Lưu Trữ Đám Mây:** File upload được đẩy thẳng lên **Cloudinary** để bảo vệ thư mục hệ thống khỏi Path Traversal.
+- Xây dựng thư viện điện tử nơi người dùng có thể dễ dàng tìm kiếm, đánh giá và chia sẻ tài liệu.
+- Khuyến khích sự đóng góp thông qua hệ thống tài chính ảo (Xu).
+- Tạo lập các không gian học tập nhóm khép kín và an toàn.
+- Cung cấp cho Ban quản trị (Admin) các công cụ kiểm soát và thống kê mạnh mẽ.
 
 ---
 
-## 3. Kiến Trúc & Công Nghệ (Tech Stack)
+## 3. Công nghệ sử dụng
+
+Hệ thống được phát triển theo mô hình **Client - Server (RESTful API)**.
 
 ### Frontend
 
-| Công nghệ | Vai trò |
-| :--- | :--- |
-| **HTML5 / CSS3** | Cấu trúc và thiết kế giao diện (UI) thân thiện, hiện đại. |
-| **Vanilla JavaScript** | Xử lý sự kiện, DOM và giao tiếp Fetch API an toàn (gắn Token). |
-| **SweetAlert2** | Hộp thoại thông báo (Alert/Confirm) thân thiện với người dùng. |
-| **Chart.js** | Hiển thị biểu đồ thống kê trực quan trên Dashboard Admin. |
+- **HTML5 & CSS3** — Giao diện thuần túy, thiết kế responsive theo hướng Mobile-first.
+- **Vanilla JavaScript** — Xử lý logic phía Client, gọi API qua Fetch API.
+- **Thư viện bên thứ ba**:
+  - SweetAlert2: Xử lý thông báo (Alerts & Toasts).
+  - Chart.js: Hiển thị biểu đồ thống kê trên Admin Dashboard.
+  - FontAwesome (v6): Hệ thống biểu tượng.
+  - Google Identity Services: Xác thực OAuth2.
 
 ### Backend
 
-| Công nghệ | Vai trò |
-| :--- | :--- |
-| **Node.js & Express.js** | Xây dựng RESTful API, bảo mật với Express-Rate-Limit, CORS. |
-| **JWT & Bcrypt** | Mã hóa mật khẩu, tạo phiên đăng nhập Stateless. |
-| **Multer & Cloudinary** | Xử lý file bộ nhớ đệm (memoryStorage) và lưu trữ mây hóa. |
-| **Nodemailer** | Gửi Email OTP bảo mật trong quá trình quên mật khẩu. |
+- **Node.js & Express.js** — Nền tảng xây dựng Server và RESTful APIs.
+- **Xác thực & Bảo mật**:
+  - `jsonwebtoken` (JWT): Quản lý phiên đăng nhập (Stateless) với Access Token & Refresh Token.
+  - `bcrypt`: Mã hóa mật khẩu người dùng.
+  - `google-auth-library`: Xác minh Google OAuth2 ID Token.
+  - `express-rate-limit`: Chống Spam/DDoS trên các luồng quan trọng (Login, Upload, Report).
+- **Xử lý File & Lưu trữ**:
+  - `multer` (MemoryStorage): Nhận file từ Client.
+  - `cloudinary`: Lưu trữ tài liệu (PDF, DOCX, PPTX) và hình ảnh (Avatar, Bìa) trên đám mây.
+- **Tiện ích khác**:
+  - `nodemailer`: Gửi email mã OTP xác thực và khôi phục mật khẩu.
+  - Quét virus tự động trước khi lưu tài liệu.
+  - Chống trùng lặp tài liệu (Plagiarism Detection) thông qua mã băm SHA-256.
 
-### Cơ Sở Dữ Liệu
+### Cơ sở dữ liệu
 
-| Công nghệ | Vai trò |
-| :--- | :--- |
-| **MySQL (v8.0+)** | Hệ quản trị CSDL quan hệ, tương tác bất đồng bộ thông qua thư viện `mysql2/promise`. Các transaction đảm bảo tính ACID. |
+- **MySQL (v8.0+)** — Kết nối qua `mysql2/promise`, hỗ trợ xử lý bất đồng bộ và Database Transactions (Row-level locking) để đảm bảo tính ACID khi giao dịch Xu.
 
 ---
 
-## 4. Cấu Trúc Mã Nguồn (Directory Structure)
+## 4. Các tính năng nổi bật
 
-```text
+### Người dùng (Sinh viên / Giảng viên)
+
+- **Xác thực đa kênh**: Đăng nhập/Đăng ký qua Email (kèm OTP) hoặc Google OAuth2.
+- **Quản lý tài liệu**: Đăng tải tài liệu Free hoặc Premium. Hệ thống tự động tạo mã băm chống re-upload và quét virus.
+- **Hệ thống giao dịch (Xu)**:
+  - Nạp Xu qua Admin, nhập mã khuyến mãi (Promo Code).
+  - Mua tài liệu Premium bằng Xu; tác giả tự động nhận doanh thu.
+  - Lịch sử giao dịch chi tiết, chống trừ tiền âm bằng Transaction.
+- **Tương tác xã hội**:
+  - Đánh giá (Rating 1–5 sao) và Bình luận tài liệu (hỗ trợ Ghim bình luận).
+  - Theo dõi người dùng khác (Follow/Unfollow).
+  - Đánh dấu lưu tài liệu (Bookmark).
+- **Cộng đồng nhóm (Groups)**: Tạo nhóm học tập kín, mời thành viên, duyệt yêu cầu tham gia, chia sẻ tài liệu nội bộ.
+
+### Quản trị viên (Admin)
+
+- **Dashboard thống kê**: Theo dõi doanh thu, số người dùng, tài liệu mới, top đóng góp qua biểu đồ.
+- **Kiểm duyệt nội dung**: Duyệt/Từ chối tài liệu, xử lý báo cáo vi phạm. Hoàn tiền (Refund) tự động cho người mua nếu tài liệu bị gỡ.
+- **Quản lý người dùng**: Khóa/Mở khóa tài khoản (Bulk actions), xét duyệt yêu cầu nâng cấp lên Giảng viên.
+- **Mã khuyến mãi**: Tạo và quản lý Promo Code để tặng Xu cho người dùng.
+
+---
+
+## 5. Cấu trúc thư mục
+
+```
 EduShare/
-├── be/                       # Thư mục mã nguồn máy chủ (Backend)
-│   ├── config/               # Cấu hình biến môi trường
-│   ├── middlewares/          # Chứa auth.js và rateLimit.js
-│   ├── services/             # Dịch vụ quét virus, mailer
-│   ├── server.js             # Entry point Express
-│   ├── database.sql          # Script cấu trúc CSDL ban đầu
-│   ├── alter_db.js           # Kịch bản cập nhật schema tự động
-│   └── *.js                  # Các Routers (users.js, upload.js, admin.js)
+├── be/                       # Backend (Node.js / Express.js)
+│   ├── config/               # Cấu hình kết nối (Database, Cloudinary)
+│   ├── middlewares/          # Middleware bảo mật (auth.js, rateLimit.js)
+│   ├── services/             # Các dịch vụ độc lập (virus scan, hash,...)
+│   ├── server.js             # Entry point của Express.js
+│   ├── database.sql          # Schema cơ sở dữ liệu gốc
+│   ├── migrate_hash.js       # Script nâng cấp CSDL (thêm cột Hash)
+│   └── *.js                  # Các Router (users.js, upload.js, admin.js,...)
 │
-├── fe/                       # Thư mục giao diện (Frontend)
-│   ├── assets/               # Hình ảnh tĩnh
-│   ├── css/                  # File StyleSheet 
-│   ├── pages/                # Các tệp HTML
-│   └── main/                 # Các tệp JavaScript Client-side logic
-└── README.md                 # Tài liệu mô tả dự án
+└── fe/                       # Frontend (HTML / CSS / Vanilla JS)
+    ├── assets/               # Hình ảnh, biểu tượng tĩnh
+    ├── css/                  # StyleSheet theo từng chức năng
+    ├── pages/                # Các trang HTML (auth, admin, user, document)
+    └── main/                 # File JS xử lý logic cho từng trang
 ```
 
 ---
 
-## 5. Hướng Dẫn Cài Đặt (Installation Guide)
+## 6. Hướng dẫn cài đặt
 
-### 5.1 Yêu Cầu Môi Trường Tiền Quyết
-* **Node.js** bản LTS (Phiên bản >= 16.x).
-* **MySQL Server** đang hoạt động (Thường chạy tại cổng 3306).
+### Yêu cầu môi trường
 
-### 5.2 Khởi Tạo Cơ Sở Dữ Liệu
-1. Khởi tạo một cơ sở dữ liệu rỗng trong MySQL (Ví dụ: `edushare_db`).
-2. Thực thi toàn bộ script trong tệp `be/database.sql`.
-3. Quan trọng: Chạy script bổ sung DB (cập nhật bảng BINHLUAN, BAOCAOVIPHAM, THEODOI...):
-   ```bash
-   node be/alter_db.js
-   ```
+- Node.js (LTS >= 16.x)
+- MySQL Server (cổng mặc định 3306)
 
-### 5.3 Cài Đặt Và Khởi Chạy Backend
-1. Di chuyển vào thư mục Backend:
-   ```bash
-   cd be
-   npm install
-   ```
-2. Thiết lập `.env` ngang hàng với `server.js`:
-   ```env
-   PORT=3000
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=YOUR_DB_PASSWORD
-   DB_NAME=edushare_db
-   JWT_SECRET=YOUR_SECRET_KEY
-   CLOUDINARY_CLOUD_NAME=...
-   CLOUDINARY_API_KEY=...
-   CLOUDINARY_API_SECRET=...
-   ```
-3. Khởi động máy chủ:
-   ```bash
-   npm start
-   ```
+### Bước 1 — Khởi tạo cơ sở dữ liệu
 
-2. Bật Live Server trỏ vào gốc thư mục dự án hoặc trực tiếp vào thư mục `fe/`.
-3. Ứng dụng sẽ tự động mở trên trình duyệt (Ví dụ tại địa chỉ: `http://127.0.0.1:5500/fe/pages/guest/guestHome.html`).
-4. **Lưu ý Quan Trọng:** Hãy kiểm tra và đảm bảo hằng số `API_URL` được định nghĩa trong các tệp tại thư mục `fe/main/` đang trỏ chính xác về cổng của Backend mà bạn vừa chạy (Mặc định là `:3000`).
+1. Mở MySQL Client hoặc phpMyAdmin, tạo database trống tên `edushare_db`.
+2. Import file `be/database.sql` để tạo các bảng cơ bản.
+3. Chạy script nâng cấp cấu trúc (thêm cột Hash chống trùng lặp):
+
+```bash
+cd be
+node migrate_hash.js
+```
+
+### Bước 2 — Cấu hình môi trường (Backend)
+
+Cài đặt các gói phụ thuộc:
+
+```bash
+cd be
+npm install
+```
+
+Tạo file `.env` nằm cùng cấp với `server.js` và điền thông tin thực tế:
+
+```env
+PORT=3000
+
+# Database
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=YOUR_DB_PASSWORD
+DB_NAME=edushare_db
+
+# JWT
+JWT_SECRET=YOUR_VERY_SECURE_SECRET_KEY
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Google OAuth2
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+```
+
+> **Lưu ý**: Không commit file `.env` lên Git. Hãy thêm `.env` vào `.gitignore`.
+
+### Bước 3 — Khởi động Backend
+
+```bash
+# Đứng ở thư mục be/
+npm start
+```
+
+Server chạy tại: `http://localhost:3000`
+
+### Bước 4 — Khởi động Frontend
+
+- Dùng tiện ích **Live Server** (VSCode) để phục vụ thư mục `fe/`.
+- Hoặc mở trực tiếp file `fe/pages/guest/guestHome.html` trên trình duyệt.
+- Đảm bảo biến `API_URL` trong các file thuộc `fe/main/` trỏ đúng về Backend: `http://localhost:3000/api`.
 
 ---
 
-## 6. Bảng Phụ Lục API (API Endpoints Reference)
 
-Dưới đây là một phần trích lục các Endpoint cốt lõi của Backend:
+## 7. Hướng phát triển tiếp theo
 
-| Endpoint Route | Phương thức | Chức năng (Mô tả) | Yêu cầu xác thực |
-| :--- | :--- | :--- | :--- |
-| `/api/users/login` | `POST` | Xác thực thông tin người dùng và cấp Token. | Không |
-| `/api/documents/upload` | `POST` | Tiếp nhận và xử lý tệp tài liệu mới. | Có (User) |
-| `/api/documents/:id/buy` | `POST` | Thực hiện giao dịch mua tài liệu Premium. | Có (User) |
-| `/api/admin/documents/:id/approve`| `PUT` | Phê duyệt quyền xuất bản cho tài liệu. | Có (Admin) |
-| `/api/payment/deposit` | `POST` | Đẩy yêu cầu giao dịch nạp Xu. | Có (User) |
-
----
-
-<div align="center">
-  <p><i>Tài liệu được biên soạn phục vụ mục đích phát triển và bảo trì dự án EduShare.</i></p>
-</div>
+- Tích hợp **Socket.io** để đẩy thông báo thời gian thực thay cho cơ chế Polling.
+- Xây dựng khu vực "Bảng tin thảo luận" (Group Feed) ngay bên trong mỗi Nhóm học tập.
+- Chuyển sang **Next.js** (SSR) để tối ưu SEO cho các trang chi tiết tài liệu.

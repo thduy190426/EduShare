@@ -172,7 +172,7 @@
         </form>
       </div>
 
-      <div class="form-card">
+      <div class="form-card" id="change-password-section">
         <div class="collapsible-header" id="btn-toggle-pwd">
           <h2 class="card-title" style="margin: 0;">Đổi mật khẩu</h2>
           <span class="toggle-status"
@@ -184,7 +184,7 @@
 
         <div class="collapsible-content" id="pwd-content">
           <form>
-            <div class="form-group">
+            <div id="change-pw-wrapper" class="form-group">
               <label class="form-label">Mật khẩu hiện tại</label>
               <div style="position: relative;">
                 <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
@@ -214,12 +214,12 @@
               </div>
             </div>
             <div class="form-group" style="margin-top: 16px;">
-              <label class="form-label">Mã xác thực OTP</label>
+              <label class="form-label" style="display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Mã xác thực OTP</label>
               <div style="display: flex; gap: 12px;">
                 <input type="text" id="input-change-pw-otp" class="form-control" placeholder="Nhập mã OTP 6 số"
                   style="flex: 1;" maxlength="6">
                 <button type="button" id="btn-send-pw-otp" class="btn-secondary"
-                  style="white-space: nowrap; margin-right: 4px">Gửi mã OTP</button>
+                  style="white-space: nowrap; margin-right: 4px"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP</button>
               </div>
               <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email
                 hiện tại của bạn để xác thực.</small>
@@ -237,7 +237,7 @@
         <div class="collapsible-header" id="upgrade-teacher-header" style="cursor: pointer;">
           <div>
             <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
-              <i class="fa-solid fa-chalkboard-user" style="color: var(--primary);"></i> Trở thành Giáo viên
+              <i class="fa-solid fa-chalkboard-user" style="color: var(--primary); margin-right: 8px;"></i> Bạn muốn trở thành Giáo viên?
             </h2>
             <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Nâng cấp tài khoản để có quyền
               xác minh và kiểm duyệt tài liệu.</p>
@@ -258,19 +258,26 @@
           <form id="form-upgrade-teacher">
             <div class="form-group">
               <label class="form-label">Minh chứng Giáo viên (Ảnh)</label>
-              <div class="file-upload-wrapper"
+              <div id="proof-upload-zone" class="file-upload-wrapper"
                 style="border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; background: var(--bg-secondary); cursor: pointer;"
                 onclick="document.getElementById('input-upgrade-proof').click()">
                 <i class="fa-solid fa-cloud-arrow-up"
                   style="font-size: 32px; color: var(--primary); margin-bottom: 12px;"></i>
                 <p style="font-weight: 500; margin-bottom: 4px;">Bấm để chọn ảnh minh chứng</p>
-                <p style="font-size: 13px; color: var(--text-secondary);">Thẻ giảng viên, chứng chỉ giảng dạy,... (Chỉ
-                  nhận file ảnh)</p>
-                <input type="file" id="input-upgrade-proof" accept="image/*" style="display: none;"
-                  onchange="document.getElementById('file-name-proof').textContent = this.files[0] ? this.files[0].name : ''">
+                <p style="font-size: 13px; color: var(--text-secondary);">Thẻ giảng viên, chứng chỉ giảng dạy,... (Chỉ nhận file ảnh)</p>
               </div>
-              <div id="file-name-proof"
-                style="margin-top: 8px; font-size: 14px; color: var(--primary); font-weight: 500; text-align: center;">
+              <input type="file" id="input-upgrade-proof" accept="image/*" style="display: none;">
+              
+              <div id="proof-preview-zone" style="display: none; border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--bg-secondary); text-align: center; margin-top: 10px;">
+                <img id="proof-preview-img" style="max-width: 100%; max-height: 250px; object-fit: contain; border-radius: 4px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                  <button type="button" class="btn-secondary" onclick="document.getElementById('input-upgrade-proof').click()" style="padding: 8px 16px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); border-radius: 6px; background: white;">
+                    <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Đổi ảnh khác
+                  </button>
+                  <button type="button" class="btn-danger" id="btn-remove-proof" style="padding: 8px 16px; font-size: 13px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    <i class="fa-solid fa-trash" style="margin-right: 4px;"></i> Xóa ảnh này
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -394,11 +401,25 @@
         tác. Toàn bộ dữ liệu của bạn sẽ bị xoá khỏi hệ thống. Vui lòng nhập mật khẩu để xác nhận.</p>
 
       <div class="form-group" style="margin-bottom: 24px;">
+        <div id="delete-pw-wrapper">
+          <label class="form-label"
+            style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i
+              class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
+          <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
+            autocomplete="current-password" style="width: 100%; box-sizing: border-box;">
+        </div>
+        
         <label class="form-label"
-          style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i
-            class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
-        <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
-          autocomplete="current-password" style="width: 100%; box-sizing: border-box;">
+          style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-top: 16px; margin-bottom: 8px;"><i
+            class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Mã xác thực OTP</label>
+        <div style="display: flex; gap: 12px;">
+          <input type="text" id="input-delete-otp" class="form-control" placeholder="Nhập mã OTP 6 số"
+            style="flex: 1;" maxlength="6">
+          <button type="button" id="btn-send-delete-otp" class="btn-secondary"
+            style="white-space: nowrap;"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP</button>
+        </div>
+        <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email hiện tại của bạn.</small>
+
         <span id="delete-pw-error"
           style="color: #EF4444; font-size: 13px; display: none; margin-top: 6px; font-weight: 500;"><i
             class="fa-solid fa-circle-exclamation" style="margin-right: 4px;"></i> <span></span></span>

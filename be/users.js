@@ -38,6 +38,27 @@ const generateOTPChangePwEmail = (hoTen, otp) => {
     </div>`;
 };
 
+const generateOTPDeleteAccountEmail = (hoTen, otp) => {
+    return `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #EF4444; margin: 0; font-size: 28px;">EduShare</h1>
+            <p style="color: #6B7280; margin-top: 5px; font-size: 16px;">Yêu cầu xóa tài khoản</p>
+        </div>
+        <div style="background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #EF4444;">
+            <h2 style="color: #1f2937; margin-top: 0;">Xin chào ${hoTen},</h2>
+            <p style="font-size: 16px;">Chúng tôi nhận được yêu cầu <strong>xóa tài khoản vĩnh viễn</strong> trên EduShare của bạn. Đây là một hành động không thể hoàn tác.</p>
+            <p style="font-size: 16px;">Dưới đây là mã xác thực OTP để hoàn tất quá trình xóa tài khoản:</p>
+            <div style="background: #FEF2F2; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; border: 1px dashed #EF4444;">
+                <div style="font-size: 32px; font-weight: 700; color: #EF4444; letter-spacing: 4px;">${otp}</div>
+            </div>
+            <p style="font-size: 14px; color: #6b7280; font-style: italic;">Mã này sẽ hết hạn sau 15 phút.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">Nếu bạn không yêu cầu xóa tài khoản, <strong>vui lòng đổi mật khẩu ngay lập tức</strong> để bảo vệ tài khoản.</p>
+        </div>
+    </div>`;
+};
+
 async function tableExists(conn, tableName) {
     const [rows] = await conn.execute(
         `SELECT 1
@@ -144,7 +165,7 @@ router.get('/top-contributors', async (req, res) => {
               AND YEAR(TL.NgayDang) = YEAR(CURRENT_DATE())
             GROUP BY ND.MaND
             ORDER BY TotalDocuments DESC, TotalDownloads DESC
-            LIMIT 5
+            LIMIT 4
         `;
         
         const [rows] = await pool.execute(sql);
@@ -158,7 +179,7 @@ router.get('/top-contributors', async (req, res) => {
 router.get('/profile', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu, HienThiLichSuTai, HienThiDanhGia FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu, HienThiLichSuTai, HienThiDanhGia, AuthType FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
 
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
@@ -173,19 +194,19 @@ router.get('/profile', authMiddleware, async (req, res) => {
 router.post('/send-change-password-otp', authMiddleware, async (req, res) => {
     try {
         const { matKhauCu } = req.body;
-        if (!matKhauCu) {
-            return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu hiện tại.' });
-        }
-
         const pool = req.app.locals.pool;
         const maND = req.user.MaND;
-
-        const [rows] = await pool.execute('SELECT Email, HoTen, MatKhau FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        const [rows] = await pool.execute('SELECT Email, HoTen, MatKhau, AuthType FROM NGUOIDUNG WHERE MaND = ?', [maND]);
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
-        const isMatch = await bcrypt.compare(matKhauCu, rows[0].MatKhau);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Mật khẩu hiện tại không chính xác.' });
+        if (rows[0].AuthType === 'Local') {
+            if (!matKhauCu) {
+                return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu hiện tại.' });
+            }
+            const isMatch = await bcrypt.compare(matKhauCu, rows[0].MatKhau);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Mật khẩu hiện tại không chính xác.' });
+            }
         }
 
         const email = rows[0].Email;
@@ -238,11 +259,22 @@ router.put('/profile', authMiddleware, async (req, res) => {
         const pool = req.app.locals.pool;
         const maND = req.user.MaND;
 
-        if (matKhauCu && matKhauMoi) {
-            const [rows] = await pool.execute('SELECT Email, MatKhau FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (matKhauMoi) {
+            const [rows] = await pool.execute('SELECT Email, MatKhau, AuthType FROM NGUOIDUNG WHERE MaND = ?', [maND]);
             if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
             
             const email = rows[0].Email;
+            const userAuthType = rows[0].AuthType;
+
+            if (userAuthType === 'Local') {
+                if (!matKhauCu) {
+                    return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu cũ.' });
+                }
+                const isMatch = await bcrypt.compare(matKhauCu, rows[0].MatKhau);
+                if (!isMatch) {
+                    return res.status(400).json({ message: 'Mật khẩu cũ không chính xác.' });
+                }
+            }
 
             if (!otp) {
                 return res.status(400).json({ message: 'Vui lòng cung cấp mã OTP để đổi mật khẩu.' });
@@ -254,11 +286,6 @@ router.put('/profile', authMiddleware, async (req, res) => {
             }
             if (new Date() > new Date(otpRows[0].ExpiresAt)) {
                 return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
-            }
-
-            const isMatch = await bcrypt.compare(matKhauCu, rows[0].MatKhau);
-            if (!isMatch) {
-                return res.status(400).json({ message: 'Mật khẩu cũ không chính xác.' });
             }
 
             const saltRounds = 10;
@@ -286,11 +313,43 @@ router.put('/profile', authMiddleware, async (req, res) => {
     }
 });
 
-router.delete('/profile', authMiddleware, async (req, res) => {
-    const { matKhau } = req.body || {};
+router.post('/profile/delete-otp', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT Email, HoTen FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        }
 
-    if (!matKhau) {
-        return res.status(400).json({ message: 'Vui lòng nhập mật khẩu để xác nhận xoá tài khoản.' });
+        const email = rows[0].Email;
+        const hoTen = rows[0].HoTen;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
+
+        await pool.execute(
+            'INSERT INTO DELETE_ACCOUNT_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
+            [email, otp, expiresAt, otp, expiresAt]
+        );
+
+        await transporter.sendMail({
+            from: `"EduShare" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Mã OTP Xóa Tài Khoản',
+            html: generateOTPDeleteAccountEmail(hoTen, otp)
+        });
+
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
+    } catch (err) {
+        console.error('Lỗi gửi OTP xóa tài khoản:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi gửi OTP.' });
+    }
+});
+
+router.delete('/profile', authMiddleware, async (req, res) => {
+    const { matKhau, otp } = req.body || {};
+    
+    if (!otp) {
+        return res.status(400).json({ message: 'Vui lòng nhập mã OTP để xác nhận xoá tài khoản.' });
     }
 
     const pool = req.app.locals.pool;
@@ -299,17 +358,34 @@ router.delete('/profile', authMiddleware, async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        const [userRows] = await conn.execute('SELECT MaND, HoTen, MatKhau, VaiTro, TrangThai FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        const [userRows] = await conn.execute('SELECT MaND, HoTen, Email, MatKhau, VaiTro, TrangThai, AuthType FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
         if (userRows.length === 0) {
             await conn.rollback();
             return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
         }
 
         const user = userRows[0];
-        const isMatch = await bcrypt.compare(matKhau, user.MatKhau);
-        if (!isMatch) {
+        
+        if (user.AuthType === 'Local') {
+            if (!matKhau) {
+                await conn.rollback();
+                return res.status(400).json({ message: 'Vui lòng nhập mật khẩu để xác nhận xoá tài khoản.' });
+            }
+            const isMatch = await bcrypt.compare(matKhau, user.MatKhau);
+            if (!isMatch) {
+                await conn.rollback();
+                return res.status(400).json({ message: 'Mật khẩu xác nhận không chính xác.' });
+            }
+        }
+
+        const [otpRows] = await conn.execute('SELECT * FROM DELETE_ACCOUNT_OTP WHERE Email = ? AND OTP = ?', [user.Email, otp]);
+        if (otpRows.length === 0) {
             await conn.rollback();
-            return res.status(400).json({ message: 'Mật khẩu xác nhận không chính xác.' });
+            return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+        }
+        if (new Date() > new Date(otpRows[0].ExpiresAt)) {
+            await conn.rollback();
+            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
         }
 
         if (user.VaiTro === 'Admin' && user.TrangThai === 'HoatDong') {
@@ -327,6 +403,7 @@ router.delete('/profile', authMiddleware, async (req, res) => {
         }
 
         await conn.commit();
+        await pool.execute('DELETE FROM DELETE_ACCOUNT_OTP WHERE Email = ?', [user.Email]);
         res.status(200).json({ message: `Đã xoá vĩnh viễn tài khoản "${user.HoTen}".` });
     } catch (error) {
         await conn.rollback();

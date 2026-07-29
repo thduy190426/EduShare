@@ -328,3 +328,34 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
+
+@media (max-width: 992px) {
+  .content-area {
+    margin-left: 0;
+    padding: 24px;
+    margin-bottom: 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .content-area {
+    padding: 16px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 12px;
+  }
+  .export-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .transaction-table th, .transaction-table td {
+    padding: 12px 10px;
+    white-space: nowrap;
+  }
+}

@@ -156,6 +156,39 @@ async function run() {
         `);
         
         await addColumnIfMissing('BINHLUAN', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
+        
+        await addColumnIfMissing('NHOM', 'AnhBia', 'VARCHAR(255) DEFAULT NULL');
+        
+        await addColumnIfMissing('NHOM', 'IsPrivate', 'BOOLEAN DEFAULT FALSE');
+        
+        await createTableIfMissing('BAIVIET_NHOM', `
+            CREATE TABLE BAIVIET_NHOM (
+                MaBaiViet INT AUTO_INCREMENT PRIMARY KEY,
+                MaND INT NOT NULL,
+                MaNhom INT NOT NULL,
+                NoiDung TEXT NOT NULL,
+                NgayDang DATETIME DEFAULT CURRENT_TIMESTAMP,
+                DaGhim BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE,
+                FOREIGN KEY (MaNhom) REFERENCES NHOM(MaNhom) ON DELETE CASCADE
+            )
+        `);
+        
+        await addColumnIfMissing('BAIVIET_NHOM', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
+
+        await createTableIfMissing('BINHLUAN_BAIVIET', `
+            CREATE TABLE BINHLUAN_BAIVIET (
+                MaBL INT AUTO_INCREMENT PRIMARY KEY,
+                MaBaiViet INT NOT NULL,
+                MaND INT NOT NULL,
+                NoiDung TEXT NOT NULL,
+                MaBL_Cha INT DEFAULT NULL,
+                NgayBinhLuan DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (MaBaiViet) REFERENCES BAIVIET_NHOM(MaBaiViet) ON DELETE CASCADE,
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE,
+                FOREIGN KEY (MaBL_Cha) REFERENCES BINHLUAN_BAIVIET(MaBL) ON DELETE CASCADE
+            )
+        `);
     } finally {
         await pool.end();
     }
