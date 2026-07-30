@@ -3,6 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const Busboy = require('busboy');
 const { Readable } = require('stream');
+const fs = require('fs');
+const os = require('os');
 const multer = require('multer');
 const streamifier = require('streamifier');
 const router = express.Router();
@@ -111,6 +113,13 @@ async function deleteUserAndRelatedData(conn, maND) {
     await conn.execute('DELETE FROM THANHVIEN_NHOM WHERE MaND = ?', [maND]);
     await conn.execute('DELETE FROM NGUOIDUNG_MONHOC WHERE MaND = ?', [maND]);
     await conn.execute('DELETE FROM THEODOI WHERE MaND_TheoDoi = ? OR MaND_DuocTheoDoi = ?', [maND, maND]);
+    
+    await conn.execute('DELETE FROM TAILIEU_DAMUA WHERE MaND = ?', [maND]);
+    await conn.execute('UPDATE GIAODICH_NAPXU SET MaND_Duyet = NULL WHERE MaND_Duyet = ?', [maND]);
+    await conn.execute('DELETE FROM GIAODICH_NAPXU WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM LICH_SU_XU WHERE MaND = ?', [maND]);
+    await conn.execute('DELETE FROM YEU_CAU_GIAO_VIEN WHERE MaND = ?', [maND]);
+
 
     if (await tableExists(conn, 'LICH_SU_TAI')) {
         await conn.execute('DELETE FROM LICH_SU_TAI WHERE MaND = ?', [maND]);
@@ -144,8 +153,6 @@ function normalizeGioiTinh(value) {
     return genderMap[normalized] || null;
 }
 
-
-// API lấy top người đóng góp trong tháng
 router.get('/top-contributors', async (req, res) => {
     try {
         const pool = req.app.locals.pool;
@@ -516,7 +523,7 @@ function parseAvatarRequest(req) {
 
 const avatarUpdateLimits = new Map();
 const MAX_AVATAR_CHANGES = 5;
-const AVATAR_LIMIT_RESET_TIME = 60 * 60 * 1000; // 1 giờ
+const AVATAR_LIMIT_RESET_TIME = 60 * 60 * 1000; 
 
 function checkAvatarRateLimit(maND) {
     const now = Date.now();
@@ -908,8 +915,11 @@ router.get('/upgrade-status', authMiddleware, async (req, res) => {
 });
 
 const uploadImage = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => cb(null, os.tmpdir()),
+        filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 }, 
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);

@@ -139,8 +139,6 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
 
-
-/* Prevent printing the PDF preview */
 @media print {
     .preview-pages {
         display: none !important;

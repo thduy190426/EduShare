@@ -410,6 +410,8 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
             await conn.execute(`DELETE FROM BOOKMARK WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM DANHGIA WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM BAOCAOVIPHAM WHERE MaTL IN (${placeholders})`, documentIds);
+            await conn.execute(`DELETE FROM THONGBAO WHERE MaTL IN (${placeholders})`, documentIds);
+            await conn.execute(`DELETE FROM TAILIEU_DAMUA WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM TAILIEU_NHOM WHERE MaTL IN (${placeholders})`, documentIds);
             if (await tableExists('LICH_SU_TAI')) {
                 await conn.execute(`DELETE FROM LICH_SU_TAI WHERE MaTL IN (${placeholders})`, documentIds);

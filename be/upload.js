@@ -4,10 +4,21 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const https = require('https');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
+
+async function getFileHash(filePath) {
+    return new Promise((resolve, reject) => {
+        const hash = crypto.createHash('sha256');
+        const rs = fs.createReadStream(filePath);
+        rs.on('error', reject);
+        rs.on('data', chunk => hash.update(chunk));
+        rs.on('end', () => resolve(hash.digest('hex')));
+    });
+}
 const xss = require('xss');
 require('dotenv').config();
 
@@ -18,14 +29,18 @@ cloudinary.config({
 });
 
 
-const uploadToCloudinary = (buffer, options) => {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
+const uploadToCloudinary = (filePathOrBuffer, options) => {
+    if (Buffer.isBuffer(filePathOrBuffer)) {
+        return new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
+                if (result) resolve(result);
+                else reject(error);
+            });
+            streamifier.createReadStream(filePathOrBuffer).pipe(stream);
         });
-        streamifier.createReadStream(buffer).pipe(stream);
-    });
+    } else {
+        return cloudinary.uploader.upload(filePathOrBuffer, options);
+    }
 };
 
 const generatePreviewPdf = async (buffer) => {
@@ -80,7 +95,10 @@ const { authMiddleware, teacherMiddleware } = require('./middlewares/auth');
 const { uploadLimiter, rateLimiter, reportLimiter, downloadLimiter, commentLimiter } = require('./middlewares/rateLimit');
 const { scanFileVirus } = require('./services/virusScanner');
 
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, os.tmpdir()),
+    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
 
 const upload = multer({
     storage: storage,
@@ -229,46 +247,55 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
             return res.status(400).json({ message: 'Vui lòng chọn file tài liệu.' });
         }
 
-        const virusScanResult = await scanFileVirus(req.file.buffer);
-        if (!virusScanResult.safe) {
-            return res.status(400).json({ message: virusScanResult.message });
-        }
-
-        const tenTL = xss(req.body.tenTL);
-        const moTa = req.body.moTa ? xss(req.body.moTa) : null;
-        const maMonHoc = req.body.maMonHoc;
-        let laTaiLieuChinhThuc = false;
-
-
-        if (req.user.VaiTro === 'GiaoVien' && req.body.laTaiLieuChinhThuc === 'true') {
-            laTaiLieuChinhThuc = true;
-        }
-
-        let laTaiLieuDocQuyen = req.body.laTaiLieuDocQuyen === 'true';
-        let giaXu = parseInt(req.body.giaXu) || 0;
-        
-        if (req.user.VaiTro !== 'GiaoVien' && req.user.VaiTro !== 'Admin') {
-            laTaiLieuDocQuyen = false;
-        }
-
-        if (!laTaiLieuDocQuyen) {
-            giaXu = 0;
-        } else if (giaXu < 0 || giaXu > 1000000) {
-            return res.status(400).json({ message: 'Giá Xu phải lớn hơn hoặc bằng 0 và không vượt quá 1.000.000.' });
-        }
-
-        if (!tenTL || !maMonHoc) {
-            return res.status(400).json({ message: 'Vui lòng cung cấp đủ tên tài liệu và mã môn học.' });
-        }
-
-        const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
-        const isPdf = loaiFile === 'pdf';
-        const resourceType = isPdf ? 'image' : 'raw';
-
         try {
+            const fileHash = await getFileHash(req.file.path);
             
+            const virusScanResult = await scanFileVirus(fileHash);
+            if (!virusScanResult.safe) {
+                fs.unlinkSync(req.file.path);
+                return res.status(400).json({ message: virusScanResult.message });
+            }
 
-            const cloudinaryResult = await uploadToCloudinary(req.file.buffer, {
+            const tenTL = xss(req.body.tenTL);
+            const moTa = req.body.moTa ? xss(req.body.moTa) : null;
+            const maMonHoc = req.body.maMonHoc;
+            let laTaiLieuChinhThuc = false;
+
+            if (req.user.VaiTro === 'GiaoVien' && req.body.laTaiLieuChinhThuc === 'true') {
+                laTaiLieuChinhThuc = true;
+            }
+
+            let laTaiLieuDocQuyen = req.body.laTaiLieuDocQuyen === 'true';
+            let giaXu = parseInt(req.body.giaXu) || 0;
+            
+            if (req.user.VaiTro !== 'GiaoVien' && req.user.VaiTro !== 'Admin') {
+                laTaiLieuDocQuyen = false;
+            }
+
+            if (!laTaiLieuDocQuyen) {
+                giaXu = 0;
+            } else if (giaXu < 0 || giaXu > 1000000) {
+                fs.unlinkSync(req.file.path);
+                return res.status(400).json({ message: 'Giá Xu phải lớn hơn hoặc bằng 0 và không vượt quá 1.000.000.' });
+            }
+
+            if (!tenTL || !maMonHoc) {
+                fs.unlinkSync(req.file.path);
+                return res.status(400).json({ message: 'Vui lòng cung cấp đủ tên tài liệu và mã môn học.' });
+            }
+
+            const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
+            const isPdf = loaiFile === 'pdf';
+            const resourceType = isPdf ? 'image' : 'raw';
+
+            const pool = req.app.locals.pool;
+            const [existingDocs] = await pool.execute('SELECT MaTL FROM TAILIEU WHERE FileHash = ? AND TrangThaiKiemDuyet != "TuChoi"', [fileHash]);
+            if (existingDocs.length > 0) {
+                fs.unlinkSync(req.file.path);
+                return res.status(400).json({ message: 'Tài liệu này đã tồn tại trên hệ thống. Xin vui lòng không re-up.' });
+            }
+
+            const cloudinaryResult = await uploadToCloudinary(req.file.path, {
                 resource_type: resourceType,
                 folder: 'edushare_docs',
                 format: isPdf ? 'pdf' : undefined
@@ -278,7 +305,8 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
             let previewURL = null;
 
             if (laTaiLieuDocQuyen && isPdf) {
-                const previewBuffer = await generatePreviewPdf(req.file.buffer);
+                const fileBuffer = fs.readFileSync(req.file.path);
+                const previewBuffer = await generatePreviewPdf(fileBuffer);
                 if (previewBuffer) {
                     const previewUploadResult = await uploadToCloudinary(previewBuffer, {
                         resource_type: 'image',
@@ -289,13 +317,7 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
                 }
             }
 
-            const pool = req.app.locals.pool;
-            
-            const fileHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
-            const [existingDocs] = await pool.execute('SELECT MaTL FROM TAILIEU WHERE FileHash = ? AND TrangThaiKiemDuyet != "TuChoi"', [fileHash]);
-            if (existingDocs.length > 0) {
-                return res.status(400).json({ message: 'Tài liệu này đã tồn tại trên hệ thống. Xin vui lòng không re-up.' });
-            }
+            fs.unlinkSync(req.file.path);
 
             await pool.execute(
                 `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash) 
@@ -312,6 +334,9 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
 
             res.status(200).json({ message: 'Tải lên tài liệu thành công.', fileURL });
         } catch (dbErr) {
+            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
             console.error('Lỗi khi tải lên hoặc lưu DB:', dbErr);
             res.status(500).json({ message: 'Lỗi máy chủ khi xử lý tài liệu.' });
         }
@@ -1199,14 +1224,12 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
             [maTL, maND, lyDo, 'ChoXuLy']
         );
 
-        // Đếm số lượng báo cáo chờ xử lý của tài liệu này
         const [reportCount] = await pool.execute(
             'SELECT COUNT(*) as count FROM BAOCAOVIPHAM WHERE MaTL = ? AND TrangThai = "ChoXuLy"',
             [maTL]
         );
 
         if (reportCount[0].count >= 5) {
-            // Tự động ẩn tài liệu và đưa về chờ duyệt
             await pool.execute(
                 'UPDATE TAILIEU SET TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
                 [maTL]

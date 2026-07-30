@@ -249,7 +249,6 @@ function renderDocumentInfo(doc, hasPurchased) {
         if (rawUrl) {
             const fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
             
-            // Render PDF.js
             renderPdfToCanvas(fileUrlFull, previewContainer);
             previewContainer.style.width = '100%';
             previewContainer.style.height = 'calc(100% - 44px)';
@@ -976,8 +975,6 @@ async function handleDownload() {
     }
 }
 
-
-// === Render PDF.js ===
 async function renderPdfToCanvas(url, container) {
     container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang tải và xử lý tài liệu (PDF.js)...</div>';
     try {
@@ -1034,7 +1031,6 @@ async function renderPdfToCanvas(url, container) {
     }
 }
 
-// === Responsive Mobile Sidebar ===
 if (window.innerWidth <= 768) {
     document.documentElement.classList.add('sidebar-collapsed');
 }

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware, adminMiddleware } = require('./middlewares/auth');
+const { paymentLimiter } = require('./middlewares/rateLimit');
 
 
 const PACKAGES = [
@@ -22,7 +23,7 @@ router.post('/promos/validate', authMiddleware, async (req, res) => {
     
     try {
         const pool = req.app.locals.pool;
-        const [rows] = await pool.execute('SELECT DiscountPercent, IsActive FROM PROMO_CODE WHERE Code = ?', [code.trim().toUpperCase()]);
+        const [rows] = await pool.execute('SELECT MaPromo, DiscountPercent, IsActive FROM PROMO_CODE WHERE Code = ?', [code.trim().toUpperCase()]);
         
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Mã ưu đãi không tồn tại.' });
@@ -32,6 +33,11 @@ router.post('/promos/validate', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Mã ưu đãi đã hết hạn hoặc bị vô hiệu hóa.' });
         }
         
+        const [used] = await pool.execute('SELECT MaGD FROM GIAODICH_NAPXU WHERE MaND = ? AND MaPromo = ? AND TrangThai = "DaDuyet"', [req.user.MaND, rows[0].MaPromo]);
+        if (used.length > 0) {
+            return res.status(400).json({ message: 'Bạn đã sử dụng mã khuyến mãi này trước đó, mỗi mã chỉ dùng được 1 lần.' });
+        }
+        
         res.status(200).json({ discountPercent: rows[0].DiscountPercent });
     } catch (err) {
         console.error('Lỗi khi validate promo code:', err);
@@ -39,7 +45,7 @@ router.post('/promos/validate', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/create', authMiddleware, async (req, res) => {
+router.post('/create', authMiddleware, paymentLimiter, async (req, res) => {
     const { packageId, promoCode } = req.body;
     const pkg = PACKAGES.find(p => p.id === packageId);
     
@@ -54,9 +60,17 @@ router.post('/create', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         
+        let maPromo = null;
         if (promoCode) {
-            const [promoRows] = await pool.execute('SELECT DiscountPercent, IsActive FROM PROMO_CODE WHERE Code = ?', [promoCode.trim().toUpperCase()]);
+            const [promoRows] = await pool.execute('SELECT MaPromo, DiscountPercent, IsActive FROM PROMO_CODE WHERE Code = ?', [promoCode.trim().toUpperCase()]);
             if (promoRows.length > 0 && promoRows[0].IsActive) {
+                maPromo = promoRows[0].MaPromo;
+                
+                const [used] = await pool.execute('SELECT MaGD FROM GIAODICH_NAPXU WHERE MaND = ? AND MaPromo = ? AND TrangThai = "DaDuyet"', [userId, maPromo]);
+                if (used.length > 0) {
+                    return res.status(400).json({ message: 'Bạn đã sử dụng mã khuyến mãi này trước đó.' });
+                }
+
                 coins = Math.floor(coins * (1 + promoRows[0].DiscountPercent / 100));
             }
         }
@@ -72,13 +86,13 @@ router.post('/create', authMiddleware, async (req, res) => {
         if (pendingTx.length > 0) {
             maGD = pendingTx[0].MaGD;
             await pool.execute(
-                'UPDATE GIAODICH_NAPXU SET SoTien = ?, SoXu = ?, NgayTao = CURRENT_TIMESTAMP WHERE MaGD = ?',
-                [amount, coins, maGD]
+                'UPDATE GIAODICH_NAPXU SET SoTien = ?, SoXu = ?, MaPromo = ?, NgayTao = CURRENT_TIMESTAMP WHERE MaGD = ?',
+                [amount, coins, maPromo, maGD]
             );
         } else {
             const [result] = await pool.execute(
-                'INSERT INTO GIAODICH_NAPXU (MaND, SoTien, SoXu, TrangThai) VALUES (?, ?, ?, ?)',
-                [userId, amount, coins, 'ChoDuyet']
+                'INSERT INTO GIAODICH_NAPXU (MaND, SoTien, SoXu, TrangThai, MaPromo) VALUES (?, ?, ?, ?, ?)',
+                [userId, amount, coins, 'ChoDuyet', maPromo]
             );
             maGD = result.insertId;
         }

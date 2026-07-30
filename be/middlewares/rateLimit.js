@@ -72,6 +72,14 @@ const commentLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const paymentLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, 
+    max: 10, 
+    message: { message: 'Bạn đã yêu cầu tạo giao dịch quá nhiều lần. Vui lòng thử lại sau 15 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 module.exports = {
     uploadLimiter,
     rateLimiter,
@@ -81,5 +89,6 @@ module.exports = {
     contactLimiter,
     otpLimiter,
     downloadLimiter,
-    commentLimiter
+    commentLimiter,
+    paymentLimiter
 };

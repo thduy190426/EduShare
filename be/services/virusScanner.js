@@ -1,6 +1,4 @@
-const crypto = require('crypto');
-
-async function scanFileVirus(buffer) {
+async function scanFileVirus(fileHash) {
     const apiKey = process.env.VIRUSTOTAL_API_KEY;
 
     if (!apiKey || apiKey.trim() === '' || apiKey === '3a73b4f146f91977c3d0666e95c0e6a099d08f2986d0036216fc368420f5d27b') {
@@ -9,8 +7,7 @@ async function scanFileVirus(buffer) {
     }
 
     try {
-        const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-        const response = await fetch(`https://www.virustotal.com/api/v3/files/${hash}`, {
+        const response = await fetch(`https://www.virustotal.com/api/v3/files/${fileHash}`, {
             method: 'GET',
             headers: {
                 'x-apikey': apiKey
@@ -22,17 +19,17 @@ async function scanFileVirus(buffer) {
             const stats = data?.data?.attributes?.last_analysis_stats;
             
             if (stats && stats.malicious > 0) {
-                console.error(`[VirusScanner] Phát hiện mã độc! SHA-256: ${hash} — Cảnh báo từ ${stats.malicious} trình diệt virus.`);
+                console.error(`[VirusScanner] Phát hiện mã độc! SHA-256: ${fileHash} — Cảnh báo từ ${stats.malicious} trình diệt virus.`);
                 return { 
                     safe: false, 
                     message: `Tệp bị phát hiện có chứa mã độc bởi ${stats.malicious} trình diệt virus! Hệ thống đã từ chối tải lên.` 
                 };
             }
 
-            console.log(`[VirusScanner] Tệp an toàn. SHA-256: ${hash}`);
+            console.log(`[VirusScanner] Tệp an toàn. SHA-256: ${fileHash}`);
             return { safe: true, message: 'Tệp an toàn (Đã quét bởi VirusTotal).' };
         } else if (response.status === 404) {
-            console.log(`[VirusScanner] Tệp mới (SHA-256: ${hash}) chưa có dữ liệu báo cáo mã độc.`);
+            console.log(`[VirusScanner] Tệp mới (SHA-256: ${fileHash}) chưa có dữ liệu báo cáo mã độc.`);
             return { safe: true, message: 'Tệp mới chưa từng bị gắn cờ độc hại.' };
         } else {
             console.warn(`[VirusScanner] Phản hồi từ VirusTotal API (Status ${response.status}).`);

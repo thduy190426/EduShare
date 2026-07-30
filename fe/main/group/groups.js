@@ -1776,11 +1776,8 @@ async function fetchGroupDocuments() {
             grid.appendChild(a);
         });
         };
-
-        // Initial render
         window.renderGroupDocs();
 
-        // Attach event listener once
         const searchInput = document.getElementById('search-group-doc');
         if (searchInput && !searchInput.dataset.hasListener) {
             searchInput.dataset.hasListener = 'true';
@@ -1927,9 +1924,6 @@ async function loadMyDocumentsForShare() {
     }
 }
 
-// -------------------------------------------------------------
-// ENHANCEMENTS START HERE
-// -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.includes('groupDetails.html')) {
         setupTabs();
@@ -1952,10 +1946,8 @@ function setupTabs() {
         }
     };
 
-    // Initialize indicator position
     const activeTab = document.querySelector('.tab-item.active');
     if (activeTab) {
-        // Use setTimeout to ensure layout is calculated
         setTimeout(() => updateIndicator(activeTab), 50);
     }
 
@@ -1973,7 +1965,6 @@ function setupTabs() {
             if (targetId) {
                 const targetContent = document.getElementById(targetId);
                 targetContent.style.display = 'block';
-                // Trigger reflow to restart animation
                 void targetContent.offsetWidth;
                 targetContent.classList.add('fade-in');
                 if (targetId === 'discussions-tab') {
@@ -2016,7 +2007,7 @@ function setupCoverUpload() {
 
                 if (cropper) cropper.destroy();
                 cropper = new Cropper(imageToCrop, {
-                    aspectRatio: NaN, // Allow free crop
+                    aspectRatio: NaN, 
                     viewMode: 1,
                     autoCropArea: 1,
                 });
@@ -2076,7 +2067,7 @@ function setupCoverUpload() {
                         if (updateRes.ok) {
                             localStorage.setItem(`lastCoverUpdate_${currentGroupId}`, Date.now().toString());
                             Swal.fire('Thành công', 'Đã cập nhật ảnh bìa.', 'success');
-                            fetchGroupInfo(); // reload to show cover
+                            fetchGroupInfo(); 
                         } else {
                             throw new Error('Lỗi cập nhật dữ liệu nhóm');
                         }
@@ -2120,10 +2111,7 @@ let docSearchQuery = '';
 
 function setupDocumentSearch() {
     const searchGroupDoc = document.getElementById('search-group-doc');
-    // We remove the server-side input listener here because client-side search 
-    // is already implemented in fetchGroupDocuments()
 
-    // setup intersection observer for infinite scroll
     const loadingIndicator = document.getElementById('docs-loading');
     if (loadingIndicator) {
         const observer = new IntersectionObserver((entries) => {
@@ -2136,7 +2124,6 @@ function setupDocumentSearch() {
     }
 }
 
-// Override original fetchGroupDocuments
 window.fetchGroupDocuments = async function(reset = false) {
     if (!currentGroupId || docIsLoading) return;
     
@@ -2398,7 +2385,7 @@ function setupDiscussions() {
                     btnCreate.disabled = true;
                     btnCreate.style.opacity = '0.6';
                     btnCreate.style.cursor = 'not-allowed';
-                    fetchGroupPosts(true); // reload posts
+                    fetchGroupPosts(true);
                 } else {
                     const data = await res.json();
                     Swal.fire('Lỗi', data.message, 'error');
@@ -2641,12 +2628,10 @@ window.submitComment = async (postId) => {
         });
         if (res.ok) {
             input.value = '';
-            // refresh comments by toggling off and on
             const section = document.getElementById(`comments-${postId}`);
             section.classList.remove('show');
             toggleComments(postId);
             
-            // update comment count visually by triggering a full refresh
             fetchGroupPosts(true); 
         }
     } catch (err) {

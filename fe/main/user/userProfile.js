@@ -964,26 +964,22 @@ function setupTabListeners() {
     const tabMyDocs = document.getElementById('tab-my-docs');
     const tabBookmarks = document.getElementById('tab-bookmarks');
     const tabPurchased = document.getElementById('tab-purchased');
-    const tabTransactions = document.getElementById('tab-transactions');
     const tabMyReports = document.getElementById('tab-my-reports');
     
     const containerMyDocs = document.getElementById('my-docs-container');
     const containerBookmarks = document.getElementById('bookmarks-container');
     const containerPurchased = document.getElementById('purchased-container');
-    const containerTransactions = document.getElementById('transactions-container');
     const containerMyReports = document.getElementById('my-reports-container');
 
     function resetTabs() {
         tabMyDocs.classList.remove('active');
         tabBookmarks.classList.remove('active');
         tabPurchased.classList.remove('active');
-        tabTransactions.classList.remove('active');
         tabMyReports.classList.remove('active');
         
         containerMyDocs.style.display = 'none';
         containerBookmarks.style.display = 'none';
         containerPurchased.style.display = 'none';
-        containerTransactions.style.display = 'none';
         containerMyReports.style.display = 'none';
     }
 
@@ -1013,15 +1009,7 @@ function setupTabListeners() {
         fetchPurchasedDocuments();
     });
     
-    tabTransactions.addEventListener('click', () => {
-        resetTabs();
-        tabTransactions.classList.add('active');
-        containerTransactions.style.display = 'flex';
-        containerTransactions.style.flexDirection = 'column';
-        containerTransactions.style.gap = '15px';
-        fetchTransactions();
-    });
-    
+
     tabMyReports.addEventListener('click', () => {
         resetTabs();
         tabMyReports.classList.add('active');

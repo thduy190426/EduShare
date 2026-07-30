@@ -113,6 +113,8 @@ async function run() {
                 FOREIGN KEY (MaND_Duyet) REFERENCES NGUOIDUNG(MaND)
             )
         `);
+        
+        await addColumnIfMissing('GIAODICH_NAPXU', 'MaPromo', 'INT DEFAULT NULL');
         await createTableIfMissing('TAILIEU_DAMUA', `
             CREATE TABLE TAILIEU_DAMUA (
                 MaND INT NOT NULL,

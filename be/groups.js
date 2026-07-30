@@ -825,7 +825,6 @@ router.get('/:maNhom/posts', authMiddleware, async (req, res) => {
         const [groupCheck] = await pool.execute('SELECT IsPrivate FROM NHOM WHERE MaNhom = ?', [maNhom]);
         if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
         
-        // check member
         const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
         if (memberCheck.length === 0 && req.user.VaiTro !== 'Admin' && groupCheck[0].IsPrivate) {
             return res.status(403).json({ message: 'Bạn không có quyền xem nhóm này.' });
@@ -892,13 +891,11 @@ router.put('/:maNhom/posts/:postId/pin', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-        // Check if user is admin
         const [adminCheck] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
         if (adminCheck.length === 0 || (adminCheck[0].VaiTroTrongNhom !== 'QuanTri' && adminCheck[0].VaiTroTrongNhom !== 'PhoNhom')) {
             return res.status(403).json({ message: 'Chỉ quản trị viên mới có quyền ghim bài viết.' });
         }
 
-        // Get current pin state
         const [postCheck] = await pool.execute('SELECT DaGhim FROM BAIVIET_NHOM WHERE MaBaiViet = ? AND MaNhom = ?', [postId, maNhom]);
         if (postCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy bài viết.' });
 

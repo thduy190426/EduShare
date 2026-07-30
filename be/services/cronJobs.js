@@ -25,7 +25,7 @@ function initCronJobs(pool) {
                 return;
             }
 
-            const rewards = [500, 300, 200, 100]; // Thưởng Top 1-4
+            const rewards = [500, 300, 200, 100];
             
             for (let i = 0; i < topUsers.length; i++) {
                 const user = topUsers[i];
@@ -49,6 +49,16 @@ function initCronJobs(pool) {
         }
     });
     console.log('Đã khởi tạo các Cron Job tự động (Phát thưởng Top Bảng Vàng).');
+    cron.schedule('0 3 * * *', async () => {
+        try {
+            const [result] = await pool.execute('DELETE FROM REFRESH_TOKENS WHERE ExpiresAt < CURRENT_TIMESTAMP');
+            if (result.affectedRows > 0) {
+                console.log(`Đã dọn dẹp ${result.affectedRows} token hết hạn khỏi CSDL.`);
+            }
+        } catch (error) {
+            console.error('Lỗi khi dọn dẹp token:', error);
+        }
+    });
 }
 
 module.exports = { initCronJobs };
