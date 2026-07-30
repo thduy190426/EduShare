@@ -88,7 +88,7 @@ async function fetchDocumentDetails() {
 
         const data = await response.json();
         renderDocumentInfo(data.document, data.hasPurchased);
-        updateSEO(data.document.TenTL, data.document.MoTa);
+        updateSEO(data.document.TenTL, data.document.TextSEO || data.document.MoTa);
         renderComments(data.comments, data.document.MaND_NguoiDang);
         fetchRelatedDocuments();
 
@@ -247,7 +247,11 @@ function renderDocumentInfo(doc, hasPurchased) {
     if (loaiFile === 'pdf' || (doc.PreviewURL && doc.PreviewURL !== 'null')) {
         let rawUrl = doc.FileURL || doc.PreviewURL;
         if (rawUrl) {
-            const fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
+            let fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
+            
+            if (loaiFile === 'pdf' && doc.MaTL && rawUrl && rawUrl.includes('uploads/')) {
+                fileUrlFull = `${API_URL}/documents/${doc.MaTL}/stream`;
+            }
             
             renderPdfToCanvas(fileUrlFull, previewContainer);
             previewContainer.style.width = '100%';
@@ -613,6 +617,7 @@ function setupEventListeners() {
     const btnSubmitComment = document.getElementById('btn-submit-comment');
     
     if (commentInput && btnSubmitComment) {
+        initTribute(commentInput);
         btnSubmitComment.disabled = true;
         btnSubmitComment.style.opacity = '0.5';
         btnSubmitComment.style.cursor = 'not-allowed';
@@ -635,6 +640,41 @@ function setupEventListeners() {
             submitComment(noiDung, null);
         });
     }
+}
+
+function initTribute(element) {
+    if (!window.Tribute) return;
+    const tribute = new Tribute({
+        values: async function (text, cb) {
+            try {
+                const res = await fetch(`${API_URL}/users/search?q=${text}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (!res.ok) return cb([]);
+                const users = await res.json();
+                cb(users);
+            } catch (err) {
+                cb([]);
+            }
+        },
+        lookup: 'HoTen',
+        fillAttr: 'HoTen',
+        selectTemplate: function (item) {
+            return `@[${item.original.HoTen}](${item.original.MaND})`;
+        },
+        menuItemTemplate: function (item) {
+            if (item.original.AvatarURL) {
+                return `<img src="${getAssetUrl(item.original.AvatarURL)}"> ${item.original.HoTen}`;
+            } else {
+                const initial = item.original.HoTen ? item.original.HoTen.charAt(0).toUpperCase() : 'U';
+                return `<div style="width: 24px; height: 24px; border-radius: 50%; background: #E0E7FF; color: #4F46E5; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 8px; vertical-align: middle;">${initial}</div> ${item.original.HoTen}`;
+            }
+        },
+        noMatchTemplate: function () {
+            return '<span style="visibility: hidden;"></span>';
+        }
+    });
+    tribute.attach(element);
 }
 
 let lastCommentTime = 0;
@@ -767,7 +807,7 @@ function renderComments(comments, documentOwnerId) {
                 ${pinnedBadge}
                 <span class="comment-time">${dateHtml}</span>
               </div>
-              <div class="comment-text">${escapeHTML(comment.NoiDung)}</div>
+              <div class="comment-text">${escapeHTML(comment.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
               <div class="comment-actions">
                 <span class="comment-action reply-btn" data-id="${comment.MaBL}"><i class="fa-solid fa-reply" style="margin-right: 4px;"></i> Phản hồi</span>
                 ${deleteBtnHtml}
@@ -823,6 +863,7 @@ function renderComments(comments, documentOwnerId) {
             btnCancelReply.addEventListener('mouseout', () => btnCancelReply.style.background = 'white');
 
             const replyInput = document.getElementById(`reply-input-${parentId}`);
+            initTribute(replyInput);
             const btnSubmitReply = document.getElementById(`btn-submit-reply-${parentId}`);
 
             replyInput.focus();

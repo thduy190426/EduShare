@@ -10,8 +10,43 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../guest/guestHome.html';
         return;
     }
-
     fetchStats();
+
+    const btnExportRev = document.getElementById('btn-export-revenue');
+    if (btnExportRev) {
+        btnExportRev.addEventListener('click', async () => {
+            try {
+                btnExportRev.disabled = true;
+                btnExportRev.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang tải...';
+                
+                const response = await fetch(`${API_URL}/admin/export/revenue`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Lỗi khi tải báo cáo');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'bao-cao-doanh-thu.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                // Ignore Swal error if not imported, or log
+                console.error(err);
+                alert(err.message);
+            } finally {
+                btnExportRev.disabled = false;
+                btnExportRev.innerHTML = '<i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Xuất';
+            }
+        });
+    }
 });
 
 async function fetchStats() {

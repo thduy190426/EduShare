@@ -556,29 +556,43 @@ router.put('/users/:maND/status', adminMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-        const [userRows] = await pool.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?', [maND]);
-        if (userRows.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
-        }
+        try {
+            const [userRows] = await connection.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
+            if (userRows.length === 0) {
+                await connection.rollback();
+                connection.release();
+                return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+            }
 
-        if (trangThai === 'BiKhoa') {
-            if (userRows[0].VaiTro === 'Admin') {
-                const [adminCount] = await pool.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong'");
-                if (adminCount[0].total <= 1) {
-                    return res.status(403).json({ message: 'Không thể khóa Admin cuối cùng của hệ thống.' });
+            if (trangThai === 'BiKhoa') {
+                if (userRows[0].VaiTro === 'Admin') {
+                    const [adminCount] = await connection.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong' FOR UPDATE");
+                    if (adminCount[0].total <= 1) {
+                        await connection.rollback();
+                        connection.release();
+                        return res.status(403).json({ message: 'Không thể khóa Admin cuối cùng của hệ thống.' });
+                    }
                 }
             }
+
+            await connection.execute('UPDATE NGUOIDUNG SET TrangThai = ? WHERE MaND = ?', [trangThai, maND]);
+
+            await connection.execute(
+                'INSERT INTO AUDIT_LOG (MaND_ThucHien, MaND_BiTacDong, HanhDong, ChiTiet) VALUES (?, ?, ?, ?)',
+                [req.user.MaND, maND, trangThai === 'BiKhoa' ? 'KhoaTaiKhoan' : 'MoKhoaTaiKhoan', `Đổi trạng thái thành ${trangThai}`]
+            );
+
+            await connection.commit();
+            res.status(200).json({ message: `Đã ${trangThai === 'BiKhoa' ? 'khóa' : 'mở khóa'} tài khoản.` });
+        } catch (dbErr) {
+            await connection.rollback();
+            throw dbErr;
+        } finally {
+            connection.release();
         }
-
-        await pool.execute('UPDATE NGUOIDUNG SET TrangThai = ? WHERE MaND = ?', [trangThai, maND]);
-
-        await pool.execute(
-            'INSERT INTO AUDIT_LOG (MaND_ThucHien, MaND_BiTacDong, HanhDong, ChiTiet) VALUES (?, ?, ?, ?)',
-            [req.user.MaND, maND, trangThai === 'BiKhoa' ? 'KhoaTaiKhoan' : 'MoKhoaTaiKhoan', `Đổi trạng thái thành ${trangThai}`]
-        );
-
-        res.status(200).json({ message: `Đã ${trangThai === 'BiKhoa' ? 'khóa' : 'mở khóa'} tài khoản.` });
     } catch (error) {
         console.error('Lỗi API /users/:maND/status:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -599,27 +613,41 @@ router.put('/users/:maND/role', adminMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-        const [userRows] = await pool.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ?', [maND]);
-        if (userRows.length === 0) {
-            return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
-        }
-
-        if (userRows[0].VaiTro === 'Admin' && vaiTro !== 'Admin') {
-            const [adminCount] = await pool.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong'");
-            if (adminCount[0].total <= 1) {
-                return res.status(403).json({ message: 'Không thể hạ quyền Admin cuối cùng của hệ thống.' });
+        try {
+            const [userRows] = await connection.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
+            if (userRows.length === 0) {
+                await connection.rollback();
+                connection.release();
+                return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
             }
+
+            if (userRows[0].VaiTro === 'Admin' && vaiTro !== 'Admin') {
+                const [adminCount] = await connection.execute("SELECT COUNT(*) AS total FROM NGUOIDUNG WHERE VaiTro = 'Admin' AND TrangThai = 'HoatDong' FOR UPDATE");
+                if (adminCount[0].total <= 1) {
+                    await connection.rollback();
+                    connection.release();
+                    return res.status(403).json({ message: 'Không thể hạ quyền Admin cuối cùng của hệ thống.' });
+                }
+            }
+
+            await connection.execute('UPDATE NGUOIDUNG SET VaiTro = ? WHERE MaND = ?', [vaiTro, maND]);
+
+            await connection.execute(
+                'INSERT INTO AUDIT_LOG (MaND_ThucHien, MaND_BiTacDong, HanhDong, ChiTiet) VALUES (?, ?, ?, ?)',
+                [req.user.MaND, maND, 'DoiQuyen', `Đổi quyền thành ${vaiTro}`]
+            );
+
+            await connection.commit();
+            res.status(200).json({ message: 'Thay đổi quyền thành công.' });
+        } catch (dbErr) {
+            await connection.rollback();
+            throw dbErr;
+        } finally {
+            connection.release();
         }
-
-        await pool.execute('UPDATE NGUOIDUNG SET VaiTro = ? WHERE MaND = ?', [vaiTro, maND]);
-
-        await pool.execute(
-            'INSERT INTO AUDIT_LOG (MaND_ThucHien, MaND_BiTacDong, HanhDong, ChiTiet) VALUES (?, ?, ?, ?)',
-            [req.user.MaND, maND, 'DoiQuyen', `Đổi quyền thành ${vaiTro}`]
-        );
-
-        res.status(200).json({ message: 'Thay đổi quyền thành công.' });
     } catch (error) {
         console.error('Lỗi API /users/:maND/role:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -1412,6 +1440,58 @@ router.delete('/promos/:id', adminMiddleware, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'L?i khi x�a m� uu d�i' });
+    }
+});
+
+// API xuất báo cáo doanh thu ra file CSV
+router.get('/export/revenue', adminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        
+        // Lấy danh sách các giao dịch đã duyệt (Doanh thu thực tế)
+        const [rows] = await pool.execute(`
+            SELECT G.*, N.HoTen, N.Email 
+            FROM GIAODICH_NAPXU G
+            JOIN NGUOIDUNG N ON G.MaND = N.MaND
+            WHERE G.TrangThai = 'DaDuyet'
+            ORDER BY G.NgayDuyet DESC
+        `);
+
+        let csvContent = '\uFEFF'; // UTF-8 BOM
+        csvContent += 'Mã GD,Người Dùng,Email,Số Tiền (VNĐ),Số Xu,Khuyến Mãi,Ngày Tạo,Ngày Duyệt\n';
+
+        let tongDoanhThu = 0;
+        let tongXu = 0;
+
+        for (const row of rows) {
+            const dateStr = row.NgayTao ? new Date(row.NgayTao).toLocaleString('vi-VN') : '';
+            const dateDuyetStr = row.NgayDuyet ? new Date(row.NgayDuyet).toLocaleString('vi-VN') : '';
+            
+            tongDoanhThu += parseFloat(row.SoTien || 0);
+            tongXu += parseInt(row.SoXu || 0);
+
+            const values = [
+                row.MaGD,
+                `"${(row.HoTen || '').replace(/"/g, '""')}"`,
+                `"${(row.Email || '').replace(/"/g, '""')}"`,
+                row.SoTien || 0,
+                row.SoXu || 0,
+                `"${(row.MaPromo || '').replace(/"/g, '""')}"`,
+                `"${dateStr}"`,
+                `"${dateDuyetStr}"`
+            ];
+            csvContent += values.join(',') + '\n';
+        }
+
+        // Thêm dòng tổng cộng ở cuối
+        csvContent += `\nTổng Cộng,,,${tongDoanhThu},${tongXu},,,\n`;
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="bao-cao-doanh-thu.csv"');
+        res.send(csvContent);
+    } catch (error) {
+        console.error('Lỗi xuất báo cáo doanh thu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 

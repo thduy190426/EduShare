@@ -2,12 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const crypto = require('crypto');
-const mysql   = require('mysql2/promise');
-const bcrypt  = require('bcrypt');
-const jwt     = require('jsonwebtoken');
-const cors    = require('cors');
+const mysql = require('mysql2/promise');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
+const { authMiddleware } = require('./middlewares/auth');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '891380242693-mebda946u7bpcbbnjd8ro50lsaqp6unu.apps.googleusercontent.com');
 
 
@@ -19,23 +22,23 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-const RESET   = '\x1b[0m';
-const BOLD    = '\x1b[1m';
-const DIM     = '\x1b[2m';
-const WHITE   = '\x1b[97m';
-const GRAY    = '\x1b[90m';
-const CYAN    = '\x1b[36m';
-const GREEN   = '\x1b[32m';
-const YELLOW  = '\x1b[33m';
-const RED     = '\x1b[31m';
+const RESET = '\x1b[0m';
+const BOLD = '\x1b[1m';
+const DIM = '\x1b[2m';
+const WHITE = '\x1b[97m';
+const GRAY = '\x1b[90m';
+const CYAN = '\x1b[36m';
+const GREEN = '\x1b[32m';
+const YELLOW = '\x1b[33m';
+const RED = '\x1b[31m';
 const MAGENTA = '\x1b[35m';
-const BG_CYAN    = '\x1b[46m';
-const BG_GREEN   = '\x1b[42m';
-const BG_YELLOW  = '\x1b[43m';
-const BG_RED     = '\x1b[41m';
+const BG_CYAN = '\x1b[46m';
+const BG_GREEN = '\x1b[42m';
+const BG_YELLOW = '\x1b[43m';
+const BG_RED = '\x1b[41m';
 const BG_MAGENTA = '\x1b[45m';
-const BG_BLUE    = '\x1b[44m';
-const BG_GRAY    = '\x1b[100m';
+const BG_BLUE = '\x1b[44m';
+const BG_GRAY = '\x1b[100m';
 
 const ts = () => {
     const n = new Date();
@@ -49,10 +52,10 @@ const methodBadge = method => {
 };
 
 const statusStyle = code =>
-    code >= 500 ? [RED,    '✖'] :
-    code >= 400 ? [YELLOW, '⚠'] :
-    code >= 300 ? [CYAN,   '↪'] :
-                  [GREEN,  '✔'];
+    code >= 500 ? [RED, '✖'] :
+        code >= 400 ? [YELLOW, '⚠'] :
+            code >= 300 ? [CYAN, '↪'] :
+                [GREEN, '✔'];
 
 const durationStr = ms => {
     const c = ms > 2000 ? RED : ms > 800 ? YELLOW : ms > 200 ? CYAN : GREEN;
@@ -78,10 +81,10 @@ const formatBody = body => {
 };
 
 const logger = {
-    info:    (msg, ...a) => console.log(`${ts()}  ${BG_BLUE}${BOLD}${WHITE}  INFO  ${RESET}  ${WHITE}${msg}${RESET}\n`, ...a),
+    info: (msg, ...a) => console.log(`${ts()}  ${BG_BLUE}${BOLD}${WHITE}  INFO  ${RESET}  ${WHITE}${msg}${RESET}\n`, ...a),
     success: (msg, ...a) => console.log(`${ts()}  ${BG_GREEN}${BOLD}${WHITE}  OK    ${RESET}  ${GREEN}${msg}${RESET}\n`, ...a),
-    warn:    (msg, ...a) => console.warn(`${ts()}  ${BG_YELLOW}${BOLD}${WHITE}  WARN  ${RESET}  ${YELLOW}${msg}${RESET}\n`, ...a),
-    db:      (msg, ...a) => console.log(`${ts()}  ${BG_MAGENTA}${BOLD}${WHITE}  DATABASE    ${RESET}  ${MAGENTA}${msg}${RESET}\n`, ...a),
+    warn: (msg, ...a) => console.warn(`${ts()}  ${BG_YELLOW}${BOLD}${WHITE}  WARN  ${RESET}  ${YELLOW}${msg}${RESET}\n`, ...a),
+    db: (msg, ...a) => console.log(`${ts()}  ${BG_MAGENTA}${BOLD}${WHITE}  DATABASE    ${RESET}  ${MAGENTA}${msg}${RESET}\n`, ...a),
     error: (msg, err) => {
         console.error(`${ts()}  ${BG_RED}${BOLD}${WHITE}  ERROR ${RESET}  ${RED}${msg}${RESET}\n`);
         if (err?.stack) console.error(`${DIM}${err.stack}${RESET}\n`);
@@ -108,7 +111,7 @@ const logBanner = port => {
 const requestLogger = (req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
-        const ms           = Date.now() - start;
+        const ms = Date.now() - start;
         const [color, icon] = statusStyle(res.statusCode);
         console.log(
             `${ts()}  ${methodBadge(req.method)}  ${BOLD}${WHITE}${truncate(req.originalUrl, 60)}${RESET}  ${BOLD}${color}${icon} ${res.statusCode}${RESET}  ${durationStr(ms)}\n`
@@ -121,13 +124,13 @@ const requestLogger = (req, res, next) => {
     next();
 };
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet({
-  crossOriginResourcePolicy: false,
-  contentSecurityPolicy: false,
-  frameguard: false
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
+    frameguard: false
 }));
 app.use(cors());
 app.use(express.json());
@@ -137,6 +140,7 @@ app.use('/uploads', express.static('public/uploads'));
 const { loginLimiter, registerLimiter, contactLimiter } = require('./middlewares/rateLimit');
 
 async function verifyRecaptcha(token) {
+    if (process.env.NODE_ENV === 'test') return true;
     if (!token) return false;
     try {
         const response = await fetch(`https://www.google.com/recaptcha/api/siteverify`, {
@@ -153,33 +157,35 @@ async function verifyRecaptcha(token) {
 }
 
 const pool = mysql.createPool({
-    host:               process.env.DB_HOST     || 'localhost',
-    user:               process.env.DB_USER     || 'root',
-    password:           process.env.DB_PASSWORD || 'duy1tran!?',
-    database:           process.env.DB_NAME     || 'edushare_db',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'duy1tran!?',
+    database: process.env.DB_NAME || 'edushare_db',
     waitForConnections: true,
-    connectionLimit:    10,
-    queueLimit:         0,
+    connectionLimit: 10,
+    queueLimit: 0,
 });
 
 pool.getConnection()
     .then(conn => { logger.db(`Connected to MySQL — database: ${process.env.DB_NAME || 'edushare_db'}`); conn.release(); })
-    .catch(err  => logger.error('MySQL connection failed', err));
+    .catch(err => logger.error('MySQL connection failed', err));
 
 app.locals.pool = pool;
 
 const { initCronJobs } = require('./services/cronJobs');
-initCronJobs(pool);
+if (process.env.NODE_ENV !== 'test') {
+    initCronJobs(pool);
+}
 
 logger.divider('Routes');
 const routes = [
-    ['/api/documents',     require('./upload')],
-    ['/api/admin',         require('./admin')],
-    ['/api/users',         require('./users')],
+    ['/api/documents', require('./upload')],
+    ['/api/admin', require('./admin')],
+    ['/api/users', require('./users')],
     ['/api/notifications', require('./notifications')],
-    ['/api/groups',        require('./groups')],
-    ['/api/subjects',      require('./subjects')],
-    ['/api/payment',       require('./payment')],
+    ['/api/groups', require('./groups')],
+    ['/api/subjects', require('./subjects')],
+    ['/api/payment', require('./payment')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -222,7 +228,7 @@ app.post('/api/register/send-otp', registerLimiter, async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
         await pool.execute(
             'INSERT INTO REGISTER_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
@@ -247,7 +253,7 @@ app.post('/api/register/send-otp', registerLimiter, async (req, res) => {
 
 app.post('/api/register', registerLimiter, async (req, res) => {
     const { hoTen, email, matKhau, truongHoc, khoaNganh, otp } = req.body;
-    
+
     const normalizedRole = 'SinhVien';
 
     if (!hoTen || !email || !matKhau || !otp)
@@ -290,7 +296,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
     if (!credential) {
         return res.status(400).json({ message: 'Missing credential' });
     }
-    
+
     try {
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
@@ -315,7 +321,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
         } else {
             const randomPassword = crypto.randomBytes(16).toString('hex');
             const hashedPassword = await bcrypt.hash(randomPassword, 10);
-            
+
             const [result] = await pool.execute(
                 'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro, AvatarURL, TrangThai, AuthType) VALUES (?, ?, ?, "SinhVien", ?, "HoatDong", "Google")',
                 [hoTen, email, hashedPassword, avatar]
@@ -332,7 +338,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
         );
 
         logger.success(`Google Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
-        
+
         res.json({
             message: 'Đăng nhập thành công',
             token,
@@ -354,20 +360,20 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
     if (!accessToken) {
         return res.status(400).json({ message: 'Missing Facebook access token' });
     }
-    
+
     try {
         const response = await fetch(`https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${accessToken}`);
         const fbUser = await response.json();
-        
+
         if (fbUser.error) {
             logger.error('Facebook Graph API error', fbUser.error);
             return res.status(400).json({ message: 'Đăng nhập Facebook thất bại.' });
         }
-        
+
         const email = fbUser.email;
         const hoTen = fbUser.name;
         const avatar = fbUser.picture?.data?.url || null;
-        
+
         if (!email) {
             return res.status(400).json({ message: 'Tài khoản Facebook của bạn không có email công khai. Vui lòng thêm email vào tài khoản Facebook hoặc sử dụng phương thức đăng nhập khác.' });
         }
@@ -386,7 +392,7 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
         } else {
             const randomPassword = crypto.randomBytes(16).toString('hex');
             const hashedPassword = await bcrypt.hash(randomPassword, 10);
-            
+
             const [result] = await pool.execute(
                 'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro, AvatarURL, TrangThai, AuthType) VALUES (?, ?, ?, "SinhVien", ?, "HoatDong", "Facebook")',
                 [hoTen, email, hashedPassword, avatar]
@@ -403,7 +409,7 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
         );
 
         logger.success(`Facebook Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
-        
+
         res.json({
             message: 'Đăng nhập thành công',
             token,
@@ -445,6 +451,19 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         if (!isMatch)
             return res.status(401).json({ message: 'Mật khẩu không chính xác.' });
 
+        if (user.IsTwoFactorEnabled) {
+            const tempToken = jwt.sign(
+                { MaND: user.MaND, rememberLogin: rememberLogin, temp: true },
+                process.env.JWT_SECRET,
+                { expiresIn: '5m' }
+            );
+            return res.status(200).json({
+                message: 'Yêu cầu xác thực 2 bước.',
+                require2FA: true,
+                tempToken: tempToken
+            });
+        }
+
         const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
             process.env.JWT_SECRET,
@@ -461,16 +480,118 @@ app.post('/api/login', loginLimiter, async (req, res) => {
         );
 
         logger.success(`Login OK — id: ${user.MaND}  role: ${user.VaiTro}  remember: ${!!rememberLogin}`);
-        res.status(200).json({ 
-            message: 'Đăng nhập thành công.', 
+        res.status(200).json({
+            message: 'Đăng nhập thành công.',
             token: accessToken,
             refreshToken: refreshToken,
-            avatarURL: user.AvatarURL || null 
+            avatarURL: user.AvatarURL || null
         });
 
     } catch (err) {
         logger.error('Login failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.post('/api/auth/2fa/login', loginLimiter, async (req, res) => {
+    const { tempToken, totpCode } = req.body;
+    if (!tempToken || !totpCode) {
+        return res.status(400).json({ message: 'Vui lòng cung cấp mã 2FA.' });
+    }
+
+    try {
+        const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+        if (!decoded.temp) return res.status(400).json({ message: 'Token không hợp lệ.' });
+
+        const [rows] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+
+        const user = rows[0];
+
+        const verified = speakeasy.totp.verify({
+            secret: user.TwoFactorSecret,
+            encoding: 'base32',
+            token: totpCode,
+            window: 1
+        });
+
+        if (!verified) {
+            return res.status(401).json({ message: 'Mã xác nhận 2FA không chính xác.' });
+        }
+
+        const accessToken = jwt.sign(
+            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
+            process.env.JWT_SECRET,
+            { expiresIn: '15m' }
+        );
+
+        const refreshToken = crypto.randomBytes(40).toString('hex');
+        const expiresDays = decoded.rememberLogin ? 30 : 7;
+        const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
+
+        await pool.execute(
+            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt) VALUES (?, ?, ?)',
+            [user.MaND, refreshToken, expiresAt]
+        );
+
+        logger.success(`2FA Login OK — id: ${user.MaND}`);
+        res.status(200).json({
+            message: 'Đăng nhập thành công.',
+            token: accessToken,
+            refreshToken: refreshToken,
+            avatarURL: user.AvatarURL || null
+        });
+
+    } catch (err) {
+        logger.error('2FA Login failed', err);
+        return res.status(401).json({ message: 'Token hết hạn hoặc không hợp lệ.' });
+    }
+});
+
+app.get('/api/auth/2fa/setup', authMiddleware, async (req, res) => {
+    try {
+        const [rows] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy user' });
+
+        const secret = speakeasy.generateSecret({ length: 20, name: `EduShare (${rows[0].Email})` });
+
+        await pool.execute('UPDATE NGUOIDUNG SET TwoFactorSecret = ? WHERE MaND = ?', [secret.base32, req.user.MaND]);
+
+        qrcode.toDataURL(secret.otpauth_url, (err, data_url) => {
+            if (err) return res.status(500).json({ message: 'Lỗi tạo QR Code' });
+            res.json({ qrCodeDataURL: data_url, secret: secret.base32 });
+        });
+    } catch (error) {
+        logger.error('2FA Setup failed', error);
+        res.status(500).json({ message: 'Lỗi máy chủ' });
+    }
+});
+
+app.post('/api/auth/2fa/verify-setup', authMiddleware, async (req, res) => {
+    const { token } = req.body;
+    try {
+        const [rows] = await pool.execute('SELECT TwoFactorSecret FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy user' });
+
+        const secret = rows[0].TwoFactorSecret;
+        if (!secret) return res.status(400).json({ message: 'Chưa khởi tạo 2FA' });
+
+        const verified = speakeasy.totp.verify({
+            secret: secret,
+            encoding: 'base32',
+            token: token,
+            window: 1
+        });
+
+        if (verified) {
+            await pool.execute('UPDATE NGUOIDUNG SET IsTwoFactorEnabled = TRUE WHERE MaND = ?', [req.user.MaND]);
+            res.json({ message: 'Xác thực 2 bước đã được bật thành công' });
+        } else {
+            res.status(400).json({ message: 'Mã xác thực không hợp lệ' });
+        }
+    } catch (error) {
+        logger.error('2FA Verify Setup failed', error);
+        res.status(500).json({ message: 'Lỗi máy chủ' });
     }
 });
 
@@ -675,7 +796,7 @@ app.post('/api/forgot-password', async (req, res) => {
         }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); 
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
         await pool.execute(
             'INSERT INTO RESET_PASSWORD_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
@@ -737,7 +858,7 @@ app.post('/api/reset-password', async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await pool.execute('UPDATE NGUOIDUNG SET MatKhau = ? WHERE Email = ?', [hashedPassword, email]);
         await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);
-        
+
         logger.success(`Password reset for ${email}`);
         res.status(200).json({ message: 'Mật khẩu đã được đặt lại thành công.' });
     } catch (err) {
@@ -748,20 +869,20 @@ app.post('/api/reset-password', async (req, res) => {
 
 app.post('/api/contact', contactLimiter, async (req, res) => {
     const { name, email, subject, message, recaptchaToken } = req.body;
-    
+
     const isHuman = await verifyRecaptcha(recaptchaToken);
     if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
-    
+
     if (!name || !email || !subject || !message) {
         return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
     }
 
     try {
         const mailOptions = {
-    from: `"${name}" <${email}>`,
-    to: process.env.GMAIL_USER,
-    subject: `[EduShare Liên Hệ] ${subject}`,
-    html: `
+            from: `"${name}" <${email}>`,
+            to: process.env.GMAIL_USER,
+            subject: `[EduShare Liên Hệ] ${subject}`,
+            html: `
         <div style="margin:0;padding:0;background-color:#f4f4f7;font-family:'Segoe UI',Arial,sans-serif;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;padding:40px 16px;">
             <tr>
@@ -847,8 +968,8 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
           </table>
         </div>
     `,
-    replyTo: email
-};
+            replyTo: email
+        };
 
         await transporter.sendMail(mailOptions);
         logger.success(`Contact email received from ${email}`);

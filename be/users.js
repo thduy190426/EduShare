@@ -113,7 +113,7 @@ async function deleteUserAndRelatedData(conn, maND) {
     await conn.execute('DELETE FROM THANHVIEN_NHOM WHERE MaND = ?', [maND]);
     await conn.execute('DELETE FROM NGUOIDUNG_MONHOC WHERE MaND = ?', [maND]);
     await conn.execute('DELETE FROM THEODOI WHERE MaND_TheoDoi = ? OR MaND_DuocTheoDoi = ?', [maND, maND]);
-    
+
     await conn.execute('DELETE FROM TAILIEU_DAMUA WHERE MaND = ?', [maND]);
     await conn.execute('UPDATE GIAODICH_NAPXU SET MaND_Duyet = NULL WHERE MaND_Duyet = ?', [maND]);
     await conn.execute('DELETE FROM GIAODICH_NAPXU WHERE MaND = ?', [maND]);
@@ -153,10 +153,29 @@ function normalizeGioiTinh(value) {
     return genderMap[normalized] || null;
 }
 
+router.get('/search', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const searchQuery = req.query.q || '';
+        if (!searchQuery.trim()) {
+            return res.json([]);
+        }
+
+        const [users] = await pool.execute(
+            'SELECT MaND, HoTen, AvatarURL FROM NGUOIDUNG WHERE HoTen LIKE ? AND TrangThai = "HoatDong" LIMIT 10',
+            [`%${searchQuery}%`]
+        );
+        res.json(users);
+    } catch (error) {
+        console.error('Lỗi API search user:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 router.get('/top-contributors', async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        
+
         const sql = `
             SELECT 
                 ND.MaND, 
@@ -174,12 +193,12 @@ router.get('/top-contributors', async (req, res) => {
             ORDER BY TotalDocuments DESC, TotalDownloads DESC
             LIMIT 4
         `;
-        
+
         const [rows] = await pool.execute(sql);
         res.status(200).json(rows);
     } catch (error) {
         console.error('Lỗi khi lấy top contributors:', error);
-        res.status(500).json({ message: 'Lỗi server' });
+        res.status(500).json({ message: 'Lỗi máy chủ' });
     }
 });
 
@@ -219,7 +238,7 @@ router.post('/send-change-password-otp', authMiddleware, async (req, res) => {
         const email = rows[0].Email;
         const hoTen = rows[0].HoTen;
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
         await pool.execute(
             'INSERT INTO RESET_PASSWORD_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
@@ -269,7 +288,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
         if (matKhauMoi) {
             const [rows] = await pool.execute('SELECT Email, MatKhau, AuthType FROM NGUOIDUNG WHERE MaND = ?', [maND]);
             if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
-            
+
             const email = rows[0].Email;
             const userAuthType = rows[0].AuthType;
 
@@ -297,7 +316,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
 
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(matKhauMoi, saltRounds);
-            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?', 
+            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?',
                 [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, hienThiLichSuTai, hienThiDanhGia, maND]);
             await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);
         } else {
@@ -331,7 +350,7 @@ router.post('/profile/delete-otp', authMiddleware, async (req, res) => {
         const email = rows[0].Email;
         const hoTen = rows[0].HoTen;
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
         await pool.execute(
             'INSERT INTO DELETE_ACCOUNT_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
@@ -354,7 +373,7 @@ router.post('/profile/delete-otp', authMiddleware, async (req, res) => {
 
 router.delete('/profile', authMiddleware, async (req, res) => {
     const { matKhau, otp } = req.body || {};
-    
+
     if (!otp) {
         return res.status(400).json({ message: 'Vui lòng nhập mã OTP để xác nhận xoá tài khoản.' });
     }
@@ -372,7 +391,7 @@ router.delete('/profile', authMiddleware, async (req, res) => {
         }
 
         const user = userRows[0];
-        
+
         if (user.AuthType === 'Local') {
             if (!matKhau) {
                 await conn.rollback();
@@ -523,7 +542,7 @@ function parseAvatarRequest(req) {
 
 const avatarUpdateLimits = new Map();
 const MAX_AVATAR_CHANGES = 5;
-const AVATAR_LIMIT_RESET_TIME = 60 * 60 * 1000; 
+const AVATAR_LIMIT_RESET_TIME = 60 * 60 * 1000;
 
 function checkAvatarRateLimit(maND) {
     const now = Date.now();
@@ -876,7 +895,7 @@ router.post('/upgrade-teacher', authMiddleware, async (req, res) => {
         }
 
         const [existingReq] = await pool.execute('SELECT TrangThai FROM YEU_CAU_GIAO_VIEN WHERE MaND = ? ORDER BY NgayTao DESC LIMIT 1', [maND]);
-        
+
         if (existingReq.length > 0 && existingReq[0].TrangThai === 'ChoDuyet') {
             return res.status(400).json({ message: 'Bạn đang có một yêu cầu chờ duyệt.' });
         }
@@ -919,7 +938,7 @@ const uploadImage = multer({
         destination: (req, file, cb) => cb(null, os.tmpdir()),
         filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
     }),
-    limits: { fileSize: 5 * 1024 * 1024 }, 
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -933,7 +952,7 @@ router.post('/upload-image', authMiddleware, uploadImage.single('image'), async 
     if (!req.file) {
         return res.status(400).json({ message: 'Không tìm thấy file hình ảnh.' });
     }
-    
+
     try {
         const uploadStream = cloudinary.uploader.upload_stream(
             { folder: 'edushare_kyc', resource_type: 'image' },

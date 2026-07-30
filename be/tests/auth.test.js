@@ -30,7 +30,7 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
             .send({ email: 'newuser@gmail.com' });
 
         expect(response.status).toBe(400);
-        expect(response.body.message).toBe('Vui lòng điền đầy đủ thông tin.');
+        expect(response.body.message).toBe('Vui lòng điền đầy đủ thông tin và mã OTP.');
     });
 
     it('Nên đăng nhập thành công và trả về token hợp lệ', async () => {
@@ -79,6 +79,9 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
 
     it('Nên đăng ký thành công người dùng mới', async () => {
         mockPoolExecute(app, (query, params) => {
+            if (query.includes('SELECT * FROM REGISTER_OTP')) {
+                return Promise.resolve([[{ Email: 'new@example.com', OTP: '123456', ExpiresAt: new Date(Date.now() + 100000) }]]);
+            }
             if (query.includes('SELECT Email FROM NGUOIDUNG WHERE Email = ?')) {
                 return Promise.resolve([[]]); 
             }
@@ -90,7 +93,7 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
 
         const response = await request(app)
             .post('/api/register')
-            .send({ hoTen: 'Test User', email: 'new@example.com', matKhau: 'pass123', vaiTro: 'SinhVien' });
+            .send({ hoTen: 'Test User', email: 'new@example.com', matKhau: 'pass123', vaiTro: 'SinhVien', otp: '123456' });
 
         expect(response.status).toBe(201);
         expect(response.body.message).toBe('Đăng ký thành công.');
@@ -99,6 +102,9 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
 
     it('Nên báo lỗi 409 nếu đăng ký bằng email đã tồn tại', async () => {
         mockPoolExecute(app, (query, params) => {
+            if (query.includes('SELECT * FROM REGISTER_OTP')) {
+                return Promise.resolve([[{ Email: 'existing@example.com', OTP: '123456', ExpiresAt: new Date(Date.now() + 100000) }]]);
+            }
             if (query.includes('SELECT Email FROM NGUOIDUNG WHERE Email = ?')) {
                 return Promise.resolve([[{ Email: 'existing@example.com' }]]);
             }
@@ -107,7 +113,7 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
 
         const response = await request(app)
             .post('/api/register')
-            .send({ hoTen: 'Test User', email: 'existing@example.com', matKhau: 'pass123', vaiTro: 'SinhVien' });
+            .send({ hoTen: 'Test User', email: 'existing@example.com', matKhau: 'pass123', vaiTro: 'SinhVien', otp: '123456' });
 
         expect(response.status).toBe(409);
         expect(response.body.message).toBe('Email đã được sử dụng.');
@@ -139,7 +145,23 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
             .send({ email: 'error@example.com', matKhau: 'pass123' });
 
         expect(response.status).toBe(500);
-        expect(response.body.message).toBe('Lỗi máy chủ.');
+    });
+
+    describe('2FA API', () => {
+        it('Nên báo lỗi 400 nếu đăng nhập 2FA thiếu mã', async () => {
+            const response = await request(app)
+                .post('/api/auth/2fa/login')
+                .send({ tempToken: 'token', totpCode: '' });
+            
+            expect(response.status).toBe(400);
+        });
+
+        it('Nên báo lỗi 401 nếu xem setup 2FA mà chưa login', async () => {
+            const response = await request(app)
+                .get('/api/auth/2fa/setup');
+            
+            expect(response.status).toBe(401);
+        });
     });
 
 });

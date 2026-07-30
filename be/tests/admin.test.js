@@ -27,7 +27,7 @@ describe('Admin API', () => {
             .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(403);
-        expect(response.body.message).toBe('Chỉ Admin mới có quyền thực hiện chức năng này.');
+        expect(response.body.message).toBe('Bạn không có quyền thực hiện chức năng này.');
     });
 
     it('Nên trả về danh sách tài liệu duyệt nếu là Admin', async () => {
@@ -36,6 +36,9 @@ describe('Admin API', () => {
         mockPoolExecute(app, (query) => {
             if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) {
                 return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
+            }
+            if (query.includes('COUNT(*)')) {
+                return Promise.resolve([[{ total: 1 }]]);
             }
             if (query.includes('SELECT') && query.includes('TL.MaTL')) {
                 return Promise.resolve([[{ MaTL: 1, TenTL: 'Tài liệu toán' }]]);
@@ -48,7 +51,7 @@ describe('Admin API', () => {
             .set('Authorization', `Bearer ${token}`);
 
         expect(response.status).toBe(200);
-        expect(response.body.length).toBe(1);
+        expect(response.body.data.length).toBe(1);
     });
 
     it('Nên báo lỗi 404 nếu thay đổi trạng thái user không tồn tại', async () => {

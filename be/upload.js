@@ -9,7 +9,30 @@ const https = require('https');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
+async function extractTextFromFile(filePath, mimeType) {
+    try {
+        let text = '';
+        if (mimeType === 'application/pdf') {
+            const dataBuffer = fs.readFileSync(filePath);
+            const data = await pdfParse(dataBuffer, { max: 3 });
+            text = data.text;
+        } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const result = await mammoth.extractRawText({ path: filePath });
+            text = result.value;
+        }
+
+        if (text) {
+            text = text.replace(/\s+/g, ' ').trim();
+            return text.substring(0, 1000);
+        }
+    } catch (err) {
+        console.error('Error extracting text:', err);
+    }
+    return '';
+}
 async function getFileHash(filePath) {
     return new Promise((resolve, reject) => {
         const hash = crypto.createHash('sha256');
@@ -48,10 +71,10 @@ const generatePreviewPdf = async (buffer) => {
         const originalDoc = await PDFDocument.load(buffer);
         const previewDoc = await PDFDocument.create();
         const numPages = Math.min(3, originalDoc.getPageCount());
-        const copiedPages = await previewDoc.copyPages(originalDoc, Array.from({length: numPages}, (_, i) => i));
-        
+        const copiedPages = await previewDoc.copyPages(originalDoc, Array.from({ length: numPages }, (_, i) => i));
+
         const font = await previewDoc.embedFont(StandardFonts.Helvetica);
-        
+
         for (const page of copiedPages) {
             const { width, height } = page.getSize();
             page.drawText('PREVIEW - EDUSHARE', {
@@ -65,7 +88,7 @@ const generatePreviewPdf = async (buffer) => {
             });
             previewDoc.addPage(page);
         }
-        
+
         const previewBytes = await previewDoc.save();
         return Buffer.from(previewBytes);
     } catch (e) {
@@ -249,7 +272,7 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
 
         try {
             const fileHash = await getFileHash(req.file.path);
-            
+
             const virusScanResult = await scanFileVirus(fileHash);
             if (!virusScanResult.safe) {
                 fs.unlinkSync(req.file.path);
@@ -267,7 +290,7 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
 
             let laTaiLieuDocQuyen = req.body.laTaiLieuDocQuyen === 'true';
             let giaXu = parseInt(req.body.giaXu) || 0;
-            
+
             if (req.user.VaiTro !== 'GiaoVien' && req.user.VaiTro !== 'Admin') {
                 laTaiLieuDocQuyen = false;
             }
@@ -303,6 +326,7 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
 
             const fileURL = cloudinaryResult.secure_url;
             let previewURL = null;
+            let textSEO = await extractTextFromFile(req.file.path, req.file.mimetype);
 
             if (laTaiLieuDocQuyen && isPdf) {
                 const fileBuffer = fs.readFileSync(req.file.path);
@@ -320,9 +344,9 @@ router.post('/upload', authMiddleware, uploadLimiter, (req, res) => {
             fs.unlinkSync(req.file.path);
 
             await pool.execute(
-                `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?, ?)`,
-                [tenTL, moTa || null, fileURL, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu, fileHash]
+                `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash, TextSEO) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?, ?, ?)`,
+                [tenTL, moTa || null, fileURL, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu, fileHash, textSEO || null]
             );
 
             await notifyActiveAdmins(
@@ -385,7 +409,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
             const currentIds = recommendedDocs.map(d => d.MaTL);
             let notInClause = '';
             let params = [maND, maND];
-            
+
             if (currentIds.length > 0) {
                 notInClause = ` AND TL.MaTL NOT IN (${currentIds.map(() => '?').join(',')})`;
                 params.push(...currentIds);
@@ -415,7 +439,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
             const currentIds = recommendedDocs.map(d => d.MaTL);
             let notInClause = '';
             let params = [maND];
-            
+
             if (currentIds.length > 0) {
                 notInClause = ` AND TL.MaTL NOT IN (${currentIds.map(() => '?').join(',')})`;
                 params.push(...currentIds);
@@ -618,7 +642,7 @@ router.get('/feed', authMiddleware, async (req, res) => {
     try {
         const userId = req.user.MaND;
         const limit = parseInt(req.query.limit) || 4;
-        
+
         const pool = req.app.locals.pool;
         const [docs] = await pool.execute(`
             SELECT 
@@ -650,7 +674,7 @@ const viewTracker = new Map();
 setInterval(() => {
     const now = Date.now();
     for (const [key, timestamp] of viewTracker.entries()) {
-        if (now - timestamp > 3600000) { 
+        if (now - timestamp > 3600000) {
             viewTracker.delete(key);
         }
     }
@@ -663,7 +687,7 @@ router.get('/:maTL', async (req, res) => {
 
         const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         const trackKey = `${clientIp}_${maTL}`;
-        
+
         if (!viewTracker.has(trackKey)) {
             await pool.execute('UPDATE TAILIEU SET SoLuotXem = SoLuotXem + 1 WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet"', [maTL]);
             viewTracker.set(trackKey, Date.now());
@@ -710,12 +734,12 @@ router.get('/:maTL', async (req, res) => {
                 if (ratingRows.length > 0) hasRated = true;
                 const [downloadRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaTL = ? AND MaND = ?', [maTL, decoded.MaND]);
                 if (downloadRows.length > 0) hasDownloaded = true;
-                
+
                 if (taiLieu.LaTaiLieuDocQuyen) {
                     const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, decoded.MaND]);
                     if (purchaseRows.length > 0) hasPurchased = true;
                 }
-                
+
                 if (decoded.VaiTro === 'Admin' || decoded.VaiTro === 'GiaoVien' || taiLieu.MaND_NguoiDang === decoded.MaND) {
                     canViewFullDoc = true;
                 }
@@ -774,7 +798,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
         if (!isAllowed) {
             return res.status(403).json({ message: 'Bạn không có quyền tải tài liệu này.' });
         }
-        
+
         if (doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin' && req.user.VaiTro !== 'GiaoVien') {
             const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, maND]);
             if (purchaseRows.length === 0) {
@@ -820,7 +844,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
         if (doc.FileURL.startsWith('http')) {
             await updateDownloadHistory();
             let downloadUrl = doc.FileURL;
-            
+
             if (doc.LoaiFile && doc.LoaiFile.toLowerCase() === 'pdf') {
                 https.get(downloadUrl, (fileResponse) => {
                     const chunks = [];
@@ -831,7 +855,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
                             const pdfDoc = await PDFDocument.load(pdfBuffer);
                             const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
                             const pages = pdfDoc.getPages();
-                            
+
                             for (const page of pages) {
                                 const { width, height } = page.getSize();
                                 page.drawText('EduShare', {
@@ -844,7 +868,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
                                     rotate: degrees(-45),
                                 });
                             }
-                            
+
                             const pdfBytes = await pdfDoc.save();
                             res.type('pdf');
                             res.send(Buffer.from(pdfBytes));
@@ -888,7 +912,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
                 const pdfDoc = await PDFDocument.load(pdfBuffer);
                 const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
                 const pages = pdfDoc.getPages();
-                
+
                 for (const page of pages) {
                     const { width, height } = page.getSize();
                     page.drawText('EduShare', {
@@ -901,7 +925,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
                         rotate: degrees(-45),
                     });
                 }
-                
+
                 const pdfBytes = await pdfDoc.save();
                 res.type('pdf');
                 res.send(Buffer.from(pdfBytes));
@@ -1120,6 +1144,27 @@ router.post('/:maTL/comments', authMiddleware, commentLimiter, async (req, res) 
             }
         }
 
+        const mentionRegex = /@\[(.*?)\]\((\d+)\)/g;
+        let match;
+        const taggedUserIds = new Set();
+        while ((match = mentionRegex.exec(noiDung)) !== null) {
+            taggedUserIds.add(parseInt(match[2]));
+        }
+
+        if (taggedUserIds.size > 0) {
+            const [currentUserRows] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+            const currentUserHoTen = currentUserRows.length > 0 ? currentUserRows[0].HoTen : 'Một người dùng';
+
+            for (const taggedMaND of taggedUserIds) {
+                if (taggedMaND !== maND) {
+                    await pool.execute(
+                        'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                        [taggedMaND, 'NhacDen', `${currentUserHoTen} đã nhắc đến bạn trong một bình luận.`, `../document/documentDetails.html?id=${maTL}`]
+                    );
+                }
+            }
+        }
+
         res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId });
     } catch (error) {
         console.error('Lỗi comment:', error);
@@ -1282,23 +1327,25 @@ router.put('/:maTL/file', authMiddleware, (req, res) => {
 
             const loaiFile = path.extname(req.file.originalname).toLowerCase().replace('.', '');
             const isPdf = loaiFile === 'pdf';
-            const cloudinaryResult = await uploadToCloudinary(req.file.buffer, {
+            const cloudinaryResult = await uploadToCloudinary(req.file.path, {
                 resource_type: isPdf ? 'image' : 'raw',
                 folder: 'edushare_docs',
                 format: isPdf ? 'pdf' : undefined
             });
             const fileURL = cloudinaryResult.secure_url;
             let previewURL = null;
+            let textSEO = await extractTextFromFile(req.file.path, req.file.mimetype);
 
-            const fileHash = crypto.createHash('sha256').update(req.file.buffer).digest('hex');
+            const fileHash = await getFileHash(req.file.path);
             const [existingDocs] = await pool.execute('SELECT MaTL FROM TAILIEU WHERE FileHash = ? AND MaTL != ? AND TrangThaiKiemDuyet != "TuChoi"', [fileHash, maTL]);
             if (existingDocs.length > 0) {
+                fs.unlinkSync(req.file.path);
                 return res.status(400).json({ message: 'Tài liệu này đã tồn tại trên hệ thống. Xin vui lòng không re-up.' });
             }
-            
+
             await pool.execute(
-                'UPDATE TAILIEU SET FileURL = ?, PreviewURL = ?, LoaiFile = ?, FileHash = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
-                [fileURL, previewURL, loaiFile, fileHash, maTL]
+                'UPDATE TAILIEU SET FileURL = ?, PreviewURL = ?, LoaiFile = ?, FileHash = ?, TextSEO = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
+                [fileURL, previewURL, loaiFile, fileHash, textSEO || null, maTL]
             );
 
             try {
@@ -1314,8 +1361,15 @@ router.put('/:maTL/file', authMiddleware, (req, res) => {
                 console.error('Lỗi xóa file cũ:', e);
             }
 
+            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+
             res.status(200).json({ message: 'Cập nhật file thành công. Tài liệu đang chờ duyệt lại.' });
         } catch (error) {
+            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
             console.error('Lỗi cập nhật file tài liệu:', error);
             res.status(500).json({ message: 'Lỗi máy chủ.' });
         }
@@ -1364,7 +1418,7 @@ router.put('/:maTL', authMiddleware, (req, res) => {
         if (!tenTL || !maMonHoc) {
             return res.status(400).json({ message: 'Vui lòng cung cấp đủ tên tài liệu và mã môn học.' });
         }
-        
+
         let parsedGiaXu = null;
         if (giaXu !== undefined && giaXu !== null) {
             parsedGiaXu = parseInt(giaXu);
@@ -1413,7 +1467,7 @@ router.put('/:maTL', authMiddleware, (req, res) => {
                     if (existingDocs.length > 0) {
                         return res.status(400).json({ message: 'Tài liệu này đã tồn tại trên hệ thống. Xin vui lòng không re-up.' });
                     }
-                    
+
                     await pool.execute(
                         'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, GiaXu = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, FileHash = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
                         [tenTL, moTa || null, maMonHoc, parsedGiaXu, fileURL, previewURL, loaiFile, fileHash, maTL]
@@ -1424,7 +1478,7 @@ router.put('/:maTL', authMiddleware, (req, res) => {
                     if (existingDocs.length > 0) {
                         return res.status(400).json({ message: 'Tài liệu này đã tồn tại trên hệ thống. Xin vui lòng không re-up.' });
                     }
-                    
+
                     await pool.execute(
                         'UPDATE TAILIEU SET TenTL = ?, MoTa = ?, MaMonHoc = ?, FileURL = ?, PreviewURL = ?, LoaiFile = ?, FileHash = ?, TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
                         [tenTL, moTa || null, maMonHoc, fileURL, previewURL, loaiFile, fileHash, maTL]
@@ -1507,7 +1561,7 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
 
         try {
             const fs = require('fs');
-            
+
             if (docs[0].FileURL && docs[0].FileURL.startsWith('/uploads/')) {
                 const filePath = path.join(__dirname, 'public', docs[0].FileURL);
                 if (fs.existsSync(filePath)) {
@@ -1580,5 +1634,31 @@ router.put('/:id/appeal', authMiddleware, async (req, res) => {
     }
 });
 
+
+router.get('/:maTL/stream', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.query('SELECT FileURL FROM TAILIEU WHERE MaTL = ?', [req.params.maTL]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy tài liệu' });
+
+        const fileUrl = rows[0].FileURL;
+        if (!fileUrl) return res.status(404).json({ message: 'Tài liệu không có file đính kèm' });
+
+        const path = require('path');
+        const fs = require('fs');
+        const filePath = path.join(__dirname, 'public', fileUrl);
+
+        if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File không tồn tại' });
+
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', 'inline; filename="document.bin"');
+
+        const stream = fs.createReadStream(filePath);
+        stream.pipe(res);
+    } catch (err) {
+        console.error('Lỗi stream file:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ' });
+    }
+});
 
 module.exports = router;

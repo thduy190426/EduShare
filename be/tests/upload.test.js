@@ -4,6 +4,29 @@ const { mockPoolExecute, generateTestToken } = require('./testUtils');
 const fs = require('fs');
 const path = require('path');
 
+const { PassThrough } = require('stream');
+
+jest.mock('cloudinary', () => ({
+    v2: {
+        config: jest.fn(),
+        uploader: {
+            upload_stream: jest.fn((options, callback) => {
+                const stream = new require('stream').PassThrough();
+                stream.on('finish', () => {
+                    callback(null, { secure_url: 'http://example.com/file.pdf' });
+                });
+                return stream;
+            }),
+            upload: jest.fn().mockResolvedValue({ secure_url: 'http://example.com/file.pdf' }),
+            destroy: jest.fn().mockResolvedValue({ result: 'ok' })
+        }
+    }
+}));
+
+jest.mock('../services/virusScanner', () => ({
+    scanFileVirus: jest.fn().mockResolvedValue({ safe: true, message: 'Safe' })
+}));
+
 describe('Documents API', () => {
 
     afterEach(() => {

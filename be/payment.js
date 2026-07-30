@@ -223,17 +223,28 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
         if (txRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy giao dịch.' });
         if (txRows[0].TrangThai !== 'ChoDuyet') return res.status(400).json({ message: 'Giao dịch đã được xử lý.' });
 
-        await pool.execute(
-            'UPDATE GIAODICH_NAPXU SET TrangThai = "TuChoi", MaND_Duyet = ?, NgayDuyet = CURRENT_TIMESTAMP WHERE MaGD = ?',
-            [adminId, maGD]
-        );
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-        await pool.execute(
-            'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
-            [txRows[0].MaND, `Giao dịch nạp xu (Mã GD: ${maGD}) của bạn đã bị từ chối do không nhận được thanh toán.`, 'HeThong']
-        );
+        try {
+            await connection.execute(
+                'UPDATE GIAODICH_NAPXU SET TrangThai = "TuChoi", MaND_Duyet = ?, NgayDuyet = CURRENT_TIMESTAMP WHERE MaGD = ?',
+                [adminId, maGD]
+            );
 
-        res.status(200).json({ message: 'Đã từ chối giao dịch.' });
+            await connection.execute(
+                'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
+                [txRows[0].MaND, `Giao dịch nạp xu (Mã GD: ${maGD}) của bạn đã bị từ chối do không nhận được thanh toán.`, 'HeThong']
+            );
+
+            await connection.commit();
+            res.status(200).json({ message: 'Đã từ chối giao dịch.' });
+        } catch (dbErr) {
+            await connection.rollback();
+            throw dbErr;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error('Lỗi khi từ chối:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -257,4 +268,50 @@ router.delete('/delete/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
+// API xuất báo cáo lịch sử nạp xu ra file CSV
+router.get('/export/history', adminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT G.*, N.HoTen, N.Email 
+            FROM GIAODICH_NAPXU G
+            JOIN NGUOIDUNG N ON G.MaND = N.MaND
+            ORDER BY G.NgayTao DESC
+        `);
+
+        let csvContent = '\uFEFF'; // UTF-8 BOM
+        csvContent += 'Mã GD,Người Dùng,Email,Số Tiền (VNĐ),Số Xu,Khuyến Mãi,Ngày Tạo,Ngày Duyệt,Trạng Thái\n';
+
+        for (const row of rows) {
+            const dateStr = row.NgayTao ? new Date(row.NgayTao).toLocaleString('vi-VN') : '';
+            const dateDuyetStr = row.NgayDuyet ? new Date(row.NgayDuyet).toLocaleString('vi-VN') : '';
+            
+            let statusStr = row.TrangThai;
+            if (statusStr === 'DaDuyet') statusStr = 'Đã Duyệt';
+            else if (statusStr === 'ChoDuyet') statusStr = 'Chờ Duyệt';
+            else if (statusStr === 'TuChoi') statusStr = 'Từ Chối';
+
+            const values = [
+                row.MaGD,
+                `"${(row.HoTen || '').replace(/"/g, '""')}"`,
+                `"${(row.Email || '').replace(/"/g, '""')}"`,
+                row.SoTien || 0,
+                row.SoXu || 0,
+                `"${(row.MaPromo || '').replace(/"/g, '""')}"`,
+                `"${dateStr}"`,
+                `"${dateDuyetStr}"`,
+                `"${statusStr}"`
+            ];
+            csvContent += values.join(',') + '\n';
+        }
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename="lich-su-nap-xu.csv"');
+        res.send(csvContent);
+    } catch (error) {
+        console.error('Lỗi xuất lịch sử nạp xu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 module.exports = router;

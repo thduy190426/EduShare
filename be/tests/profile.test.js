@@ -28,7 +28,7 @@ describe('User Profile API', () => {
                 return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             }
 
-            if (query.includes('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi FROM NGUOIDUNG')) {
+            if (query.includes('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi')) {
                 return Promise.resolve([[{
                     MaND: 1, HoTen: 'Test User', Email: 'test@example.com', VaiTro: 'SinhVien'
                 }]]);

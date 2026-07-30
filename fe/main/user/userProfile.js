@@ -263,6 +263,17 @@ async function initProfile() {
         if (profile.VaiTro === 'SinhVien') {
             document.getElementById('upgrade-teacher-section').style.display = 'block';
             initUpgradeTeacher();
+        } else if (profile.VaiTro === 'Admin' || profile.VaiTro === 'GiaoVien') {
+            const twoFaSection = document.getElementById('twofa-section');
+            if (twoFaSection) {
+                twoFaSection.style.display = 'block';
+                if (profile.IsTwoFactorEnabled) {
+                    const btnSetup = document.getElementById('btn-setup-2fa');
+                    const msgSetup = document.getElementById('2fa-status-msg');
+                    if (btnSetup) btnSetup.style.display = 'none';
+                    if (msgSetup) msgSetup.style.display = 'block';
+                }
+            }
         }
     } catch (err) {
         console.error(err);
@@ -869,6 +880,8 @@ async function fetchTransactions() {
         const tab = document.getElementById('tab-transactions');
         if (tab) tab.innerHTML = `<i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Lịch sử giao dịch Xu (${data.transactions ? data.transactions.length : 0})`;
         const container = document.getElementById('transactions-container');
+        if (!container) return;
+        
         container.innerHTML = '';
         
         if (!data.transactions || data.transactions.length === 0) {
@@ -1179,6 +1192,29 @@ function setupEventListeners() {
     
     const btnChangePw = document.getElementById('btn-change-pw');
     btnChangePw.addEventListener('click', changePassword);
+
+    const btnToggle2Fa = document.getElementById('btn-toggle-2fa');
+    if (btnToggle2Fa) {
+        btnToggle2Fa.addEventListener('click', () => {
+            const content = document.getElementById('twofa-content');
+            const icon = btnToggle2Fa.querySelector('.toggle-icon');
+            const text = btnToggle2Fa.querySelector('.toggle-text');
+            const isExpanded = content.classList.contains('expanded');
+            
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                btnToggle2Fa.classList.remove('expanded');
+                text.textContent = 'Mở rộng';
+            } else {
+                content.classList.add('expanded');
+                btnToggle2Fa.classList.add('expanded');
+                text.textContent = 'Thu gọn';
+            }
+        });
+    }
+
+    const btnSetup2Fa = document.getElementById('btn-setup-2fa');
+    if (btnSetup2Fa) btnSetup2Fa.addEventListener('click', handleSetup2FA);
     
     const btnSendPwOtp = document.getElementById('btn-send-pw-otp');
     if (btnSendPwOtp) btnSendPwOtp.addEventListener('click', sendChangePasswordOtp);
@@ -1617,4 +1653,66 @@ if (btnSubmitUpgrade) {
             btnSubmitUpgrade.disabled = false;
         }
     });
+}
+
+async function handleSetup2FA() {
+    try {
+        const res = await fetch(`${API_URL}/auth/2fa/setup`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (!res.ok) throw new Error(data.message || 'Không thể thiết lập 2FA');
+
+        const { value: totpCode } = await Swal.fire({
+            title: 'Thiết lập Xác thực 2 bước',
+            html: `
+                <div style="text-align: left; font-size: 14.5px; line-height: 1.6;">
+                    <p><b>Bước 1:</b> Cài đặt ứng dụng <b>Google Authenticator</b> hoặc <b>Authy</b> trên điện thoại.</p>
+                    <p><b>Bước 2:</b> Quét mã QR dưới đây:</p>
+                    <img src="${data.qrCodeDataURL}" style="width: 200px; height: 200px; margin: 10px auto; display: block; border: 1px solid #ddd; border-radius: 8px;">
+                    <p style="text-align: center; font-size: 13px; color: #666;">Mã bí mật: <b style="letter-spacing: 1px;">${data.secret}</b></p>
+                    <p style="margin-top: 15px;"><b>Bước 3:</b> Nhập mã 6 số từ ứng dụng để kích hoạt:</p>
+                </div>
+            `,
+            input: 'text',
+            inputAttributes: {
+                maxlength: 6,
+                autocapitalize: 'off',
+                autocorrect: 'off',
+                style: 'text-align: center; font-size: 24px; letter-spacing: 4px;'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Kích hoạt',
+            cancelButtonText: 'Hủy',
+            preConfirm: (code) => {
+                if (!code || code.length !== 6) {
+                    Swal.showValidationMessage('Vui lòng nhập đủ mã 6 số');
+                }
+                return code;
+            }
+        });
+
+        if (totpCode) {
+            const verifyRes = await fetch(`${API_URL}/auth/2fa/verify-setup`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ token: totpCode })
+            });
+            const verifyData = await verifyRes.json();
+            
+            if (verifyRes.ok) {
+                Swal.fire('Thành công', 'Xác thực 2 bước đã được bật.', 'success');
+                document.getElementById('btn-setup-2fa').style.display = 'none';
+                document.getElementById('2fa-status-msg').style.display = 'block';
+            } else {
+                Swal.fire('Lỗi', verifyData.message || 'Mã không hợp lệ', 'error');
+            }
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
 }

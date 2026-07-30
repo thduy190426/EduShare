@@ -418,3 +418,189 @@ Dưới đây là các CSS Selectors quan trọng để AI Subagent tương tác
   4. Chọn 1 option hợp lệ tại `select#new-group-subject`.
   5. Click `button#btn-confirm-create-group`.
 - **Đầu ra mong đợi (Outputs):** Có thông báo tạo nhóm thành công (SweetAlert2), modal tự đóng và nhóm mới xuất hiện trong `div#group-grid`.
+
+---
+
+# LƯU Ý VỀ TÀI KHOẢN VÀ PHÂN QUYỀN
+
+Trong hệ thống EduShare, có 3 vai trò chính: Sinh Viên (Student), Giáo Viên (Teacher), và Quản Trị Viên (Admin).
+
+**Tài khoản Test được cung cấp:**
+- **Tài khoản Admin (Quản trị viên):**
+  - Email: `admin@edushare.com.vn`
+  - Mật khẩu: `Admin123!?`
+- **Tài khoản Giáo viên (Teacher):**
+  - Email: `gv1@edushare.com.vn`
+  - Mật khẩu: `Duy1tran!?`
+
+**Quy tắc Đăng xuất trước khi Đổi role:**
+Nếu Subagent đang ở trong trạng thái đăng nhập của một tài khoản (ví dụ Student) nhưng test case tiếp theo yêu cầu role Admin hoặc Teacher, Subagent **bắt buộc** phải thực hiện Đăng xuất trước khi Đăng nhập lại.
+- **Thao tác Đăng xuất (Logout):**
+  1. Click vào nút Đăng xuất trên sidebar: `a#logoutBtn` (hoặc có icon đăng xuất, href=`#` gọi hàm logout).
+  2. Trình duyệt sẽ xóa Token và URL sẽ chuyển hướng về `http://127.0.0.1:5501/fe/pages/auth/login.html`.
+
+---
+
+# Test Cases cho Trang Chi Tiết Nhóm (Group Details Page)
+
+## 1. Thông tin trang
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/group/groupDetails.html?id=...`
+- **Mục đích:** Hiển thị chi tiết nhóm, các tab Thảo luận, Tài liệu, Thành viên. Có chức năng Gắn thẻ (Tagging) khi bình luận.
+
+## 2. Định danh các phần tử (Elements)
+- **Tab Thảo luận:** `button[data-target="tab-discussions"]`
+- **Ô nhập bài viết/bình luận:** `textarea#new-post-content` hoặc `.comment-input`
+- **Danh sách nhắc tên (Tribute.js):** `.tribute-container ul li`
+
+## 3. Luồng kiểm thử (Test Cases)
+
+### Test Case 1: Thử nghiệm tính năng Gắn thẻ (@Username) trong Thảo luận
+- **Luồng hoạt động:** Đăng nhập bằng tài khoản Giáo viên, vào một nhóm và gõ `@` để nhắc tên thành viên.
+- **Đầu vào (Inputs):** Nội dung: `Chào @`
+- **Cách thao tác (Actions):**
+  1. Đăng xuất tài khoản hiện tại (nếu có) bằng `a#logoutBtn`.
+  2. Đăng nhập bằng tài khoản Giáo viên (`gv1@edushare.com.vn` / `Duy1tran!?`).
+  3. Điều hướng đến trang chi tiết nhóm hợp lệ.
+  4. Đảm bảo đang ở Tab Thảo luận.
+  5. Focus vào ô nhập liệu (`textarea` bình luận hoặc bài viết).
+  6. Gõ phím `@`. Đợi khoảng 500ms.
+  7. Kiểm tra sự xuất hiện của popup hiển thị danh sách người dùng (`.tribute-container`).
+  8. Click chọn một user từ danh sách (`.tribute-container ul li`).
+- **Đầu ra mong đợi (Outputs):** Tên người dùng được chèn vào ô nhập liệu dưới dạng `@TênNgườiDùng`, popup biến mất.
+
+---
+
+# Test Cases cho Mua Tài Liệu Premium (Buy Premium Document)
+
+## 1. Mục đích
+Người dùng thanh toán bằng Xu để tải tài liệu Premium.
+
+## 2. Định danh các phần tử (Elements)
+- **Nút Mua tài liệu (hoặc Tải xuống Premium):** `button#btn-download` (sẽ hiển thị dạng "Mua: XX Xu")
+- **Nút Xác nhận mua (SweetAlert2):** `.swal2-confirm`
+
+## 3. Luồng kiểm thử
+
+### Test Case 1: Mua tài liệu thành công
+- **Luồng hoạt động:** Click nút Mua, xác nhận thanh toán.
+- **Cách thao tác (Actions):**
+  1. Điều hướng đến `http://127.0.0.1:5501/fe/pages/document/documentDetails.html?id=...` (một tài liệu Premium hợp lệ).
+  2. Click vào `button#btn-download`.
+  3. Đợi popup xác nhận "Bạn có chắc chắn muốn mua tài liệu này với giá... Xu?" xuất hiện.
+  4. Click nút xác nhận của popup (`.swal2-confirm`).
+- **Đầu ra mong đợi (Outputs):**
+  - Báo mua thành công.
+  - Số dư Xu trên header bị trừ đi tương ứng.
+  - Nút Mua thay đổi thành nút "Tải xuống" (Download) màu xanh lá.
+
+---
+
+# Test Cases cho Quản Trị Viên (Admin)
+
+## 1. Thông tin chung
+- Tất cả các thao tác bên dưới yêu cầu Đăng xuất tài khoản hiện hành và Đăng nhập bằng tài khoản Admin (`admin@edushare.com.vn` / `Admin123!?`).
+- Sidebar của Admin chứa các link: Dashboard, Duyệt tài liệu, Nạp xu, Người dùng.
+
+## 2. Luồng kiểm thử (Test Cases)
+
+### Test Case 1: Xuất báo cáo Doanh Thu tại Admin Dashboard
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/admin/adminDashboard.html`
+- **Cách thao tác (Actions):**
+  1. Đăng xuất tài khoản hiện hành.
+  2. Đăng nhập tài khoản Admin (`admin@edushare.com.vn` / `Admin123!?`).
+  3. Điều hướng đến trang Admin Dashboard.
+  4. Đợi các biểu đồ (`canvas#revenueChart`) load xong.
+  5. Tìm và click nút **Xuất CSV** (có id: `btn-export-revenue`).
+- **Đầu ra mong đợi (Outputs):**
+  - Trình duyệt tự động tải xuống một file có đuôi `.csv` (ví dụ: `DoanhThu_...csv`).
+  - File được sinh ra qua Blob, chứa các dòng UTF-8 BOM, đảm bảo không lỗi font tiếng Việt.
+
+### Test Case 2: Xuất báo cáo Lịch Sử Nạp Xu tại Admin Payments
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/admin/adminPayments.html`
+- **Cách thao tác (Actions):**
+  1. Điều hướng đến trang Admin Payments.
+  2. Tìm và click nút **Xuất CSV** (có id: `btn-export-csv`).
+- **Đầu ra mong đợi (Outputs):**
+  - Trình duyệt tải xuống file `.csv` chứa toàn bộ lịch sử giao dịch nạp xu của hệ thống cho Kế toán.
+
+### Test Case 3: Duyệt / Từ chối giao dịch Nạp Xu
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/admin/adminPayments.html`
+- **Cách thao tác (Actions):**
+  1. Tại bảng danh sách giao dịch (`#payments-table-body`), tìm một giao dịch đang ở trạng thái `ChoDuyet`.
+  2. Click vào nút "Duyệt" (`.btn-approve-payment`) hoặc "Từ chối" (`.btn-reject-payment`) tương ứng trên dòng đó.
+  3. Nếu có popup xác nhận từ SweetAlert2, click `.swal2-confirm`.
+- **Đầu ra mong đợi (Outputs):**
+  - Hệ thống báo thành công.
+  - Trạng thái dòng đó chuyển sang "Đã duyệt" hoặc "Từ chối".
+  - (Logic chìm dưới DB: Tiền Xu được cộng cho user hoặc Audit log ghi nhận thành công, đảm bảo chống lỗi Race Condition qua Transaction).
+
+### Test Case 4: Quản lý Người dùng (Khóa tài khoản và Đổi quyền)
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/admin/adminUsers.html`
+- **Cách thao tác (Actions) - Khóa tài khoản:**
+  1. Tại bảng người dùng (`#users-table-body`), tìm một tài khoản `SinhVien` đang `HoatDong`.
+  2. Click nút Khóa (`.btn-lock-user` hoặc icon khóa).
+  3. Click xác nhận trên popup SweetAlert2.
+- **Đầu ra mong đợi (Outputs):** Trạng thái người dùng chuyển sang "Bị khóa", giao diện bảng cập nhật.
+
+- **Cách thao tác (Actions) - Kiểm chứng chống Race Condition khi hạ quyền Admin:**
+  1. Tìm một tài khoản có vai trò `Admin` (có thể là chính tài khoản đang login nếu chỉ có 1 Admin duy nhất).
+  2. Đổi select dropdown vai trò (role select) của dòng đó từ `Admin` thành `SinhVien`.
+  3. Nhấn nút xác nhận đổi quyền.
+- **Đầu ra mong đợi (Outputs):** 
+  - Nếu đây là Admin duy nhất/cuối cùng, hệ thống backend với cơ chế `FOR UPDATE` sẽ chặn và trả về lỗi: "Không thể khóa/hạ quyền Admin cuối cùng của hệ thống."
+  - Giao diện báo lỗi qua SweetAlert2, đảm bảo hệ thống không bao giờ bị "vô chủ".
+
+### Test Case 5: Duyệt / Từ chối Tài liệu tải lên (Moderation)
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/admin/adminModeration.html`
+- **Cách thao tác (Actions):**
+  1. Tại bảng danh sách tài liệu chờ duyệt, tìm một tài liệu đang ở trạng thái `ChoDuyet`.
+  2. Click nút "Duyệt" (Approve) hoặc "Từ chối" (Reject) trên dòng tương ứng.
+  3. Nếu có form yêu cầu nhập lý do từ chối, hãy điền "Nội dung không phù hợp" và Submit.
+- **Đầu ra mong đợi (Outputs):** Tài liệu biến mất khỏi danh sách chờ duyệt hoặc chuyển trạng thái thành Đã Duyệt / Từ Chối. Cập nhật thông báo cho tác giả.
+
+### Test Case 6: Quản lý Mã khuyến mãi (Promo Codes)
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/admin/adminPromos.html`
+- **Cách thao tác (Actions) - Tạo mã:**
+  1. Click nút "Thêm mã khuyến mãi" (hoặc Create Promo).
+  2. Điền thông tin: Mã code `TEST50`, Số xu tặng `50`, Giới hạn lượt dùng `10`.
+  3. Submit form.
+- **Đầu ra mong đợi (Outputs):** Bảng hiển thị Promo Code mới `TEST50` với trạng thái Hoạt động.
+
+---
+
+# Test Cases cho Sinh Viên (Student / Thao tác bổ sung)
+
+## Test Case 1: Nạp Xu (Top-up) và Nhập Mã Khuyến Mãi
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/user/buyCoins.html`
+- **Cách thao tác (Actions) - Nhập Promo Code:**
+  1. Đăng xuất Admin, Đăng nhập Sinh viên.
+  2. Điều hướng đến trang Nạp Xu.
+  3. Nhập `TEST50` vào `input#promo-code-input`.
+  4. Click `button#btn-apply-promo`.
+- **Đầu ra mong đợi (Outputs):** Thông báo nhận thành công 50 Xu, số dư Xu ở góc trên cập nhật ngay lập tức.
+- **Cách thao tác (Actions) - Nạp Xu chuyển khoản:**
+  1. Tại phần danh sách gói Xu (`#packages-container`), click chọn một gói Xu (Ví dụ: 100.000đ = 1000 Xu).
+  2. Modal hiển thị QR Code và thông tin chuyển khoản xuất hiện (`#qrModal`).
+  3. (Hệ thống sẽ lưu 1 Request Nạp Xu trạng thái ChoDuyet vào DB).
+  4. Đóng modal bằng `button#btn-close-qr`.
+
+## Test Case 2: Theo dõi Giảng viên / Người dùng khác (Follow User)
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/user/otherUserProfile.html?id=...`
+- **Cách thao tác (Actions):**
+  1. Tìm một người dùng khác, điều hướng đến trang cá nhân của họ.
+  2. Click nút "Theo dõi" (Follow).
+- **Đầu ra mong đợi (Outputs):** 
+  - Nút chuyển thành "Đang theo dõi" (Following). 
+  - Số lượng Follower của người đó tăng lên 1.
+
+## Test Case 3: Quản lý tài liệu của tôi (My Documents)
+- **Đường dẫn (URL):** `http://127.0.0.1:5501/fe/pages/document/myDocuments.html`
+- **Cách thao tác (Actions):**
+  1. Điều hướng đến trang tài liệu của tôi.
+  2. Tìm tài liệu đang chờ duyệt hoặc đã duyệt, click nút "Xóa" hoặc "Sửa".
+  3. Xác nhận xóa.
+- **Đầu ra mong đợi (Outputs):** Tài liệu bị xóa khỏi danh sách, báo thành công (SweetAlert2). Nếu tài liệu đã bán được, không cho phép xóa hoàn toàn mà chỉ ẩn.
+
+---
+**-- HẾT --**
+(Tài liệu Test Cases này đã bao phủ Toàn bộ Phân quyền, Luồng thanh toán Xu, Quản trị Hệ thống, Đăng tải Tài liệu và Tương tác Cộng đồng của EduShare).

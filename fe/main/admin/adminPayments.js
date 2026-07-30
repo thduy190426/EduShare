@@ -9,6 +9,41 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTabs();
     fetchCounts();
     fetchTransactions();
+
+    const btnExport = document.getElementById('btn-export-csv');
+    if (btnExport) {
+        btnExport.addEventListener('click', async () => {
+            const token = getToken();
+            try {
+                btnExport.disabled = true;
+                btnExport.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang xuất...';
+                
+                const response = await fetch(`${API_URL}/payment/export/history`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Lỗi khi tải báo cáo');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'lich-su-nap-xu.csv';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btnExport.disabled = false;
+                btnExport.innerHTML = '<i class="fa-solid fa-file-csv" style="margin-right: 6px;"></i> Xuất CSV';
+            }
+        });
+    }
 });
 
 function setupTabs() {

@@ -2507,6 +2507,10 @@ function createPostCard(post) {
             </div>
         </div>
     `;
+    setTimeout(() => {
+        const input = document.getElementById(`comment-input-${post.MaBaiViet}`);
+        if (input && window.initTribute) window.initTribute(input);
+    }, 0);
     return div;
 }
 
@@ -2586,7 +2590,7 @@ window.toggleComments = async (postId) => {
                     ${avatarHtml}
                     <div class="comment-bubble">
                         <div class="comment-author-name">${escapeHTML(cmt.HoTen)}</div>
-                        <div class="comment-content">${escapeHTML(cmt.NoiDung)}</div>
+                        <div class="comment-content">${escapeHTML(cmt.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
                         <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
                     </div>
                 `;
@@ -2662,3 +2666,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+window.initTribute = function(element) {
+    if (!window.Tribute) return;
+    const tribute = new Tribute({
+        values: async function (text, cb) {
+            try {
+                const res = await fetch(`${API_URL}/users/search?q=${text}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (!res.ok) return cb([]);
+                const users = await res.json();
+                cb(users);
+            } catch (err) {
+                cb([]);
+            }
+        },
+        lookup: 'HoTen',
+        fillAttr: 'HoTen',
+        selectTemplate: function (item) {
+            return `@[${item.original.HoTen}](${item.original.MaND})`;
+        },
+        menuItemTemplate: function (item) {
+            if (item.original.AvatarURL) {
+                return `<img src="${getAssetUrl(item.original.AvatarURL)}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 8px;"> ${item.original.HoTen}`;
+            } else {
+                const initial = item.original.HoTen ? item.original.HoTen.charAt(0).toUpperCase() : 'U';
+                return `<div style="width: 24px; height: 24px; border-radius: 50%; background: #E0E7FF; color: #4F46E5; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; margin-right: 8px; vertical-align: middle;">${initial}</div> ${item.original.HoTen}`;
+            }
+        },
+        noMatchTemplate: function () {
+            return '<span style="visibility: hidden;"></span>';
+        }
+    });
+    tribute.attach(element);
+};

@@ -54,6 +54,8 @@ async function run() {
         await addColumnIfMissing('NGUOIDUNG', 'DiaChi', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'TruongHoc', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'KhoaNganh', 'VARCHAR(255) DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'TwoFactorSecret', 'VARCHAR(255) DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'IsTwoFactorEnabled', 'BOOLEAN DEFAULT FALSE');
         await pool.execute('ALTER TABLE NGUOIDUNG MODIFY COLUMN GioiTinh VARCHAR(20) DEFAULT NULL');
         await pool.execute(`
             UPDATE NGUOIDUNG
@@ -191,6 +193,8 @@ async function run() {
                 FOREIGN KEY (MaBL_Cha) REFERENCES BINHLUAN_BAIVIET(MaBL) ON DELETE CASCADE
             )
         `);
+        
+        await addColumnIfMissing('TAILIEU', 'TextSEO', 'TEXT');
     } finally {
         await pool.end();
     }

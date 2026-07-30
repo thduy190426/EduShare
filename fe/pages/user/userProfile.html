@@ -233,6 +233,25 @@
         </div>
       </div>
 
+      <div class="form-card" id="twofa-section" style="display: none; border-left: 4px solid #10b981;">
+        <div class="collapsible-header" id="btn-toggle-2fa" style="cursor: pointer;">
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Xác thực 2 bước (2FA)</h2>
+          <span class="toggle-status"
+            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+            <span class="toggle-text">Mở rộng</span>
+            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+          </span>
+        </div>
+
+        <div class="collapsible-content" id="twofa-content">
+          <div style="padding: 10px 0;">
+            <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Tăng cường bảo mật cho tài khoản của bạn bằng cách yêu cầu mã xác thực từ ứng dụng Google Authenticator hoặc Authy mỗi khi đăng nhập.</p>
+            <button type="button" id="btn-setup-2fa" class="btn-primary" style="background-color: #10b981;"><i class="fa-solid fa-qrcode" style="margin-right: 6px;"></i> Thiết lập 2FA</button>
+            <div id="2fa-status-msg" style="margin-top: 10px; font-weight: 600; color: #10b981; display: none;"><i class="fa-solid fa-circle-check"></i> Xác thực 2 bước đang được BẬT</div>
+          </div>
+        </div>
+      </div>
+
       <div class="form-card" id="upgrade-teacher-section" style="display: none; border-left: 4px solid var(--primary);">
         <div class="collapsible-header" id="upgrade-teacher-header" style="cursor: pointer;">
           <div>

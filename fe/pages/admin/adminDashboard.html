@@ -130,8 +130,11 @@
 
       <div class="grid-2" style="margin-bottom: 24px;">
         <div class="panel">
-          <div class="panel-header">
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3 class="panel-title">Doanh thu theo tháng</h3>
+            <button id="btn-export-revenue" class="btn" style="background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em; font-family: 'Inter', sans-serif;">
+              <i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Xuất
+            </button>
           </div>
           <div class="chart-container" style="padding: 20px;">
             <canvas id="revenueChart" width="400" height="250"></canvas>

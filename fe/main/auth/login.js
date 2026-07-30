@@ -147,6 +147,85 @@ document.addEventListener('DOMContentLoaded', () => {
                         title: 'Đăng nhập thất bại',
                         text: data.message || 'Email hoặc mật khẩu không đúng'
                     });
+                } else if (data.require2FA) {
+                    Swal.close();
+                    document.body.style.pointerEvents = 'auto';
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                    submitBtn.innerHTML = originalText;
+                    
+                    const { value: totpCode } = await Swal.fire({
+                        title: 'Xác thực 2 bước',
+                        html: '<p>Tài khoản của bạn đã được bảo vệ bằng 2FA.</p><p>Vui lòng nhập mã 6 số từ Google Authenticator:</p>',
+                        input: 'text',
+                        inputAttributes: {
+                            maxlength: 6,
+                            autocapitalize: 'off',
+                            autocorrect: 'off',
+                            style: 'text-align: center; font-size: 24px; letter-spacing: 4px;'
+                        },
+                        showCancelButton: true,
+                        confirmButtonText: 'Xác nhận',
+                        cancelButtonText: 'Hủy',
+                        allowOutsideClick: false,
+                        preConfirm: (code) => {
+                            if (!code || code.length !== 6) {
+                                Swal.showValidationMessage('Vui lòng nhập đủ mã 6 số');
+                            }
+                            return code;
+                        }
+                    });
+                    
+                    if (totpCode) {
+                        Swal.fire({
+                            title: 'Đang xác thực...',
+                            allowOutsideClick: false,
+                            didOpen: () => { Swal.showLoading(); }
+                        });
+                        
+                        const verifyRes = await fetch(`${API_URL}/auth/2fa/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tempToken: data.tempToken, totpCode })
+                        });
+                        const verifyData = await verifyRes.json();
+                        
+                        if (!verifyRes.ok) {
+                            Swal.fire('Lỗi', verifyData.message || 'Mã xác thực không hợp lệ', 'error');
+                            return;
+                        }
+                        
+                        const greeting = getTimeBasedGreeting('login');
+                        Toast.fire({ icon: 'success', title: greeting });
+                        localStorage.setItem('lastLoginMethod', 'email');
+                        
+                        saveLoginSession({
+                            token: verifyData.token,
+                            refreshToken: verifyData.refreshToken,
+                            avatarURL: verifyData.avatarURL,
+                            rememberLogin
+                        });
+
+                        let vaiTro = 'SinhVien';
+                        try {
+                            const base64Url = verifyData.token.split('.')[1];
+                            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                            }).join(''));
+                            const payload = JSON.parse(jsonPayload);
+                            vaiTro = payload.VaiTro;
+                        } catch (e) {}
+
+                        setTimeout(() => {
+                            if (vaiTro === 'Admin') {
+                                window.location.href = '../admin/adminDashboard.html';
+                            } else {
+                                window.location.href = '../user/userHome.html';
+                            }
+                        }, 1500);
+                    }
                 } else {
                     const greeting = getTimeBasedGreeting('login');
                     Toast.fire({ icon: 'success', title: greeting });

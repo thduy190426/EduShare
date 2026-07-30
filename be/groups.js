@@ -981,6 +981,27 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) 
             [postId, maND, noiDung.trim()]
         );
 
+        const mentionRegex = /@\[(.*?)\]\((\d+)\)/g;
+        let match;
+        const taggedUserIds = new Set();
+        while ((match = mentionRegex.exec(noiDung)) !== null) {
+            taggedUserIds.add(parseInt(match[2]));
+        }
+
+        if (taggedUserIds.size > 0) {
+            const [currentUserRows] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+            const currentUserHoTen = currentUserRows.length > 0 ? currentUserRows[0].HoTen : 'Một người dùng';
+            
+            for (const taggedMaND of taggedUserIds) {
+                if (taggedMaND !== maND) {
+                    await pool.execute(
+                        'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                        [taggedMaND, 'NhacDen', `${currentUserHoTen} đã nhắc đến bạn trong nhóm.`, `../group/groupDetails.html?id=${maNhom}`]
+                    );
+                }
+            }
+        }
+
         res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId });
     } catch (error) {
         console.error('Lỗi API POST /groups/:maNhom/posts/:postId/comments:', error);

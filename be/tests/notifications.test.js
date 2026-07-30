@@ -20,6 +20,7 @@ describe('Notifications API', () => {
             mockPoolExecute(app, (query) => {
                 if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
                 if (query.includes('DELETE FROM THONGBAO')) return Promise.resolve([{ affectedRows: 0 }]);
+                if (query.includes('SELECT COUNT(*) AS total FROM THONGBAO')) return Promise.resolve([[{ total: 1 }]]);
                 if (query.includes('SELECT * FROM THONGBAO')) {
                     return Promise.resolve([[{ MaTB: 1, NoiDung: 'Test' }]]);
                 }
