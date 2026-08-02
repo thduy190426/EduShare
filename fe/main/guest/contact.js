@@ -1,6 +1,21 @@
-import { API_URL } from "../shared/config.js";
+import { API_URL, fetchAppConfig } from "../shared/config.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    const config = await fetchAppConfig();
+
+    window.onRecaptchaLoad = function() {
+        const recaptchaContainer = document.getElementById('recaptcha-container');
+        if (recaptchaContainer && config.recaptchaSiteKey) {
+            grecaptcha.render(recaptchaContainer, {
+                'sitekey': config.recaptchaSiteKey
+            });
+        }
+    };
+    const recaptchaScript = document.createElement('script');
+    recaptchaScript.src = 'https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoad';
+    recaptchaScript.async = true;
+    recaptchaScript.defer = true;
+    document.head.appendChild(recaptchaScript);
     const contactForm = document.getElementById("contactForm");
     const btnSubmit = document.getElementById("btn-submit");
     const inputName = document.getElementById("input-name");

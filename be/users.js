@@ -985,15 +985,15 @@ router.get('/:maND/downloaded-documents', authMiddleware, async (req, res) => {
 
         const [rows] = await pool.execute(`
             SELECT 
-                TL.MaTL, TL.TieuDe, TL.MoTa, TL.FileDinhKem, 
-                TL.SoLuotTai, TL.Gia, TL.HinhThuc, TL.ThoiGianTaiLen, 
-                MH.TenMH, LND.TenLop, ND.HoTen AS NguoiDang, ND.AvatarURL,
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
+                TL.LaTaiLieuDocQuyen, TL.GiaXu,
+                COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc, ND.HoTen AS NguoiDang, ND.AvatarURL,
                 COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
                 (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
             FROM LICH_SU_TAI LST
             JOIN TAILIEU TL ON LST.MaTL = TL.MaTL
-            LEFT JOIN MONHOC MH ON TL.MaMH = MH.MaMH 
-            LEFT JOIN LOPHOC_NGANH LND ON TL.MaLop = LND.MaLop 
+            LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc 
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND 
             WHERE LST.MaND = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
             ORDER BY LST.NgayTai DESC
@@ -1020,16 +1020,16 @@ router.get('/:maND/rated-documents', authMiddleware, async (req, res) => {
 
         const [rows] = await pool.execute(`
             SELECT 
-                TL.MaTL, TL.TieuDe, TL.MoTa, TL.FileDinhKem, 
-                TL.SoLuotTai, TL.Gia, TL.HinhThuc, TL.ThoiGianTaiLen, 
-                MH.TenMH, LND.TenLop, ND.HoTen AS NguoiDang, ND.AvatarURL,
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
+                TL.LaTaiLieuDocQuyen, TL.GiaXu,
+                COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc, ND.HoTen AS NguoiDang, ND.AvatarURL,
                 COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
                 (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia,
                 DG.SoSao AS UserRating
             FROM DANHGIA DG
             JOIN TAILIEU TL ON DG.MaTL = TL.MaTL
-            LEFT JOIN MONHOC MH ON TL.MaMH = MH.MaMH 
-            LEFT JOIN LOPHOC_NGANH LND ON TL.MaLop = LND.MaLop 
+            LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc 
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND 
             WHERE DG.MaND = ? AND TL.TrangThaiKiemDuyet = 'DaDuyet'
             ORDER BY DG.NgayDanhGia DESC

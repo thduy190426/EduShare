@@ -84,6 +84,7 @@ let contextMenuMember = null;
 let selectedRemoveDoc = null;
 let bookmarkedDocs = new Set();
 let currentContextDoc = null;
+let selectedSubjects = [];
 
 async function fetchSubjectsForModal() {
     try {
@@ -113,9 +114,12 @@ async function initGroupList() {
     await fetchGroups();
 
     const searchInput = document.getElementById('search-group');
-    const filterSelect = document.getElementById('filter-subject');
+    const filterMemberCount = document.getElementById('filter-member-count');
+    const filterPrivacy = document.getElementById('filter-privacy');
+    
     if (searchInput) searchInput.addEventListener('input', () => applyFilters());
-    if (filterSelect) filterSelect.addEventListener('change', () => applyFilters());
+    if (filterMemberCount) filterMemberCount.addEventListener('change', () => applyFilters());
+    if (filterPrivacy) filterPrivacy.addEventListener('change', () => applyFilters());
 
     const tabExplore = document.getElementById('tab-all-groups');
     const tabMyGroups = document.getElementById('tab-my-groups');
@@ -442,47 +446,99 @@ window.fetchRecommendedGroups = async function() {
 
 
 function populateSubjectFilter() {
-    const filterSelect = document.getElementById('filter-subject');
-    if (!filterSelect) return;
-    
-    const currentVal = filterSelect.value;
-    filterSelect.innerHTML = '<option value="">Tất cả môn học</option>';
+    const dropdown = document.getElementById('subject-dropdown');
+    if (!dropdown) return;
     
     const sortedSubjects = [...subjectsList].sort((a, b) => a.TenMonHoc.localeCompare(b.TenMonHoc));
     
+    let html = '';
     sortedSubjects.forEach(subj => {
-        const option = document.createElement('option');
-        option.value = subj.TenMonHoc;
-        option.textContent = subj.TenMonHoc;
-        filterSelect.appendChild(option);
+        const isChecked = selectedSubjects.includes(subj.TenMonHoc) ? 'checked' : '';
+        html += `
+            <label class="multiselect-option">
+                <input type="checkbox" value="${escapeHTML(subj.TenMonHoc)}" ${isChecked}>
+                <span>${escapeHTML(subj.TenMonHoc)}</span>
+            </label>
+        `;
     });
+    dropdown.innerHTML = html;
 
-    if (Array.from(filterSelect.options).some(opt => opt.value === currentVal)) {
-        filterSelect.value = currentVal;
+    const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                selectedSubjects.push(e.target.value);
+            } else {
+                selectedSubjects = selectedSubjects.filter(val => val !== e.target.value);
+            }
+            updateMultiselectLabel();
+            applyFilters();
+        });
+    });
+}
+
+function updateMultiselectLabel() {
+    const label = document.getElementById('multiselect-label');
+    if (!label) return;
+    if (selectedSubjects.length === 0) {
+        label.textContent = 'Tất cả môn học';
+    } else if (selectedSubjects.length === 1) {
+        label.textContent = selectedSubjects[0];
+    } else {
+        label.textContent = `Đã chọn ${selectedSubjects.length} môn học`;
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const multiselect = document.getElementById('subject-multiselect');
+    const header = document.querySelector('.multiselect-header');
+    if (header) {
+        header.addEventListener('click', () => {
+            multiselect.classList.toggle('open');
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (multiselect && !multiselect.contains(e.target)) {
+            multiselect.classList.remove('open');
+        }
+    });
+});
 
 function applyFilters(newItemsOnly = null) {
     if (newItemsOnly instanceof Event) newItemsOnly = null;
     const searchInput = document.getElementById('search-group');
-    const filterSelect = document.getElementById('filter-subject');
+    const filterMemberCount = document.getElementById('filter-member-count');
+    const filterPrivacy = document.getElementById('filter-privacy');
     
     const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    const subject = filterSelect ? filterSelect.value : '';
+    const memberCount = filterMemberCount ? filterMemberCount.value : '';
+    const privacy = filterPrivacy ? filterPrivacy.value : '';
     
     let itemsToFilter = newItemsOnly ? newItemsOnly : currentGroupsData;
     
     const filtered = itemsToFilter.filter(g => {
         const matchQuery = g.TenNhom.toLowerCase().includes(query) || (g.MoTa && g.MoTa.toLowerCase().includes(query));
-        const matchSubject = subject === '' || g.TenMonHoc === subject;
-        return matchQuery && matchSubject;
+        
+        let matchMemberCount = true;
+        const count = g.SoLuongThanhVien || 1;
+        if (memberCount === '<10') matchMemberCount = count < 10;
+        else if (memberCount === '10-50') matchMemberCount = count >= 10 && count <= 50;
+        else if (memberCount === '>50') matchMemberCount = count > 50;
+
+        const matchSubject = selectedSubjects.length === 0 || selectedSubjects.includes(g.TenMonHoc);
+
+        let matchPrivacy = true;
+        if (privacy === 'public') matchPrivacy = !g.IsPrivate;
+        else if (privacy === 'private') matchPrivacy = !!g.IsPrivate;
+        
+        return matchQuery && matchMemberCount && matchSubject && matchPrivacy;
     });
     
     renderGroups(filtered, 'group-grid', !!newItemsOnly);
     
     const scrollEndMessage = document.getElementById('scrollEndMessage');
     if (scrollEndMessage) {
-        if (query !== '' || subject !== '') {
+        if (query !== '' || selectedSubjects.length > 0 || memberCount !== '' || privacy !== '') {
             scrollEndMessage.style.display = 'none';
         } else {
             scrollEndMessage.style.display = (!hasMore && currentGroupsData.length > 0) ? 'block' : 'none';
@@ -619,6 +675,11 @@ function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
         div.className = 'group-card';
         div.style.position = 'relative';
         div.style.animationDelay = `${index * 0.04}s`;
+        div.style.cursor = 'pointer';
+        div.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            window.location.href = `groupDetails.html?id=${g.MaNhom}`;
+        });
 
         let actionButton = '';
         if (g.IsMember) {
@@ -627,9 +688,13 @@ function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
             actionButton = `<button class="btn-primary" style="flex:1;" onclick="window.joinGroup(${g.MaNhom}, this)"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
         }
 
+        const groupIconHtml = g.AnhBia 
+            ? `<img src="${getAssetUrl(g.AnhBia)}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="${escapeHTML(g.TenNhom)}">` 
+            : `<i class="fa-solid fa-users"></i>`;
+
         div.innerHTML = `
           <div class="group-header">
-            <div class="group-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="group-icon" style="padding:0; overflow:hidden;">${groupIconHtml}</div>
             <div class="group-members"><i class="fa-solid fa-user-group"></i> ${g.SoLuongThanhVien || 1}</div>
           </div>
           <div class="group-info">

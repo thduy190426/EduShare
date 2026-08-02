@@ -27,6 +27,19 @@ router.get('/documents/list', teacherMiddleware, async (req, res) => {
         const totalPages = Math.ceil(totalRecords / limit);
         const offset = (page - 1) * limit;
 
+        const validSortColumns = ['TenTL', 'TenNguoiDang', 'TenMonHoc', 'NgayDang', 'TrangThaiKiemDuyet'];
+        let sortBy = req.query.sortBy || 'NgayDang';
+        if (!validSortColumns.includes(sortBy)) sortBy = 'NgayDang';
+        
+        let sortOrder = (req.query.order && req.query.order.toUpperCase() === 'ASC') ? 'ASC' : 'DESC';
+        
+        let sortClause = `ORDER BY TL.NgayDang DESC`;
+        if (sortBy === 'TenTL') sortClause = `ORDER BY TL.TenTL ${sortOrder}`;
+        else if (sortBy === 'TenNguoiDang') sortClause = `ORDER BY ND.HoTen ${sortOrder}`;
+        else if (sortBy === 'TenMonHoc') sortClause = `ORDER BY MH.TenMonHoc ${sortOrder}`;
+        else if (sortBy === 'NgayDang') sortClause = `ORDER BY TL.NgayDang ${sortOrder}`;
+        else if (sortBy === 'TrangThaiKiemDuyet') sortClause = `ORDER BY TL.TrangThaiKiemDuyet ${sortOrder}`;
+
         let sql = `
             SELECT 
                 TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.LoaiFile, TL.NgayDang,
@@ -37,7 +50,7 @@ router.get('/documents/list', teacherMiddleware, async (req, res) => {
             LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             ${baseCondition}
-            ORDER BY TL.MaTL DESC
+            ${sortClause}
             LIMIT ? OFFSET ?
         `;
         
@@ -667,12 +680,24 @@ router.get('/reports', adminMiddleware, async (req, res) => {
         const totalPages = Math.ceil(totalRecords / limit);
         const offset = (page - 1) * limit;
 
+        const validSortColumns = ['NguoiBaoCao', 'TenTL', 'NgayBaoCao', 'TrangThai'];
+        let sortBy = req.query.sortBy || 'NgayBaoCao';
+        if (!validSortColumns.includes(sortBy)) sortBy = 'NgayBaoCao';
+        
+        let sortOrder = (req.query.order && req.query.order.toUpperCase() === 'ASC') ? 'ASC' : 'DESC';
+        
+        let sortClause = `ORDER BY B.NgayBaoCao DESC`;
+        if (sortBy === 'NguoiBaoCao') sortClause = `ORDER BY N.HoTen ${sortOrder}`;
+        else if (sortBy === 'TenTL') sortClause = `ORDER BY T.TenTL ${sortOrder}`;
+        else if (sortBy === 'NgayBaoCao') sortClause = `ORDER BY B.NgayBaoCao ${sortOrder}`;
+        else if (sortBy === 'TrangThai') sortClause = `ORDER BY B.TrangThai ${sortOrder}`;
+
         const [rows] = await pool.execute(`
             SELECT B.*, T.TenTL, T.FileURL, T.TrangThaiKiemDuyet, N.HoTen AS NguoiBaoCao, N.AvatarURL AS AvatarNguoiBaoCao
             FROM BAOCAOVIPHAM B
             JOIN TAILIEU T ON B.MaTL = T.MaTL
             JOIN NGUOIDUNG N ON B.MaND = N.MaND
-            ORDER BY B.NgayBaoCao DESC
+            ${sortClause}
             LIMIT ? OFFSET ?
         `, [limit.toString(), offset.toString()]);
         
@@ -802,6 +827,130 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     } finally {
         conn.release();
+    }
+});
+
+router.put('/reports/bulk-review', adminMiddleware, async (req, res) => {
+    const { reportIds, quyetDinh } = req.body;
+    if (!Array.isArray(reportIds) || reportIds.length === 0) {
+        return res.status(400).json({ message: 'Danh sách báo cáo không hợp lệ.' });
+    }
+    if (quyetDinh !== 'ViPham' && quyetDinh !== 'TuChoi') {
+        return res.status(400).json({ message: 'Quyết định không hợp lệ.' });
+    }
+
+    const pool = req.app.locals.pool;
+    const conn = await pool.getConnection();
+
+    try {
+        await conn.beginTransaction();
+
+        for (const maBC of reportIds) {
+            const [bcRows] = await conn.execute(`
+                SELECT B.MaTL, B.MaND AS NguoiBaoCao, T.MaND_NguoiDang, T.TenTL, T.LaTaiLieuDocQuyen, T.GiaXu, T.FileURL, T.AnhBia 
+                FROM BAOCAOVIPHAM B 
+                JOIN TAILIEU T ON B.MaTL = T.MaTL 
+                WHERE B.MaBC = ?
+            `, [maBC]);
+
+            if (bcRows.length === 0) continue;
+
+            const doc = bcRows[0];
+
+            if (quyetDinh === 'ViPham') {
+                await conn.execute('UPDATE BAOCAOVIPHAM SET TrangThai = ? WHERE MaBC = ?', ['DaXuLy', maBC]);
+                await conn.execute('UPDATE TAILIEU SET TrangThaiKiemDuyet = ? WHERE MaTL = ?', ['TuChoi', doc.MaTL]);
+
+                if (doc.LaTaiLieuDocQuyen && doc.GiaXu > 0) {
+                    const [buyers] = await conn.execute('SELECT MaND FROM TAILIEU_DAMUA WHERE MaTL = ?', [doc.MaTL]);
+                    if (buyers.length > 0) {
+                        const tongXuHoan = buyers.length * doc.GiaXu;
+                        await conn.execute('UPDATE NGUOIDUNG SET SoDuXu = GREATEST(0, SoDuXu - ?) WHERE MaND = ?', [tongXuHoan, doc.MaND_NguoiDang]);
+                        await conn.execute(
+                            "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'PhatXu', ?, ?)",
+                            [doc.MaND_NguoiDang, -tongXuHoan, `Trừ ${tongXuHoan} Xu do tài liệu "${doc.TenTL}" bị xoá vì vi phạm và phải hoàn tiền cho người mua.`]
+                        );
+
+                        for (let buyer of buyers) {
+                            await conn.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [doc.GiaXu, buyer.MaND]);
+                            await conn.execute(
+                                "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'HoanXu', ?, ?)",
+                                [buyer.MaND, doc.GiaXu, `Hoàn lại ${doc.GiaXu} Xu do tài liệu "${doc.TenTL}" bị xoá vì vi phạm.`]
+                            );
+                            await conn.execute(
+                                "INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, 'HeThong', ?, ?)",
+                                [buyer.MaND, `Tài liệu "${doc.TenTL}" mà bạn đã mua vừa bị gỡ do vi phạm. Hệ thống đã hoàn lại ${doc.GiaXu} Xu vào ví của bạn.`, '../user/userProfile.html']
+                            );
+                        }
+                    }
+                } else {
+                    const [downloads] = await conn.execute('SELECT COUNT(*) as count FROM LICH_SU_TAI WHERE MaTL = ? AND MaND != ?', [doc.MaTL, doc.MaND_NguoiDang]);
+                    const downloadCount = downloads[0].count;
+                    if (downloadCount > 0) {
+                        await conn.execute('UPDATE NGUOIDUNG SET SoDuXu = GREATEST(0, SoDuXu - ?) WHERE MaND = ?', [downloadCount, doc.MaND_NguoiDang]);
+                        await conn.execute(
+                            "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'PhatXu', ?, ?)",
+                            [doc.MaND_NguoiDang, -downloadCount, `Truy thu ${downloadCount} Xu thưởng do tài liệu "${doc.TenTL}" bị xoá vì vi phạm.`]
+                        );
+                    }
+                }
+
+                try {
+                    if (doc.FileURL) {
+                        const filePath = path.join(__dirname, 'public', doc.FileURL);
+                        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+                    }
+                    if (doc.AnhBia && !doc.AnhBia.includes('default-cover.png')) {
+                        const coverPath = path.join(__dirname, 'public', doc.AnhBia);
+                        if (fs.existsSync(coverPath)) fs.unlinkSync(coverPath);
+                    }
+                } catch (e) {
+                    console.error('Lỗi khi xóa file vật lý (Bulk Báo cáo vi phạm):', e);
+                }
+
+                await conn.execute(
+                    'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                    [doc.MaND_NguoiDang, 'HeThong', `Tài liệu "${doc.TenTL}" của bạn đã bị từ chối do vi phạm quy định cộng đồng. Nếu có truy thu Xu, vui lòng kiểm tra Lịch sử giao dịch.`, '../document/myDocuments.html']
+                );
+                await conn.execute(
+                    'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                    [doc.NguoiBaoCao, 'HeThong', `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã được xử lý (Vi phạm). Cảm ơn bạn đã đóng góp.`, `../document/documentDetails.html?id=${doc.MaTL}`]
+                );
+            } else {
+                await conn.execute('UPDATE BAOCAOVIPHAM SET TrangThai = ? WHERE MaBC = ?', ['TuChoi', maBC]);
+                await conn.execute(
+                    'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                    [doc.NguoiBaoCao, 'HeThong', `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã bị từ chối do không phát hiện vi phạm.`, `../document/documentDetails.html?id=${doc.MaTL}`]
+                );
+            }
+        }
+
+        await conn.commit();
+        res.status(200).json({ message: 'Xử lý báo cáo hàng loạt thành công.' });
+    } catch (error) {
+        await conn.rollback();
+        console.error('Lỗi API /reports/bulk-review:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    } finally {
+        conn.release();
+    }
+});
+
+router.delete('/reports/bulk', adminMiddleware, async (req, res) => {
+    const { reportIds } = req.body;
+    if (!Array.isArray(reportIds) || reportIds.length === 0) {
+        return res.status(400).json({ message: 'Danh sách báo cáo không hợp lệ.' });
+    }
+
+    try {
+        const pool = req.app.locals.pool;
+        const placeholders = reportIds.map(() => '?').join(',');
+        const [result] = await pool.execute(`DELETE FROM BAOCAOVIPHAM WHERE MaBC IN (${placeholders})`, reportIds);
+
+        res.status(200).json({ message: `Đã xoá ${result.affectedRows} báo cáo thành công.` });
+    } catch (error) {
+        console.error('Lỗi API DELETE /admin/reports/bulk:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 
@@ -1269,8 +1418,24 @@ router.get('/teacher-requests', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         
-        const countSql = `SELECT COUNT(*) as total FROM YEU_CAU_GIAO_VIEN`;
-        const [countResult] = await pool.execute(countSql);
+        const [counts] = await pool.execute(`
+            SELECT 
+                SUM(CASE WHEN TrangThai = 'ChoDuyet' THEN 1 ELSE 0 END) as ChoDuyet,
+                SUM(CASE WHEN TrangThai = 'DaDuyet' THEN 1 ELSE 0 END) as DaDuyet,
+                SUM(CASE WHEN TrangThai = 'TuChoi' THEN 1 ELSE 0 END) as TuChoi
+            FROM YEU_CAU_GIAO_VIEN
+        `);
+        
+        const countObj = {
+            ChoDuyet: counts[0].ChoDuyet || 0,
+            DaDuyet: counts[0].DaDuyet || 0,
+            TuChoi: counts[0].TuChoi || 0
+        };
+
+        const status = req.query.status || 'ChoDuyet';
+
+        const countSql = `SELECT COUNT(*) as total FROM YEU_CAU_GIAO_VIEN WHERE TrangThai = ?`;
+        const [countResult] = await pool.execute(countSql, [status]);
         const totalRecords = countResult[0].total;
         
         const page = parseInt(req.query.page) || 1;

@@ -193,6 +193,14 @@ routes.forEach(([path, handler]) => {
 });
 logger.divider();
 
+app.get('/api/config', (req, res) => {
+    res.json({
+        googleClientId: process.env.GOOGLE_CLIENT_ID,
+        facebookAppId: process.env.FACEBOOK_APP_ID,
+        recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
+    });
+});
+
 app.get('/api/truonghoc', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT * FROM TRUONGHOC');

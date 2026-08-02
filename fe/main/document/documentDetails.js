@@ -91,6 +91,7 @@ async function fetchDocumentDetails() {
         updateSEO(data.document.TenTL, data.document.TextSEO || data.document.MoTa);
         renderComments(data.comments, data.document.MaND_NguoiDang);
         fetchRelatedDocuments();
+        fetchRelatedGroups();
 
         const icon = document.getElementById('bookmark-icon');
         const text = document.getElementById('bookmark-text');
@@ -640,6 +641,57 @@ function setupEventListeners() {
             submitComment(noiDung, null);
         });
     }
+}
+
+async function fetchRelatedGroups() {
+    const cardEl = document.getElementById('related-groups-card');
+    const listEl = document.getElementById('related-groups-list');
+    if (!cardEl || !listEl) return;
+
+    try {
+        const response = await fetch(`${API_URL}/documents/${currentMaTL}/related-groups`);
+        if (!response.ok) throw new Error('Cannot load related groups');
+
+        const data = await response.json();
+        const groups = data.groups || [];
+        
+        cardEl.style.display = 'block';
+        if (groups.length === 0) {
+            listEl.innerHTML = '<div style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px 0;">Chưa có nhóm nào có liên quan.</div>';
+        } else {
+            renderRelatedGroups(groups);
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải nhóm liên quan:', error);
+        cardEl.style.display = 'block';
+        listEl.innerHTML = '<div style="font-size: 13px; color: var(--danger); text-align: center; padding: 12px 0;">Lỗi khi tải nhóm liên quan.</div>';
+    }
+}
+
+function renderRelatedGroups(groups) {
+    const listEl = document.getElementById('related-groups-list');
+    
+    listEl.innerHTML = groups.map(group => {
+        const avatarHtml = group.AnhBia 
+            ? `<img src="${getAssetUrl(group.AnhBia)}" alt="${escapeHTML(group.TenNhom)}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover;">`
+            : `<div style="width: 48px; height: 48px; border-radius: 8px; background: var(--primary-light); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px;">${escapeHTML(group.TenNhom.charAt(0).toUpperCase())}</div>`;
+            
+        return `
+            <a href="../group/groupDetails.html?id=${group.MaNhom}" class="related-item" style="text-decoration: none;">
+                <div class="related-thumb" style="width: 48px; height: 48px; overflow: hidden; border-radius: 8px; flex-shrink: 0; border: 1px solid var(--border);">
+                    ${avatarHtml}
+                </div>
+                <div class="related-info" style="display: flex; flex-direction: column; justify-content: center;">
+                    <div class="related-name" style="font-weight: 600; font-size: 14px; color: var(--text-primary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        ${escapeHTML(group.TenNhom)}
+                    </div>
+                    <div class="related-meta" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                        <i class="fa-solid fa-users" style="margin-right: 4px;"></i> ${group.SoThanhVien || 0} thành viên
+                    </div>
+                </div>
+            </a>
+        `;
+    }).join('');
 }
 
 function initTribute(element) {

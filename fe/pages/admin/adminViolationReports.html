@@ -46,8 +46,42 @@
         <div class="tab-item active"><i class="fa-solid fa-flag" style="margin-right: 6px;"></i>Tất cả báo cáo</div>
       </div>
 
-      <div class="report-list" id="report-list">
-        
+      <div class="bulk-actions-toolbar" id="bulk-actions-toolbar" style="display: none; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); align-items: center; justify-content: space-between;">
+        <div class="bulk-actions-info" style="display: flex; align-items: center; gap: 10px;">
+          <i class="fa-solid fa-list-check" style="color: var(--primary); font-size: 1.2rem;"></i>
+          <span style="font-weight: 600; color: var(--text-primary);">Đã chọn <span id="bulk-selected-count" style="color: var(--primary);">0</span> báo cáo</span>
+        </div>
+        <div class="bulk-actions-buttons" style="display: flex; gap: 12px;">
+          <button id="btn-bulk-violation" class="btn-primary" style="background: var(--danger); border: none; padding: 8px 16px; border-radius: 6px; color: white; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-ban"></i> Xác nhận Vi phạm (Xóa)
+          </button>
+          <button id="btn-bulk-reject" class="btn-secondary" style="background: white; border: 1px solid var(--border); padding: 8px 16px; border-radius: 6px; color: var(--text-primary); font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-xmark"></i> Từ chối Báo cáo
+          </button>
+          <button id="btn-bulk-delete" class="btn-secondary" style="background: white; border: 1px solid #ef4444; padding: 8px 16px; border-radius: 6px; color: #ef4444; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-trash"></i> Xóa báo cáo
+          </button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="4%" style="text-align: center;"></th>
+              <th width="4%" style="text-align: center;">STT</th>
+              <th width="16%" class="sortable" data-sort="NguoiBaoCao" style="cursor: pointer;"><i class="fa-solid fa-user-flag" style="margin-right: 6px;"></i> Người báo cáo <i class="fa-solid fa-sort" style="margin-left: 4px; color: #9ca3af; font-size: 12px;"></i></th>
+              <th width="22%" class="sortable" data-sort="TenTL" style="cursor: pointer;"><i class="fa-solid fa-file-lines" style="margin-right: 6px;"></i> Tài liệu vi phạm <i class="fa-solid fa-sort" style="margin-left: 4px; color: #9ca3af; font-size: 12px;"></i></th>
+              <th width="18%"><i class="fa-solid fa-comment-dots" style="margin-right: 6px;"></i> Lý do chi tiết</th>
+              <th width="11%" class="sortable" data-sort="NgayBaoCao" style="cursor: pointer;"><i class="fa-solid fa-clock" style="margin-right: 6px;"></i> Ngày báo cáo <i class="fa-solid fa-sort" style="margin-left: 4px; color: #9ca3af; font-size: 12px;"></i></th>
+              <th width="13%" class="sortable" data-sort="TrangThai" style="cursor: pointer;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Trạng thái <i class="fa-solid fa-sort" style="margin-left: 4px; color: #9ca3af; font-size: 12px;"></i></th>
+              <th width="12%"><i class="fa-solid fa-gears" style="margin-right: 6px;"></i> Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="report-list">
+            
+          </tbody>
+        </table>
       </div>
       
       <div class="pagination-container" id="report-pagination"></div>

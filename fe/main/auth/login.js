@@ -1,7 +1,64 @@
-import { API_URL } from '../shared/config.js';
+import { API_URL, fetchAppConfig } from '../shared/config.js';
 import { isValidEmail, saveLoginSession, getTimeBasedGreeting } from '../shared/utils.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const config = await fetchAppConfig();
+
+    // 1. Initialize Facebook
+    window.fbAsyncInit = function() {
+        FB.init({
+            appId      : config.facebookAppId || '',
+            cookie     : true,
+            xfbml      : true,
+            version    : 'v20.0'
+        });
+    };
+    const fbScript = document.createElement('script');
+    fbScript.src = 'https://connect.facebook.net/vi_VN/sdk.js';
+    fbScript.async = true;
+    fbScript.defer = true;
+    fbScript.crossOrigin = 'anonymous';
+    document.head.appendChild(fbScript);
+
+    // 2. Initialize Google Sign-In
+    const googleScript = document.createElement('script');
+    googleScript.src = 'https://accounts.google.com/gsi/client';
+    googleScript.async = true;
+    googleScript.defer = true;
+    googleScript.onload = () => {
+        if (config.googleClientId) {
+            google.accounts.id.initialize({
+                client_id: config.googleClientId,
+                callback: handleGoogleLogin
+            });
+            const btnContainer = document.getElementById('googleSigninBtnContainer');
+            if (btnContainer) {
+                google.accounts.id.renderButton(
+                    btnContainer,
+                    { theme: 'outline', size: 'large', width: 250 }
+                );
+            }
+        }
+    };
+    document.head.appendChild(googleScript);
+
+    // 3. Initialize reCAPTCHA
+    window.onRecaptchaLoad = function() {
+        const recaptchaContainer = document.getElementById('recaptcha-container');
+        if (recaptchaContainer && config.recaptchaSiteKey) {
+            grecaptcha.render(recaptchaContainer, {
+                'sitekey': config.recaptchaSiteKey,
+                'callback': enableSubmitBtn,
+                'expired-callback': disableSubmitBtn
+            });
+        }
+    };
+    const recaptchaScript = document.createElement('script');
+    recaptchaScript.src = 'https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoad';
+    recaptchaScript.async = true;
+    recaptchaScript.defer = true;
+    document.head.appendChild(recaptchaScript);
+
     const loginForm = document.getElementById('loginForm');
     
     const lastLoginMethod = localStorage.getItem('lastLoginMethod');
@@ -315,16 +372,8 @@ window.handleGoogleLogin = async function(response) {
     }
 };
 
-window.fbAsyncInit = function() {
-    FB.init({
-        appId      : '3186808704838717',
-        cookie     : true,
-        xfbml      : true,
-        version    : 'v20.0'
-    });
-};
 
-document.addEventListener('DOMContentLoaded', () => {
+
     const facebookLoginBtn = document.getElementById('facebookLoginBtn');
     if (facebookLoginBtn) {
         facebookLoginBtn.addEventListener('click', () => {
@@ -337,7 +386,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, {scope: 'public_profile,email'});
         });
     }
-});
 
 window.handleFacebookLogin = async function(accessToken) {
     try {

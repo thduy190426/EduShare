@@ -1,19 +1,42 @@
 import { API_URL } from "../shared/config.js";
 import { getToken, showToast, renderPagination, getAssetUrl, escapeHTML } from "../shared/utils.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-    fetchRequests();
-    setupModals();
-});
-
+let currentStatus = "ChoDuyet";
 let currentRequests = [];
 let currentPage = 1;
 const limit = 10;
 
+document.addEventListener("DOMContentLoaded", () => {
+    setupTabs();
+    fetchRequests();
+    setupModals();
+});
+
+function setupTabs() {
+    const tabs = document.querySelectorAll(".tab-item");
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            if (tab.classList.contains("active")) return;
+            
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            
+            const tbody = document.getElementById("table-body");
+            tbody.style.opacity = "0";
+            
+            setTimeout(() => {
+                currentStatus = tab.dataset.status;
+                currentPage = 1;
+                fetchRequests();
+            }, 200);
+        });
+    });
+}
+
 async function fetchRequests() {
     const token = getToken();
     try {
-        const response = await fetch(`${API_URL}/admin/teacher-requests?page=${currentPage}&limit=${limit}`, {
+        const response = await fetch(`${API_URL}/admin/teacher-requests?page=${currentPage}&limit=${limit}&status=${currentStatus}`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
         
@@ -23,6 +46,12 @@ async function fetchRequests() {
         currentRequests = data.data || [];
         renderRequests(currentRequests);
         
+        if (data.counts) {
+            document.getElementById('pending-count-tab').textContent = data.counts.ChoDuyet || 0;
+            document.getElementById('approved-count-tab').textContent = data.counts.DaDuyet || 0;
+            document.getElementById('rejected-count-tab').textContent = data.counts.TuChoi || 0;
+        }
+
         if (data.pagination) {
             renderPagination('teacher-pagination', data.pagination.totalPages, currentPage, (page) => {
                 currentPage = page;
@@ -64,7 +93,7 @@ function renderRequests(requests) {
         }
 
         tr.innerHTML = `
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1 + (currentPage - 1) * limit}</td>
             <td>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     ${req.AvatarURL && req.AvatarURL !== 'null'
@@ -108,7 +137,12 @@ function renderRequests(requests) {
 
         tbody.appendChild(tr);
     });
+    
+    setTimeout(() => {
+        tbody.style.opacity = "1";
+    }, 50);
 }
+
 
 function setupModals() {
     const rejectModal = document.getElementById("reject-modal-overlay");

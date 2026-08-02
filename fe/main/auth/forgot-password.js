@@ -20,6 +20,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const resendOtpBtn = document.getElementById('resendOtp');
     
     let currentEmail = '';
+    let cooldownTimer = null;
+    let cooldownSeconds = 60;
+
+    const startCooldown = () => {
+        resendOtpBtn.style.pointerEvents = 'none';
+        resendOtpBtn.style.color = 'gray';
+        resendOtpBtn.style.textDecoration = 'none';
+        resendOtpBtn.textContent = `Gửi lại (${cooldownSeconds}s)`;
+        
+        cooldownTimer = setInterval(() => {
+            cooldownSeconds--;
+            resendOtpBtn.textContent = `Gửi lại (${cooldownSeconds}s)`;
+            
+            if (cooldownSeconds <= 0) {
+                clearInterval(cooldownTimer);
+                resendOtpBtn.style.pointerEvents = 'auto';
+                resendOtpBtn.style.color = '';
+                resendOtpBtn.style.textDecoration = '';
+                resendOtpBtn.textContent = 'Gửi lại';
+                cooldownSeconds = 60;
+            }
+        }, 1000);
+    };
 
     const showStep = (stepElement) => {
         document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
@@ -109,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentEmail = email;
                 document.getElementById('displayEmail').textContent = currentEmail;
                 showStep(stepOtp);
+                startCooldown();
                 Swal.fire({
                     icon: 'success',
                     title: 'Thành công!',
@@ -199,12 +223,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     showConfirmButton: false,
                     timer: 3000
                 });
+                startCooldown();
             } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Lỗi',
                     text: data.message
                 });
+                resendOtpBtn.style.pointerEvents = 'auto';
+                resendOtpBtn.textContent = 'Gửi lại';
             }
         } catch (error) {
             Swal.fire({
@@ -212,7 +239,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Lỗi kết nối',
                 text: 'Không thể kết nối đến máy chủ.'
             });
-        } finally {
             resendOtpBtn.style.pointerEvents = 'auto';
             resendOtpBtn.textContent = 'Gửi lại';
         }

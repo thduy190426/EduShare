@@ -1,9 +1,11 @@
 import { API_URL } from '../shared/config.js';
-import { getAssetUrl, getToken, showToast, renderPagination } from '../shared/utils.js';
+import { getAssetUrl, getToken, showToast, renderPagination, escapeHTML } from '../shared/utils.js';
 
 const token = getToken();
 let currentPage = 1;
 const limit = 10;
+let currentSortBy = 'NgayBaoCao';
+let currentOrder = 'DESC';
 
 async function readErrorMessage(res, fallback) {
     const contentType = res.headers.get('content-type') || '';
@@ -11,7 +13,6 @@ async function readErrorMessage(res, fallback) {
         const data = await res.json();
         return data.message || fallback;
     }
-
     return fallback;
 }
 
@@ -23,11 +24,101 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fetchReports();
+
+    const sortHeaders = document.querySelectorAll('th.sortable');
+    sortHeaders.forEach(th => {
+        th.addEventListener('click', () => {
+            const sortKey = th.getAttribute('data-sort');
+            if (currentSortBy === sortKey) {
+                currentOrder = currentOrder === 'DESC' ? 'ASC' : 'DESC';
+            } else {
+                currentSortBy = sortKey;
+                currentOrder = 'ASC';
+            }
+            
+            sortHeaders.forEach(header => {
+                const icon = header.querySelector('.fa-sort, .fa-sort-up, .fa-sort-down');
+                if (icon) {
+                    icon.className = 'fa-solid fa-sort sort-icon';
+                    icon.style.color = '#9ca3af';
+                }
+            });
+            
+            const activeIcon = th.querySelector('.sort-icon, .fa-sort, .fa-sort-up, .fa-sort-down');
+            if (activeIcon) {
+                activeIcon.className = currentOrder === 'ASC' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
+                activeIcon.style.color = 'var(--primary)';
+            }
+            
+            fetchReports();
+        });
+    });
+
+    const selectAllReports = document.getElementById("selectAllReports");
+    if (selectAllReports) {
+        selectAllReports.addEventListener("change", (e) => {
+            const checkboxes = document.querySelectorAll(".report-checkbox");
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+            updateBulkToolbar();
+        });
+    }
+
+    const btnBulkViolation = document.getElementById("btn-bulk-violation");
+    if (btnBulkViolation) {
+        btnBulkViolation.addEventListener("click", async () => {
+            const selectedIds = getSelectedReportIds();
+            if (selectedIds.length === 0) return;
+            if ((await Swal.fire({ title: "Xác nhận hàng loạt", html: `Bạn có chắc chắn muốn xử lý vi phạm (gỡ) <b>${selectedIds.length}</b> tài liệu đã bị báo cáo?`, icon: "warning", showCancelButton: true, confirmButtonText: "Đồng ý", cancelButtonText: "Hủy" })).isConfirmed) {
+                reviewBulkReports(selectedIds, "ViPham");
+            }
+        });
+    }
+
+    const btnBulkReject = document.getElementById("btn-bulk-reject");
+    if (btnBulkReject) {
+        btnBulkReject.addEventListener("click", async () => {
+            const selectedIds = getSelectedReportIds();
+            if (selectedIds.length === 0) return;
+            if ((await Swal.fire({ title: "Xác nhận hàng loạt", html: `Bạn có chắc chắn muốn từ chối (bỏ qua) <b>${selectedIds.length}</b> báo cáo này?`, icon: "info", showCancelButton: true, confirmButtonText: "Đồng ý", cancelButtonText: "Hủy" })).isConfirmed) {
+                reviewBulkReports(selectedIds, "TuChoi");
+            }
+        });
+    }
+
+    const btnBulkDelete = document.getElementById("btn-bulk-delete");
+    if (btnBulkDelete) {
+        btnBulkDelete.addEventListener("click", async () => {
+            const selectedIds = getSelectedReportIds();
+            if (selectedIds.length === 0) return;
+            if ((await Swal.fire({ title: "Xác nhận xóa hàng loạt", html: `Bạn có chắc chắn muốn xóa vĩnh viễn <b>${selectedIds.length}</b> báo cáo này không?`, icon: "warning", showCancelButton: true, confirmButtonText: "Đồng ý", cancelButtonText: "Hủy" })).isConfirmed) {
+                deleteBulkReports(selectedIds);
+            }
+        });
+    }
 });
+
+function getSelectedReportIds() {
+    const checkboxes = document.querySelectorAll(".report-checkbox:checked");
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function updateBulkToolbar() {
+    const selectedIds = getSelectedReportIds();
+    const toolbar = document.getElementById("bulk-actions-toolbar");
+    const countSpan = document.getElementById("bulk-selected-count");
+    if (selectedIds.length > 0) {
+        toolbar.style.display = "flex";
+        countSpan.textContent = selectedIds.length;
+    } else {
+        toolbar.style.display = "none";
+    }
+}
 
 async function fetchReports() {
     try {
-        const res = await fetch(`${API_URL}/admin/reports?page=${currentPage}&limit=${limit}`, {
+        const res = await fetch(`${API_URL}/admin/reports?page=${currentPage}&limit=${limit}&sortBy=${currentSortBy}&order=${currentOrder}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -52,17 +143,18 @@ async function fetchReports() {
 }
 
 function renderReports(reports) {
-    const container = document.getElementById('report-list');
-    container.innerHTML = '';
+    const tbody = document.getElementById('report-list');
+    tbody.innerHTML = '';
+    
+    updateBulkToolbar();
 
     if (reports.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; text-align: center;">Không có báo cáo nào.</div>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Không có báo cáo nào.</td></tr>';
         return;
     }
 
     reports.forEach((report, index) => {
-        const el = document.createElement('div');
-        el.className = 'report-card';
+        const tr = document.createElement('tr');
         
         const d = new Date(report.NgayBaoCao);
         const timeStr = d.toLocaleTimeString('vi-VN');
@@ -70,63 +162,78 @@ function renderReports(reports) {
         
         const initial = report.NguoiBaoCao ? report.NguoiBaoCao.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         const avatarHtml = report.AvatarNguoiBaoCao
-            ? `<img src="${getAssetUrl(report.AvatarNguoiBaoCao)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">`
-            : `<div style="width: 36px; height: 36px; border-radius: 50%; background: #E0E7FF; color: #4338CA; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">${initial}</div>`;
+            ? `<img src="${getAssetUrl(report.AvatarNguoiBaoCao)}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">`
+            : `<div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${initial}</div>`;
         
         let statusBadge = '';
-        if (report.TrangThai === 'ChoXuLy') statusBadge = '<span style="color:var(--warning); font-weight:600;">Chờ xử lý</span>';
-        else if (report.TrangThai === 'DaXuLy') statusBadge = '<span style="color:var(--success); font-weight:600;">Đã xử lý (Xóa TL)</span>';
-        else statusBadge = '<span style="color:var(--text-secondary); font-weight:600;">Đã từ chối</span>';
+        if (report.TrangThai === 'ChoXuLy') statusBadge = '<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span style="color:var(--warning); font-size:14px; font-weight:600;">Chờ xử lý</span></div>';
+        else if (report.TrangThai === 'DaXuLy') statusBadge = '<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--success);"></span><span style="color:var(--success); font-size:14px; font-weight:600;">Đã xử lý (Xóa TL)</span></div>';
+        else statusBadge = '<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--text-secondary);"></span><span style="color:var(--text-secondary); font-size:14px; font-weight:600;">Đã từ chối</span></div>';
 
         let actionHtml = '';
         if (report.TrangThai === 'ChoXuLy') {
             actionHtml = `
-                <div class="report-actions">
-                    <button class="btn btn-outline" onclick="window.open('../document/documentDetails.html?id=${report.MaTL}', '_blank')"><i class="fa-solid fa-eye"></i> Xem tài liệu</button>
-                    <button class="btn btn-danger-outline" onclick="reviewReport(${report.MaBC}, 'TuChoi')">Từ chối (Bỏ qua)</button>
-                    <button class="btn btn-success" onclick="reviewReport(${report.MaBC}, 'ViPham')">Xử lý (Gỡ tài liệu)</button>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-action" style="background:#f1f5f9; color:#475569; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" onclick="window.open('../document/documentDetails.html?id=${report.MaTL}', '_blank')" title="Xem tài liệu"><i class="fa-solid fa-eye"></i></button>
+                    <button class="btn-action" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" onclick="reviewReport(${report.MaBC}, 'ViPham')" title="Gỡ tài liệu"><i class="fa-solid fa-ban"></i></button>
+                    <button class="btn-action" style="background:#f9fafb; border: 1px solid var(--border); color:var(--text-secondary); padding:4px 8px; border-radius:4px; cursor:pointer;" onclick="reviewReport(${report.MaBC}, 'TuChoi')" title="Từ chối báo cáo"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             `;
         } else {
              actionHtml = `
-                <div class="report-actions">
-                    <button class="btn btn-outline" onclick="window.open('../document/documentDetails.html?id=${report.MaTL}', '_blank')"><i class="fa-solid fa-eye"></i></button>
-                    <button class="btn btn-danger-outline" onclick="deleteReport(${report.MaBC})"><i class="fa-solid fa-trash"></i></button>
-                    <span>Trạng thái: ${statusBadge}</span>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-action" style="background:#f1f5f9; color:#475569; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" onclick="window.open('../document/documentDetails.html?id=${report.MaTL}', '_blank')" title="Xem tài liệu"><i class="fa-solid fa-eye"></i></button>
+                    <button class="btn-action" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer;" onclick="deleteReport(${report.MaBC})" title="Xóa báo cáo"><i class="fa-solid fa-trash"></i></button>
                 </div>
             `;
         }
 
-        el.innerHTML = `
-          <div class="report-header">
-            <div>
-              <span class="report-reason-badge">STT: ${index + 1} | Báo cáo tài liệu</span>
-              <div class="report-target">
-                <span class="report-target-icon"><i class="fa-solid fa-file-pdf"></i></span>
-                ${report.TenTL}
-              </div>
-              <div class="report-meta" style="display: flex; align-items: flex-start; gap: 12px; margin-top: 12px;">
-                ${avatarHtml}
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <span style="font-weight: 600; color: var(--text-primary); font-size: 14px;">${report.NguoiBaoCao}</span>
-                    <div style="display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary); font-size: 13px;">
-                        <span><i class="fa-regular fa-clock" style="width: 14px; text-align: center; margin-right: 4px;"></i> ${timeStr}</span>
-                        <span><i class="fa-regular fa-calendar" style="width: 14px; text-align: center; margin-right: 4px;"></i> ${dateStrFormatted}</span>
-                    </div>
+        tr.innerHTML = `
+            <td style="text-align: center;">
+                <input type="checkbox" class="report-checkbox" value="${report.MaBC}" style="cursor: pointer;">
+            </td>
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">
+                <span>${(currentPage - 1) * limit + index + 1}</span>
+            </td>
+            <td>
+                <div style="display:flex; align-items:center; flex-direction:row; gap:8px;">
+                  ${avatarHtml}
+                  <span style="font-weight:500; font-size:14px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${report.NguoiBaoCao}">${report.NguoiBaoCao}</span>
                 </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="report-content">
-            <strong>Chi tiết lý do:</strong><br/>
-            ${report.LyDo}
-          </div>
-
-          ${actionHtml}
+            </td>
+            <td>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-file-pdf" style="color: #DC2626; font-size: 1.2rem;"></i>
+                    <div style="font-weight:600; color:var(--text-primary); max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${report.TenTL}">${report.TenTL}</div>
+                </div>
+            </td>
+            <td>
+                <div style="font-size: 13px; color: var(--text-secondary); max-height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${report.LyDo}">${report.LyDo}</div>
+            </td>
+            <td>
+                <div style="font-size:13px; color:var(--text-secondary);">
+                    <div>${timeStr}</div>
+                    <div>${dateStrFormatted}</div>
+                </div>
+            </td>
+            <td>${statusBadge}</td>
+            <td>${actionHtml}</td>
         `;
 
-        container.appendChild(el);
+        tbody.appendChild(tr);
+    });
+
+    const rowCheckboxes = tbody.querySelectorAll(".report-checkbox");
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener("change", () => {
+            updateBulkToolbar();
+            const allCheckboxes = tbody.querySelectorAll(".report-checkbox");
+            const checkedCheckboxes = tbody.querySelectorAll(".report-checkbox:checked");
+            const selectAllReports = document.getElementById("selectAllReports");
+            if (selectAllReports) {
+                selectAllReports.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+            }
+        });
     });
 }
 
@@ -177,3 +284,53 @@ window.deleteReport = async (maBC) => {
         showToast('error', 'Lỗi hệ thống.');
     }
 };
+
+async function reviewBulkReports(reportIds, quyetDinh) {
+    try {
+        const res = await fetch(`${API_URL}/admin/reports/bulk-review`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ reportIds, quyetDinh }),
+        });
+
+        if (res.ok) {
+            showToast("success", "Xử lý báo cáo hàng loạt thành công.");
+            document.getElementById("selectAllReports").checked = false;
+            fetchReports();
+        } else {
+            const message = await readErrorMessage(res, "Có lỗi xảy ra khi xử lý.");
+            showToast("error", message);
+        }
+    } catch (err) {
+        console.error("Lỗi review bulk reports:", err);
+        showToast("error", "Lỗi kết nối.");
+    }
+}
+
+async function deleteBulkReports(reportIds) {
+    try {
+        const res = await fetch(`${API_URL}/admin/reports/bulk`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ reportIds }),
+        });
+
+        if (res.ok) {
+            showToast("success", "Đã xóa hàng loạt báo cáo thành công.");
+            document.getElementById("selectAllReports").checked = false;
+            fetchReports();
+        } else {
+            const message = await readErrorMessage(res, "Có lỗi xảy ra khi xóa.");
+            showToast("error", message);
+        }
+    } catch (err) {
+        console.error("Lỗi delete bulk reports:", err);
+        showToast("error", "Lỗi kết nối.");
+    }
+}

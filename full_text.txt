@@ -1,0 +1,238 @@
+BỘ KHOA HỌC VÀ CÔNG NGHỆ
+HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG
+-----------------------------
+BÁO CÁO 
+ĐỒ ÁN MÔN HỌC
+MÔN HỌC: ĐẢM BẢO CHẤT LƯỢNG PHẦN MỀM
+ĐỀ TÀI: MẠNG XÃ HỘI CHIA SẺ TÀI LIỆU HỌC TẬP TRỰC TUYẾN
+Giảng viên hướng dẫn: Nguyễn Thị Bích Nguyên
+Thực hiện bởi nhóm sinh viên, bao gồm:
+Phạm Quang Huy	N24DTCN041	D24TXCNPM01-N		Trưởng nhóm
+Trần Hoàng Thanh	N24DTCN077	D24TXCNPM01-N		Thành viên
+Trần Hoàng Duy	N24DTCN021	D24TXCNPM01-N		Thành viên
+TP.HCM, tháng 06/2026
+MỤC LỤC
+DANH SÁCH HÌNH, BẢNG
+DANH MỤC TỪ VIẾT TẮT
+CHƯƠNG I. TỔNG QUAN
+Giới thiệu đề tài
+Mục tiêu của đề tài
+Đề tài hướng đến việc xây dựng một mạng xã hội chuyên biệt cho mục đích học tập, nơi học sinh, sinh viên và giảng viên có thể đăng tải, tìm kiếm và trao đổi tài liệu học tập (bài giảng, đề thi, bài tập, giáo trình…) một cách nhanh chóng, có tổ chức và đáng tin cậy. Hệ thống được thiết kế nhằm giải quyết thực trạng tài liệu học tập hiện nay bị phân tán trên nhiều nền tảng khác nhau (Facebook, Zalo, Google Drive cá nhân…), khó tra cứu và thiếu cơ chế kiểm duyệt chất lượng. Mục tiêu cụ thể của đồ án là áp dụng các quy trình đảm bảo chất lượng phần mềm (đặc tả yêu cầu, thiết kế cơ sở dữ liệu chuẩn hóa, kiểm thử) để xây dựng một hệ thống vừa đáp ứng đúng nhu cầu nghiệp vụ, vừa đảm bảo độ tin cậy và khả năng mở rộng trong tương lai.
+Phạm vi áp dụng
+Phạm vi của đồ án tập trung vào việc phân tích, thiết kế và xây dựng các chức năng cốt lõi của một mạng xã hội chia sẻ tài liệu học tập, bao gồm: quản lý tài khoản người dùng theo ba vai trò (sinh viên, giáo viên, quản trị viên), đăng tải và tìm kiếm tài liệu theo môn học, tương tác xã hội (bình luận, đánh giá, lưu yêu thích), hoạt động nhóm học tập, cùng với cơ chế kiểm duyệt nội dung và xử lý báo cáo vi phạm. Đối tượng sử dụng hướng đến là học sinh, sinh viên các cấp THCS, THPT và đại học có nhu cầu trao đổi tài liệu học tập trong môi trường giáo dục tại Việt Nam. Đồ án không đi sâu vào các vấn đề hạ tầng triển khai quy mô lớn mà tập trung vào quy trình đảm bảo chất lượng trong giai đoạn phân tích, thiết kế và kiểm thử phần mềm.
+Bên cạnh đó, hệ thống còn tích hợp hệ sinh thái kinh tế vi mô (Micro-economy) với cơ chế Wallet (Ví tiền) và Coin (Xu) giúp trao thưởng cho các nội dung chia sẻ, đồng thời đảm bảo bảo mật giao dịch (Transaction Security) và tích hợp các biện pháp ngăn chặn tấn công DDoS (Rate Limiting).
+Nền tảng kỹ thuật
+Hệ thống được đề xuất xây dựng theo kiến trúc Client-Server phổ biến trong các ứng dụng web hiện đại. Về cơ sở dữ liệu, đồ án sử dụng mô hình quan hệ với 11 bảng dữ liệu được chuẩn hóa, quản lý bởi hệ quản trị cơ sở dữ liệu như MySQL, đảm bảo tính toàn vẹn dữ liệu thông qua các ràng buộc khóa chính, khóa ngoại và kiểm tra. Phần phân tích thiết kế áp dụng các công cụ mô hình hóa chuẩn UML (sơ đồ Use Case, sơ đồ hoạt động) và ERD để mô tả cấu trúc dữ liệu và luồng nghiệp vụ. Quy trình thực hiện đồ án tuân theo các nguyên tắc đảm bảo chất lượng phần mềm, bao gồm đặc tả yêu cầu chi tiết, thiết kế trước khi cài đặt, và kiểm thử chức năng theo từng vai trò người dùng trước khi triển khai.
+Cơ sở lý thuyết
+Mạng xã hội chia sẻ tài liệu học tập trực tuyến (EduShare)
+Mạng xã hội chia sẻ tài liệu học tập trực tuyến là mô hình kết hợp giữa các tính năng xã hội (kết bạn, theo dõi, bình luận, đánh giá) với mục đích phục vụ học tập và chia sẻ tri thức. Khác với mạng xã hội thông thường, nội dung được chia sẻ trong mạng xã hội học tập cần có cơ chế phân loại theo môn học, cấp học và yêu cầu kiểm duyệt chất lượng để đảm bảo tính chính xác và phù hợp với mục đích giáo dục. Mô hình này đã được áp dụng thành công ở nhiều nền tảng quốc tế như Quizlet, Studocu, Course Hero, là cơ sở lý thuyết quan trọng cho việc thiết kế chức năng của đề tài.
+Mô hình cơ sở dữ liệu quan hệ và chuẩn hóa dữ liệu
+Mô hình cơ sở dữ liệu quan hệ tổ chức dữ liệu thành các bảng có quan hệ với nhau thông qua khóa chính và khóa ngoại. Việc chuẩn hóa dữ liệu đến dạng chuẩn thứ ba giúp loại bỏ dư thừa dữ liệu, đảm bảo tính toàn vẹn và dễ dàng bảo trì khi hệ thống mở rộng. Trong đồ án, lý thuyết này được áp dụng để thiết kế 11 bảng dữ liệu, trong đó có việc sử dụng các bảng trung gian như THANHVIEN_NHOM hay TAILIEU_NHOM để biểu diễn quan hệ nhiều-nhiều (N-N) giữa người dùng, nhóm học tập và tài liệu.
+Đảm bảo chất lượng phần mềm (Software Quality Assurance)
+Đảm bảo chất lượng phần mềm là tập hợp các hoạt động có hệ thống nhằm đảm bảo phần mềm đáp ứng đúng yêu cầu đã đặc tả và đạt các tiêu chuẩn chất lượng đề ra, bao gồm: đặc tả yêu cầu rõ ràng, thiết kế trước khi cài đặt, kiểm thử ở nhiều cấp độ (Unit Test, Integration Test, System Test) và quản lý lỗi xuyên suốt vòng đời phát triển. Đồ án áp dụng các nguyên tắc SQA ngay từ giai đoạn phân tích yêu cầu (xác định rõ chức năng theo từng vai trò người dùng) cho đến giai đoạn thiết kế cơ sở dữ liệu và thử nghiệm chức năng, nhằm đảm bảo sản phẩm cuối cùng vừa đúng yêu cầu nghiệp vụ, vừa ổn định khi vận hành thực tế.
+Kiến trúc ứng dụng Web Client-Server
+Kiến trúc Client-Server là mô hình phổ biến trong phát triển ứng dụng Web, trong đó phía client (UI) gửi yêu cầu đến phía Server thông qua giao thức HTTP/HTTPS, Server xử lý nghiệp vụ và truy xuất cơ sở dữ liệu rồi trả kết quả về cho Client. Mô hình này cho phép tách biệt rõ ràng giữa tầng giao diện, tầng xử lý nghiệp vụ và tầng dữ liệu, giúp hệ thống dễ kiểm thử, bảo trì và mở rộng. Đây là cơ sở lý thuyết nền tảng cho việc thiết kế luồng xử lý của các chức năng trong đồ án, từ đăng tải tài liệu, tìm kiếm, đến tương tác bình luận và đánh giá.
+CHƯƠNG II. PHÂN TÍCH NỘI DUNG, YÊU CẦU
+Quy trình đăng tải và kiểm duyệt tài liệu
+Người dùng đăng tải tài liệu
+Sinh viên hoặc giáo viên chọn môn học, nhập tên và mô tả tài liệu, sau đó tải file lên hệ thống (PDF, DOCX, hoặc PPTX). Tài liệu mới đăng được lưu vào bảng TAILIEU với trạng thái kiểm duyệt mặc định là “Chờ duyệt”, chưa hiển thị công khai trong kết quả tìm kiếm.
+Quản trị viên kiểm duyệt
+Quản trị viên xem danh sách tài liệu đang ở trạng thái “Chờ duyệt”, kiểm tra nội dung có vi phạm bản quyền hoặc không phù hợp hay không, rồi cập nhật trạng thái thành “Đã duyệt” hoặc “Từ chối”. Nếu tài liệu do giáo viên đăng và được xác thực, hệ thống có thể gắn thêm nhãn “Tài liệu chính thống” (LaTaiLieuChinhThuc).
+Công bố tài liệu
+Sau khi được duyệt, tài liệu xuất hiện trong kết quả tìm kiếm và có thể được người dùng khác tải xuống, bình luận, đánh giá hoặc lưu vào danh sách yêu thích. Người đăng tài liệu nhận được thông báo về kết quả kiểm duyệt (được duyệt hoặc bị từ chối kèm lý do).
+Cơ chế hoàn tiền tự động: Trong trường hợp tài liệu Premium bị báo cáo vi phạm và gỡ bỏ, hệ thống tự động hoàn lại toàn bộ Coins cho người mua và thu hồi Coins từ tác giả.
+Tài liệu Premium: Giáo viên và Admin có quyền định giá tài liệu chất lượng cao, người dùng cần tiêu phí Coins để mở khóa.
+Cơ chế thưởng: Sinh viên đăng tài liệu miễn phí sẽ được thưởng +1 Coin cho mỗi lượt tải của người khác.
+Cơ chế Wallet & Coins: Người dùng có thể quản lý số dư Xu, nạp Xu thông qua sự phê duyệt của Admin.
+Hệ thống giao dịch và Micro-economy (Premium Documents & Rewards)
+Quy trình tìm kiếm và tương tác tài liệu
+Tìm kiếm tài liệu
+Người dùng nhập từ khóa hoặc chọn bộ lọc (môn học, cấp học, loại file). Hệ thống chỉ trả về các tài liệu có trạng thái “Đã duyệt”, sắp xếp theo độ liên quan hoặc số lượt tải.
+Xem và tải xuống tài liệu
+Người dùng nhấn vào tài liệu để xem chi tiết hoặc tải xuống. Hệ thống tự động tăng biến đếm SoLuotXem hoặc SoLuotTai tương ứng trong bảng TAILIEU để phục vụ thống kê độ phổ biến.
+Tương tác với tài liệu
+Người dùng có thể bình luận, đánh giá (1-5 sao, mỗi người chỉ đánh giá một lần cho mỗi tài liệu), hoặc lưu tài liệu vào danh sách yêu thích. Nếu phát hiện tài liệu vi phạm, người dùng có thể gửi báo cáo để quản trị viên xử lý.
+Comment Moderation: Tác giả tài liệu được cấp quyền tự kiểm duyệt bình luận, bao gồm xóa bình luận tiêu cực và ghim bình luận nổi bật trên bài viết của mình.
+Full-text Search: Bổ sung bộ máy tìm kiếm toàn văn bản cải thiện độ chính xác khi truy vấn tìm kiếm so với truy vấn cơ bản.
+KYC for Teachers: Quy trình xác thực cho phép Sinh viên tải lên các minh chứng (thẻ giáo viên, chứng chỉ) để yêu cầu nâng cấp tài khoản lên Giáo viên.
+Yêu cầu chức năng nghiệp vụ
+Chức năng của đối tượng Học sinh / Sinh viên:
+- Phân hệ Xác thực (Auth): Đăng nhập, Đăng ký (kèm OTP qua email bằng Nodemailer), Xác thực OAuth2 qua Google Identity, Quên mật khẩu. Quản lý phiên bằng Access Token & Refresh Token.
+- Phân hệ Người dùng: Cập nhật hồ sơ cá nhân, Theo dõi người dùng khác, Nạp Xu qua Admin, Nhập mã khuyến mãi.
+- Phân hệ Tài liệu: Tải lên tài liệu, Tìm kiếm nâng cao Full-text Search, Mua tài liệu Premium, Lưu bookmark, Bình luận và Đánh giá sao.
+- Phân hệ Nhóm: Tạo nhóm học tập (Công khai/Riêng tư), Tùy chỉnh ảnh bìa, Tham gia thảo luận nội bộ (đăng bài, bình luận, ghim bài viết), Chia sẻ tài liệu nội bộ nhóm.
+- Chức năng tài chính: Xem lịch sử giao dịch (Lịch sử nạp/trừ/cộng xu, hoàn xu), Quản lý ví tiền tự động.
+Chức năng của đối tượng Giáo viên / Giảng viên
+- Kế thừa 100% chức năng của Sinh viên.
+- Quy trình KYC (Nâng cấp Giáo viên): Gửi yêu cầu nâng cấp quyền kèm URL minh chứng (thẻ giáo viên/bằng cấp) để Admin xét duyệt qua bảng YEU_CAU_GIAO_VIEN.
+- Đặc quyền Tài liệu: Đăng tải tài liệu chính thức, gắn nhãn tài liệu độc quyền. Tự định giá Premium cho tài liệu của mình để nhận doanh thu xu.
+- Đặc quyền Nhóm: Quản trị nhóm, duyệt yêu cầu tham gia của sinh viên, thăng quyền Phó nhóm cho thành viên.
+Chức năng của đối tượng Quản trị viên
+- Dashboard Thống kê: Bảng điều khiển trực quan hóa doanh thu, người dùng mới, và tài liệu phổ biến.
+- Kiểm duyệt Toàn diện: Duyệt tài liệu Upload, Xử lý báo cáo vi phạm, Xử lý giao dịch nạp xu, Duyệt yêu cầu nâng cấp Giáo viên.
+- Quản lý Cơ sở dữ liệu: Quản lý người dùng (Khóa/Mở khóa bằng cờ TrangThai), Quản lý danh mục môn học, Quản lý nhóm (Ngưng hoạt động nhóm vi phạm).
+- Quản lý Tài chính: Tạo và quản lý mã khuyến mãi, thực hiện Hoàn tiền trả lại xu cho người mua nếu tài liệu bị gỡ.
+Chức năng của đối tượng Khách
+- Truy cập các trang tĩnh (guestHome, about, blog, contact, copyright, forum, guide, helpCenter, privacy, terms).
+- Xem danh sách tài liệu công khai nhưng bị giới hạn xem trước, bắt buộc đăng nhập để tải hoặc tương tác sâu.
+Yêu cầu chức năng hệ thống và yêu cầu chất lượng
+Yêu cầu về hiệu năng
+- Hệ thống phải xử lý được tối thiểu 100 người dùng truy cập đồng thời với thời gian phản hồi trung bình dưới 3 giây cho các chức năng tìm kiếm và xem tài liệu. Thao tác tải lên tài liệu cần hoàn tất trong vòng 10 giây đối với file có kích thước dưới 20MB.
+Yêu cầu về an toàn và bảo mật
+*Hệ thống được thiết kế với tiêu chuẩn bảo mật thực tế vô cùng chặt chẽ:*
+- Xác thực & Phân quyền đa lớp: Tích hợp JSON Web Token với mô hình Access/Refresh Token, kết hợp Google OAuth2.
+- Ngăn chặn DDoS & Spam: Sử dụng `express-rate-limit` chặn đứng các hành vi spam tại endpoint login, register, upload, report.
+- Bảo mật Giao dịch: Việc mua bán tài liệu được xử lý trong khối Database Transactions với lệnh Row-level Locking, chặn đứng hoàn toàn Race Condition gây âm tiền khi spam request.
+- Tự động hóa & Chống trùng lặp: Cron Jobs dọn dẹp dữ liệu rác. Dùng SHA-256 mã hóa file để phát hiện Đạo văn/Upload trùng lặp. Cloudinary kết hợp VirusTotal loại trừ hoàn toàn rủi ro malware.
+- Mật khẩu người dùng phải được mã hóa trước khi lưu vào cơ sở dữ liệu, không lưu dưới dạng plaintext. Hệ thống phân quyền rõ ràng theo ba vai trò (Sinh viên, Giáo viên, Admin), đảm bảo người dùng chỉ thực hiện được các chức năng thuộc quyền hạn của vai trò mình. Tài liệu trước khi công khai phải qua bước kiểm duyệt nhằm ngăn chặn nội dung vi phạm bản quyền hoặc không phù hợp.
+- Cloud Storage & Malware Scanning: Mọi tệp tài liệu được upload trực tiếp lên nền tảng đám mây Cloudinary nhằm tránh lỗi bảo mật Path Traversal cho hệ thống, kết hợp API quét mã độc trước khi cho phép lưu trữ.
+- Rate Limiting & Anti-Spam: Áp dụng Rate Limiting khắt khe tại các endpoint nhạy cảm như đăng nhập, gửi OTP, tải xuống và báo cáo vi phạm nhằm chống Spam/DDoS.
+- Transaction Security: Các giao dịch tài chính (mua bán tài liệu, trừ/cộng Xu) được bảo vệ hoàn toàn bằng cơ chế Database Transactions với Row-level locking để ngăn chặn Race Conditions và đảm bảo tính ACID.
+- Authentication & Authorization: Quản lý phiên bằng JSON Web Token thay vì Session truyền thống, kết hợp xác thực OTP qua Email (Mailtrap/Nodemailer) cho chức năng quên mật khẩu.
+Yêu cầu về khả dụng và dễ sử dụng
+- Giao diện cần thân thiện, dễ sử dụng với người dùng phổ thông, bố cục rõ ràng theo từng nhóm chức năng. Hệ thống cần đảm bảo thời gian hoạt động (uptime) tối thiểu 99% trong điều kiện vận hành bình thường, có cơ chế thông báo lỗi rõ ràng khi người dùng thực hiện sai định dạng dữ liệu (ví dụ: email không hợp lệ, file vượt quá kích thước cho phép).
+CHƯƠNG III. PHÂN TÍCH THIẾT KẾ
+Sơ đồ user case
+Sơ đồ USE CASE Guest (Khách)
+Sơ đồ USE CASE Student (Học sinh / Sinh viên)
+Sơ đồ USE CASE Teacher (Giáo viên / Giảng viên)
+Sơ đồ USE CASE Admin (Quản trị viên)
+Sơ đồ hoạt động
+Luồng hoạt động của Đăng kí / Đăng nhập tài khoản người dùng
+Luồng hoạt động của khôi phục mật khẩu người dùng
+Luồng hoạt động của tạo nhóm và xét duyệt thành viên nhóm
+Luồng hoạt động của yêu cầu nâng cấp giảng viên
+Luồng hoạt động của báo cáo tài liệu vi phạm
+Luồng hoạt động của đăng tải tài liệu mới
+Luồng hoạt động của nạp xu và duyệt giao dịch
+Luồng hoạt động của mua tài liệu PREMIUM
+Thiết kế cơ sở dữ liệu
+Mô hình ERD
+Sơ đồ Diagram
+Cấu trúc các bảng
+1. NGUOIDUNG (Người dùng)
+2. MONHOC (Môn học)
+3. TAILIEU (Tài liệu)
+4. BINHLUAN (Bình luận)
+5. DANHGIA (Đánh giá)
+6. NHOM (Nhóm học tập)
+7. THANHVIEN_NHOM (Bảng trung gian N-N)
+8. TAILIEU_NHOM (Tài liệu chia sẻ trong nhóm - N-N)
+9. BOOKMARK (Lưu yêu thích)
+10. BAOCAOVIPHAM (Báo cáo vi phạm)
+11. THONGBAO (Thông báo)
+12. GIAODICH_NAPXU (Giao dịch nạp xu)
+13. LICH_SU_XU (Lịch sử biến động số dư)
+14. TAILIEU_DAMUA (Tài liệu đã mua)
+15. REFRESH_TOKENS (Token bảo mật)
+16. PROMO_CODE (Mã khuyến mãi)
+17. YEU_CAU_GIAO_VIEN (KYC Nâng cấp Giáo viên)
+18. BAIVIET_NHOM (Bài viết thảo luận nhóm)
+19. BINHLUAN_BAIVIET (Bình luận trong nhóm)
+Thiết kế giao diện
+4.1. Phân hệ Khách và Xác thực (Guest & Auth)
+Bao gồm 10 trang tĩnh (guestHome, about, blog, contact, copyright, forum, guide, helpCenter, privacy, terms) và 4 trang xác thực. Các trang tĩnh đóng vai trò cung cấp thông tin, điều khoản sử dụng và giới thiệu về mạng xã hội EduShare.
+- Màn hình Khách (Guest Home): Trang đích giới thiệu các tính năng nổi bật, hiển thị danh sách tài liệu phổ biến giới hạn để thu hút người dùng đăng ký.
+- Màn hình Đăng ký / Xác minh (register.html, register-verify.html): Cho phép nhập thông tin đăng ký cơ bản. Yêu cầu xác thực Email qua hệ thống mã OTP (Nodemailer) trước khi kích hoạt tài khoản.
+- Màn hình Đăng nhập (login.html): Hỗ trợ đăng nhập truyền thống (Email/Password) và tích hợp đăng nhập một chạm qua Google Identity (OAuth2).
+- Màn hình Quên mật khẩu (forgot-password.html): Hỗ trợ khôi phục mật khẩu thông qua mã OTP gửi về Email.
+4.2. Phân hệ Người dùng và Nhóm học tập (User & Group)
+Bao gồm 5 trang cá nhân người dùng và 2 trang nhóm học tập, phục vụ việc quản lý hồ sơ, tài chính và giao tiếp xã hội.
+- Màn hình Trang chủ Người dùng (userHome.html): Hiển thị Newsfeed các tài liệu mới nhất, xu hướng tìm kiếm và các đề xuất cá nhân hóa.
+- Màn hình Hồ sơ cá nhân (userProfile.html): Cho phép cập nhật thông tin cá nhân, tải lên ảnh đại diện (Lưu trữ qua Cloudinary) và xem thống kê hoạt động.
+- Màn hình Hồ sơ người khác (otherUserProfile.html): Giao diện xem thông tin công khai của người dùng khác, tích hợp chức năng Theo dõi (Follow) và Hủy theo dõi (Unfollow).
+- Màn hình Ví tiền và Nạp Xu (buyCoins.html): Cho phép người dùng xem số dư Xu hiện tại, nhập Promo Code và gửi yêu cầu nạp Xu để Admin xét duyệt.
+- Màn hình Lịch sử Giao dịch (transactionHistory.html): Ghi nhận toàn bộ biến động số dư (nạp xu, mua tài liệu, hoàn xu, nhận thưởng).
+- Màn hình Thông báo (notifications.html): Quản lý các thông báo từ hệ thống, tài liệu mới, và tương tác từ người dùng khác.
+- Màn hình Danh sách Nhóm (groupList.html): Hiển thị các nhóm học tập hiện có, cho phép tìm kiếm và gửi yêu cầu tham gia.
+- Màn hình Chi tiết Nhóm (groupDetails.html): Nơi các thành viên chia sẻ tài liệu nội bộ, đăng status thảo luận và bình luận lồng nhau.
+4.3. Phân hệ Tài liệu (Document)
+Phân hệ cốt lõi gồm 4 trang phục vụ việc đăng tải, tìm kiếm và tương tác với tài liệu.
+- Màn hình Đăng tải Tài liệu (uploadDocument.html): Form nhập liệu tích hợp tải file. File được tự động mã hóa SHA-256 để chống trùng lặp và quét qua VirusTotal trước khi lưu.
+- Màn hình Quản lý Tài liệu cá nhân (myDocuments.html): Liệt kê các tài liệu người dùng đã đăng, kèm theo trạng thái duyệt (Chờ duyệt, Đã duyệt, Từ chối).
+- Màn hình Tìm kiếm Nâng cao (searchResults.html): Bộ lọc theo môn học, cấp học và định dạng file, kết hợp thuật toán Full-text Search để tối ưu kết quả truy vấn.
+- Màn hình Chi tiết Tài liệu (documentDetails.html): Tích hợp trình xem trước tài liệu (Document Viewer). Xử lý nghiệp vụ Mua tài liệu Premium (trừ Xu an toàn qua Transaction Row-level Locking), tải xuống, đánh giá sao và bình luận đa cấp.
+4.4. Phân hệ Quản trị viên (Admin Dashboard)
+Phân hệ quản trị toàn diện gồm 9 màn hình quản lý chuyên sâu, đảm bảo hệ thống vận hành trơn tru và an toàn.
+- Màn hình Dashboard (adminDashboard.html): Trực quan hóa số liệu hệ thống (người dùng mới, doanh thu, lượt tải) bằng biểu đồ Chart.js.
+- Màn hình Quản lý Người dùng (adminUserManagement.html): Bảng dữ liệu (Data Grid) cho phép phân quyền, khóa/mở khóa tài khoản vi phạm.
+- Màn hình Kiểm duyệt Tài liệu (adminModeration.html): Cho phép Admin xem trước nội dung, phê duyệt hoặc từ chối tài liệu mới tải lên.
+- Màn hình Xử lý Báo cáo Vi phạm (adminViolationReports.html): Quản lý các phiếu khiếu nại. Có tích hợp cơ chế gỡ tài liệu và Tự động hoàn tiền (Automated Refund) cho những người đã mua.
+- Màn hình Giao dịch Tài chính (adminPayments.html): Kiểm tra và phê duyệt các giao dịch Nạp Xu của người dùng.
+- Màn hình Quản lý Mã khuyến mãi (adminPromos.html): Tạo và cấu hình trạng thái, tỷ lệ giảm giá cho các Promo Code.
+- Màn hình Duyệt Giáo viên KYC (adminTeacherRequests.html): Kiểm tra minh chứng (Thẻ sinh viên/Giảng viên) do người dùng tải lên để nâng cấp tài khoản thành Giáo viên.
+- Màn hình Quản lý Môn học (adminSubjects.html): Thêm, sửa, xóa, ẩn các danh mục môn học.
+- Màn hình Quản trị Nhóm (adminGroups.html): Kiểm soát các nhóm học tập, có quyền đóng cửa các nhóm vi phạm tiêu chuẩn cộng đồng.
+Thiết kế xử lý
+CHƯƠNG IV. PHÁT TRIỂN/THỰC THI
+4.1. Phân hệ Khách và Đăng nhập / Đăng ký
+Màn hình Giới thiệu & Đăng ký / Đăng nhập
+- Luồng hoạt động: Người dùng chưa có tài khoản truy cập vào hệ thống sẽ được điều hướng tới màn hình này. Tại đây, người dùng điền thông tin cá nhân (Họ tên, Email, Mật khẩu) vào biểu mẫu. Hệ thống tiến hành xác thực định dạng dữ liệu trực tiếp tại giao diện. Nếu đăng nhập, hệ thống sẽ gửi token về và chuyển hướng người dùng vào Trang chủ.
+- Thao tác: Nhập liệu vào các ô Textbox, nhấn nút 'Đăng ký' hoặc 'Đăng nhập'.
+4.2. Phân hệ Người dùng (Sinh viên / Giáo viên)
+Màn hình Trang chủ & Tìm kiếm tài liệu
+- Luồng hoạt động: Sau khi đăng nhập, hệ thống tải danh sách tài liệu mới nhất và phổ biến nhất đã được duyệt. Phía trên màn hình là thanh tìm kiếm và các bộ lọc cho phép lọc theo môn học, cấp học và định dạng file.
+- Thao tác: Nhập từ khóa, chọn bộ lọc và nhấn 'Tìm kiếm'. Nhấn vào một tài liệu (card) để xem chi tiết.
+Màn hình Chi tiết tài liệu
+- Luồng hoạt động: Hiển thị bộ xem tài liệu trực tuyến cho phép đọc trước nội dung. Dưới trình xem tài liệu là thông tin mô tả, thông tin người đăng, số lượt xem/tải. Tại đây tích hợp hệ thống đánh giá bằng số sao và phần bình luận đa cấp.
+- Thao tác: Cuộn để đọc tài liệu trực tuyến. Nhấn nút 'Tải xuống' để lấy file gốc về máy. Nhấn biểu tượng ngôi sao để đánh giá. Gõ văn bản và nhấn 'Gửi' để bình luận hoặc trả lời bình luận người khác.
+Màn hình Đăng tải tài liệu (Upload)
+- Luồng hoạt động: Giao diện cho phép người dùng kéo thả file hoặc nhấn chọn file từ thiết bị. Hệ thống kiểm tra dung lượng (<20MB) và đuôi file (PDF, DOCX...). Sau khi upload thành công, tài liệu được lưu với trạng thái 'Chờ duyệt'. Đối với Giáo viên, giao diện sẽ xuất hiện thêm tùy chọn đánh dấu 'Tài liệu chính thống'.
+- Thao tác: Kéo thả file, điền Tên tài liệu, Mô tả, chọn Môn học tương ứng và nhấn nút 'Đăng tải'.
+Màn hình Nhóm học tập
+- Luồng hoạt động: Hiển thị danh sách các nhóm học tập theo môn học. Người dùng có thể nhấn xin tham gia nhóm. Bên trong màn hình chi tiết nhóm, thành viên có thể chia sẻ các tài liệu chỉ lưu hành nội bộ trong nhóm đó.
+- Thao tác: Tìm kiếm nhóm, nhấn 'Tham gia'. Trong nhóm, nhấn 'Chia sẻ tài liệu vào nhóm'.
+4.3. Phân hệ Quản trị viên (Admin Dashboard)
+Màn hình Quản lý người dùng
+- Luồng hoạt động: Hiển thị danh sách tất cả người dùng trong hệ thống dưới dạng bảng lưới. Quản trị viên có thể tìm kiếm user theo email hoặc phân quyền lại.
+- Thao tác: Nhấn nút 'Khóa' để chặn truy cập của người dùng vi phạm, hoặc 'Mở khóa' để khôi phục.
+Màn hình Kiểm duyệt tài liệu
+- Luồng hoạt động: Liệt kê các tài liệu mới tải lên mang trạng thái 'Chờ duyệt'. Admin có thể mở xem trực tiếp nội dung để đối chiếu, kiểm tra bản quyền.
+- Thao tác: Nhấn nút 'Duyệt' để công khai tài liệu, hoặc 'Từ chối' và điền lý do vi phạm vào form.
+Màn hình Báo cáo và Thống kê
+- Luồng hoạt động: Hiển thị các báo cáo vi phạm từ người dùng để admin xử lý (gỡ tài liệu). Phần thống kê hiển thị các biểu đồ (đường, cột, tròn) tóm tắt số lượng truy cập, số lượt tải về và tài liệu phổ biến nhất theo mốc thời gian.
+- Thao tác: Xem biểu đồ, lọc thống kê theo tuần/tháng. Xử lý các ticket báo cáo vi phạm.
+CHƯƠNG V. TRIỂN KHAI
+Cài đặt (Dựa trên cấu trúc dự án thực tế)
+1. Database: Tạo CSDL `edushare_db` và import toàn bộ 21 bảng từ `be/database.sql`. Chạy `be/alter_db.js` để tự động map schema mới nhất.
+2. Cấu hình Backend: Điền file `.env` (DB_HOST, JWT_SECRET, CLOUDINARY_API_KEY, VIRUSTOTAL_API_KEY, GOOGLE_CLIENT_ID). Chạy `npm install` và `npm start` (Node.js).
+3. Cấu hình Frontend: Chạy trên Live Server, trỏ biến `API_URL` trong thư mục `fe/main/` đến đúng cổng backend.
+Tiến độ hoàn thành dự án (100% Core Features)
+- Phân hệ FE (28+ Trang HTML): Hoàn thiện toàn bộ luồng Auth, User, Document, Group, Admin, Guest với SweetAlert2 & Chart.js.
+- Phân hệ BE (Restful API): Hoàn thiện hệ thống xác thực JWT/OAuth, Giao dịch FOR UPDATE, Quét VirusTotal, Upload Cloudinary, Hoàn tiền tự động.
+- Database (21 Bảng): Triển khai đầy đủ mô hình CSDL quan hệ với các bảng Transaction, Follow, Lịch sử Xu, Token.
+Thử nghiệm
+Tài khoản dùng để test chức năng Quản trị viên (Admin):
+Tài khoản: admin@edushare.com.vn
+Mật khẩu: Admin123!?
+Tài khoản dùng để test chức năng Giáo viên (Teacher):
+Tài khoản: gv1@edushare.com.vn
+Tài khoản dùng để test chức năng Học sinh / Sinh viên (Student):
+Tài khoản: duyhoangtran2006@gmail.com
+Mật khẩu: Duy1tran!?
+Mật khẩu: Duy1tran!?
+CHƯƠNG VI. KẾT LUẬN
+6.1. Kết quả đạt được
+- Về mặt lý thuyết: Nhóm đã tìm hiểu và áp dụng thành công các quy trình trong Đảm bảo chất lượng phần mềm, từ việc thu thập và phân tích đặc tả yêu cầu, thiết kế hệ thống (Use Case, Activity Diagram) cho đến việc chuẩn hóa cơ sở dữ liệu.
+- Về mặt thực hành: Xây dựng thành công bộ khung và các chức năng cốt lõi cho nền tảng Mạng xã hội chia sẻ tài liệu học tập. Hệ thống đáp ứng các luồng nghiệp vụ cơ bản như đăng ký/đăng nhập, phân quyền 3 vai trò (Sinh viên, Giáo viên, Quản trị viên), quy trình đăng tải và kiểm duyệt tài liệu chặt chẽ, cùng các tính năng tương tác xã hội (bình luận, đánh giá, yêu thích).
+- Tính thực tiễn: Hệ thống thể hiện được sự chuyên biệt hóa cho môi trường giáo dục, khắc phục tình trạng phân tán tài liệu và thiếu kiểm duyệt so với các nền tảng lưu trữ hoặc mạng xã hội thông thường.
+6.2. Ưu khuyết điểm
+Ưu điểm:
+- Giao diện thân thiện, dễ sử dụng, tập trung vào trải nghiệm cốt lõi là tra cứu và học tập.
+- Cơ chế kiểm duyệt tài liệu (trạng thái Chờ duyệt -> Đã duyệt) và hệ thống báo cáo vi phạm giúp môi trường học tập trở nên lành mạnh, tôn trọng bản quyền.
+- Thiết kế cơ sở dữ liệu chuẩn hóa giúp hệ thống hoạt động ổn định và tránh dư thừa dữ liệu. Hệ thống phân quyền chặt chẽ với Role-Based Access Control.
+Khuyết điểm:
+- Chưa tích hợp chức năng trò chuyện trực tuyến (Real-time Chat Socket.io) giữa các người dùng với nhau, dẫn đến giao tiếp vẫn phụ thuộc nhiều vào bình luận.
+- Hệ thống xem trước tài liệu trực tuyến (Document Viewer) đôi khi xử lý file PDF dung lượng lớn (trên 100MB) còn chậm, cần tích hợp cơ chế chia nhỏ file để xem trước (Chunking).
+- Chưa tối ưu hóa bộ nhớ đệm (Redis Cache) cho các truy vấn API tìm kiếm lớn, dẫn đến tải trang có thể chậm nếu lưu lượng truy cập tăng vọt.
+6.3. Hướng mở rộng trong tương lai
+- Phát triển ứng dụng đa nền tảng: Xây dựng thêm phiên bản trên thiết bị di động (iOS/Android) để tăng tính tiện dụng.
+- Ứng dụng Trí tuệ nhân tạo: Tự động tóm tắt nội dung tài liệu, phân loại môn học thông minh và gợi ý tài liệu học tập theo thói quen/ngành học của người dùng.
+- Xây dựng hệ thống điểm thưởng: Tích hợp cơ chế điểm để sinh viên có thể trao đổi các tài liệu độc quyền.
+- Tối ưu hóa hạ tầng: Triển khai theo kiến trúc Microservices và lưu trữ đám mây để tăng cường khả năng chịu tải trong các mùa thi điểm rơi.
+TÀI LIỆU THAM KHẢO
+[1] Nguyễn Thị Bích Nguyên (2025). Bài giảng Đảm bảo chất lượng phần mềm. Học viện Công nghệ Bưu chính Viễn thông.
+[2] Ian Sommerville (2015). Software Engineering (10th Edition). Pearson.
+[3] Roger S. Pressman, Bruce R. Maxim (2019). Software Engineering: A Practitioner's Approach (9th Edition). McGraw-Hill.
+[4] Các mô hình mạng xã hội học tập thực tế tham khảo: Quizlet, Studocu, Course Hero.
+[5] Tài liệu hướng dẫn thiết kế cơ sở dữ liệu quan hệ (RDBMS) và UML.

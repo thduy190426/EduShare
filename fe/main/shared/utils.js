@@ -256,6 +256,9 @@ export const renderPagination = (containerId, totalPages, currentPage, onPageCha
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    totalPages = Math.max(1, totalPages || 1);
+    currentPage = Math.max(1, currentPage || 1);
+
     container.innerHTML = '';
     
     const prevBtn = document.createElement('button');

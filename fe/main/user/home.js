@@ -192,8 +192,12 @@ async function openSubjectPicker() {
 
         modalBody.innerHTML = `<div class="subject-picker-list">${options}</div>`;
         modalOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
 
-        const closeModal = () => modalOverlay.classList.remove('active');
+        const closeModal = () => {
+            modalOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        };
         
         if (btnClose) {
             btnClose.onclick = closeModal;

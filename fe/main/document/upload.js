@@ -88,6 +88,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     
+    if (uploadZone) {
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = 'var(--primary)';
+            uploadZone.style.background = 'var(--primary-light)';
+        });
+        uploadZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '';
+            uploadZone.style.background = '';
+        });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.style.borderColor = '';
+            uploadZone.style.background = '';
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                fileUpload.files = e.dataTransfer.files;
+                const event = new Event('change');
+                fileUpload.dispatchEvent(event);
+            }
+        });
+        uploadZone.addEventListener('click', (e) => {
+            if (e.target !== fileUpload && !e.target.closest('#btnSelectFile')) {
+                fileUpload.click();
+            }
+        });
+    }
+
     fileUpload.addEventListener('change', function () {
         const file = this.files[0];
         if (file) {
@@ -223,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('tenTL', tenTL);
         formData.append('maMonHoc', maMonHoc);
         formData.append('moTa', moTa);
-        formData.append('fileUpload', file);
 
         const cbOfficial = document.getElementById('laTaiLieuChinhThuc');
         if (cbOfficial && cbOfficial.checked) {
@@ -240,20 +267,86 @@ document.addEventListener('DOMContentLoaded', () => {
         btnUpload.disabled = true;
         btnUpload.style.opacity = '0.7';
         btnUpload.style.cursor = 'not-allowed';
-        btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên...';
 
         try {
+            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chuẩn bị tải lên...';
             
+            // 1. Get signature from backend
+            const sigRes = await fetch(`${API_URL}/documents/generate-signature`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!sigRes.ok) throw new Error('Không thể tạo chữ ký bảo mật.');
+            const sigData = await sigRes.json();
+
+            // 2. Upload to Cloudinary with Progress
+            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên Cloud...';
+            const cloudForm = new FormData();
+            cloudForm.append('file', file);
+            cloudForm.append('api_key', sigData.apiKey);
+            cloudForm.append('timestamp', sigData.timestamp);
+            cloudForm.append('signature', sigData.signature);
+            cloudForm.append('folder', sigData.folder);
+
+            const uploadProgressContainer = document.getElementById('uploadProgressContainer');
+            const uploadProgressBar = document.getElementById('uploadProgressBar');
+            const uploadProgressPercent = document.getElementById('uploadProgressPercent');
+            const uploadProgressText = document.getElementById('uploadProgressText');
+            
+            if (uploadProgressContainer) {
+                uploadProgressContainer.style.display = 'block';
+                uploadProgressBar.style.width = '0%';
+                uploadProgressPercent.textContent = '0%';
+                uploadProgressText.textContent = 'Đang tải lên máy chủ Cloud...';
+            }
+
+            const cloudData = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`);
+                
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable && uploadProgressContainer) {
+                        const percentComplete = Math.round((event.loaded / event.total) * 100);
+                        uploadProgressBar.style.width = percentComplete + '%';
+                        uploadProgressPercent.textContent = percentComplete + '%';
+                    }
+                };
+                
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(JSON.parse(xhr.responseText));
+                    } else {
+                        reject(new Error('Lỗi tải lên máy chủ Cloudinary.'));
+                    }
+                };
+                
+                xhr.onerror = () => reject(new Error('Lỗi kết nối mạng khi tải lên.'));
+                xhr.send(cloudForm);
+            });
+
+            if (uploadProgressContainer) {
+                uploadProgressText.textContent = 'Đang lưu trữ dữ liệu...';
+            }
+
+            // 3. Send final data to Backend
+            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu trữ dữ liệu...';
+            formData.append('cloudinaryUrl', cloudData.secure_url);
+            formData.append('publicId', cloudData.public_id);
+            formData.append('mimeType', file.type);
+            formData.append('fileName', file.name);
+
             const response = await fetch(`${API_URL}/documents/upload`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
-                    
                 },
                 body: formData
             });
 
             const data = await response.json();
+
+            if (uploadProgressContainer) {
+                uploadProgressContainer.style.display = 'none';
+            }
 
             if (response.ok) {
                 await Swal.fire({
@@ -277,6 +370,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Lỗi khi tải tài liệu:', error);
+            if (uploadProgressContainer) {
+                uploadProgressContainer.style.display = 'none';
+            }
             Swal.fire({
                 icon: 'error',
                 title: 'Lỗi máy chủ',

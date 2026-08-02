@@ -66,11 +66,7 @@
           </div>
 
           <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-            <div class="g-recaptcha" 
-                 data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9" 
-                 data-callback="enableSubmitBtn" 
-                 data-expired-callback="disableSubmitBtn">
-            </div>
+            <div id="recaptcha-container"></div>
           </div>
 
           <button type="submit" id="submitBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">
@@ -85,22 +81,7 @@
           </div>
           
           <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px;">
-            <div id="g_id_onload"
-                 data-client_id="891380242693-mebda946u7bpcbbnjd8ro50lsaqp6unu.apps.googleusercontent.com"
-                 data-context="signin"
-                 data-ux_mode="popup"
-                 data-callback="handleGoogleLogin"
-                 data-auto_prompt="false">
-            </div>
-            <div class="g_id_signin"
-                 data-type="standard"
-                 data-shape="rectangular"
-                 data-theme="outline"
-                 data-text="signin_with"
-                 data-size="large"
-                 data-width="250"
-                 data-logo_alignment="left">
-            </div>
+            <div id="googleSigninBtnContainer"></div>
             
             <button type="button" class="btn btn-facebook" id="facebookLoginBtn" style="width: 250px; height: 40px; background: #ffffff; border: 1px solid #dadce0; border-radius: 4px; color: #3c4043; font-size: 14px; font-weight: 500; font-family: 'Roboto', 'Inter', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; padding: 0 12px; margin: 0; transition: background-color 0.2s;">
               <div style="display: flex; align-items: center; justify-content: center; width: 18px; height: 18px;">
@@ -120,7 +101,6 @@
 
   <script type="module" src="../../main/auth/login.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <script>
     function enableSubmitBtn() {
       window.isCaptchaSolved = true;
@@ -131,7 +111,5 @@
       if (window.validateLoginForm) window.validateLoginForm();
     }
   </script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/vi_VN/sdk.js"></script>
 </body>
 </html>

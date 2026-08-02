@@ -111,7 +111,7 @@
             <textarea id="input-message" placeholder="Mô tả chi tiết vấn đề của bạn..." rows="4" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; resize: vertical; transition: border-color 0.2s;" required></textarea>
           </div>
           <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-            <div class="g-recaptcha" data-sitekey="6LdMa1wtAAAAAM4vLM_v-uh7ft6wwPD__tSd3Qa9"></div>
+            <div id="recaptcha-container"></div>
           </div>
           <button type="submit" id="btn-submit" class="btn btn-primary" style="margin-top: 10px; padding: 14px; font-size: 16px; border: none; cursor: not-allowed; border-radius: 8px; font-weight: 600; opacity: 0.5;" disabled><i class="fa-solid fa-paper-plane" style="margin-right: 8px;"></i>Gửi tin nhắn</button>
         </form>
@@ -162,6 +162,5 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script type="module" src="../../main/guest/contact.js"></script>
-  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>

@@ -10,7 +10,7 @@
 .menu-item.active { background: var(--primary-light); color: var(--primary); }
 .menu-item .menu-icon { font-size: 20px; width: 24px; text-align: center; }
 
-.badge { position: absolute; right: 12px; background: var(--danger); color: var(--white); font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.badge { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: var(--danger); color: var(--white); font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
 
 .nav-notifications { width: 40px; height: 40px; border: 0; background: transparent; color: inherit; font-size: 20px; cursor: pointer; position: relative; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s, color 0.2s; }
 .nav-notifications:hover, .nav-notifications:focus-visible { background: rgba(148, 163, 184, 0.18); color: var(--primary); outline: none; }
@@ -54,7 +54,7 @@
 .sidebar-collapsed .menu-label { opacity: 0; height: 0; margin: 0; padding: 0; overflow: hidden; pointer-events: none; transition: opacity 0.18s ease; }
 .sidebar-collapsed .menu-item { justify-content: center; padding: 12px 0; gap: 0; }
 .sidebar-collapsed .menu-item .menu-text { opacity: 0; width: 0; margin: 0; overflow: hidden; }
-.sidebar-collapsed .badge { right: 4px; top: 4px; font-size: 10px; padding: 2px 4px; border-radius: 8px; }
+.sidebar-collapsed .badge { right: 4px; top: 4px; transform: none; font-size: 10px; padding: 2px 4px; border-radius: 8px; }
 
 .page-is-leaving .content-area { opacity: 0.92; transform: translateY(2px); transition: opacity 0.12s ease, transform 0.12s ease; }
 .page-is-leaving .menu-item { pointer-events: none; }
@@ -65,7 +65,7 @@
   .menu-label { display: none; }
   .menu-item span:not(.menu-icon):not(.badge) { display: none; }
   .menu-item { justify-content: center; padding: 12px 0; }
-  .badge { right: 4px; top: 4px; font-size: 10px; padding: 2px 4px; border-radius: 8px; }
+  .badge { right: 4px; top: 4px; transform: none; font-size: 10px; padding: 2px 4px; border-radius: 8px; }
 }
 
 @media (max-width: 768px) {

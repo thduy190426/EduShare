@@ -6,6 +6,8 @@ let currentBulkRejectIds = [];
 let currentTabStatus = 'ChoDuyet';
 let currentPage = 1;
 const limit = 10;
+let currentSortBy = 'NgayDang';
+let currentOrder = 'DESC';
 
 document.addEventListener("DOMContentLoaded", () => {
   fetchDocuments(currentTabStatus);
@@ -18,9 +20,53 @@ document.addEventListener("DOMContentLoaded", () => {
           
           currentTabStatus = e.currentTarget.getAttribute('data-status');
           currentPage = 1;
+          
+          const selectAllDocs = document.getElementById("selectAllDocs");
+          if (selectAllDocs) selectAllDocs.checked = false;
+          
           fetchDocuments(currentTabStatus);
       });
   });
+
+  const sortHeaders = document.querySelectorAll('th.sortable');
+  sortHeaders.forEach(th => {
+      th.addEventListener('click', () => {
+          const sortKey = th.getAttribute('data-sort');
+          if (currentSortBy === sortKey) {
+              currentOrder = currentOrder === 'DESC' ? 'ASC' : 'DESC';
+          } else {
+              currentSortBy = sortKey;
+              currentOrder = 'ASC';
+          }
+          
+          sortHeaders.forEach(header => {
+              const icon = header.querySelector('.fa-sort, .fa-sort-up, .fa-sort-down');
+              if (icon) {
+                  icon.className = 'fa-solid fa-sort sort-icon';
+                  icon.style.color = '#9ca3af';
+              }
+          });
+          
+          const activeIcon = th.querySelector('.sort-icon, .fa-sort, .fa-sort-up, .fa-sort-down');
+          if (activeIcon) {
+              activeIcon.className = currentOrder === 'ASC' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
+              activeIcon.style.color = 'var(--primary)';
+          }
+          
+          fetchDocuments(currentTabStatus);
+      });
+  });
+
+  const selectAllDocs = document.getElementById("selectAllDocs");
+  if (selectAllDocs) {
+      selectAllDocs.addEventListener("change", (e) => {
+          const checkboxes = document.querySelectorAll(".doc-checkbox");
+          checkboxes.forEach(cb => {
+              cb.checked = e.target.checked;
+          });
+          updateBulkToolbar();
+      });
+  }
 
   const rejectModal = document.getElementById("reject-modal-overlay");
   const btnCloseModal = document.getElementById("btn-close-modal");
@@ -142,7 +188,7 @@ async function fetchDocuments(status) {
   await new Promise(resolve => setTimeout(resolve, 200));
 
   try {
-    const response = await fetch(`${API_URL}/admin/documents/list?status=${status}&page=${currentPage}&limit=${limit}`, {
+    const response = await fetch(`${API_URL}/admin/documents/list?status=${status}&page=${currentPage}&limit=${limit}&sortBy=${currentSortBy}&order=${currentOrder}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -210,7 +256,7 @@ function renderDocuments(documents, status) {
     if (status === 'DaDuyet') emptyText = "Không có tài liệu nào đã duyệt.";
     else if (status === 'TuChoi') emptyText = "Không có tài liệu nào bị từ chối.";
       tbody.innerHTML =
-        `<tr><td colspan="7" style="text-align: center; padding: 20px;">${emptyText}</td></tr>`;
+        `<tr><td colspan="8" style="text-align: center; padding: 20px;">${emptyText}</td></tr>`;
       return;
   }
 
@@ -301,11 +347,11 @@ function renderDocuments(documents, status) {
     }
 
         tr.innerHTML = `
+            <td style="text-align: center;">
+                ${status === 'ChoDuyet' ? `<input type="checkbox" class="doc-checkbox" value="${doc.MaTL}" style="cursor: pointer;">` : ''}
+            </td>
             <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    ${status === 'ChoDuyet' ? `<input type="checkbox" class="doc-checkbox" value="${doc.MaTL}" style="cursor: pointer;">` : ''}
-                    <span>${index + 1}</span>
-                </div>
+                <span>${(currentPage - 1) * limit + index + 1}</span>
             </td>
             <td>
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -335,6 +381,12 @@ function renderDocuments(documents, status) {
   rowCheckboxes.forEach(cb => {
       cb.addEventListener("change", () => {
           updateBulkToolbar();
+          const allCheckboxes = tbody.querySelectorAll(".doc-checkbox");
+          const checkedCheckboxes = tbody.querySelectorAll(".doc-checkbox:checked");
+          const selectAllDocs = document.getElementById("selectAllDocs");
+          if (selectAllDocs) {
+              selectAllDocs.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
+          }
       });
   });
 

@@ -6,6 +6,21 @@ const path = require('path');
 
 const { PassThrough } = require('stream');
 
+jest.mock('https', () => ({
+    get: jest.fn((url, callback) => {
+        const stream = new require('stream').PassThrough();
+        setTimeout(() => {
+            stream.emit('data', Buffer.from('mock pdf content'));
+            stream.emit('end');
+        }, 10);
+        if (callback) callback({
+            statusCode: 200,
+            pipe: (dest) => stream.pipe(dest)
+        });
+        return { on: jest.fn() };
+    })
+}));
+
 jest.mock('cloudinary', () => ({
     v2: {
         config: jest.fn(),
@@ -61,7 +76,7 @@ describe('Documents API', () => {
     });
 
     describe('POST /api/documents/upload', () => {
-        it('Nên báo lỗi 400 nếu thiếu file', async () => {
+        it('Nên báo lỗi nếu không có file', async () => {
             const token = generateTestToken();
             mockPoolExecute(app, (query) => {
                 if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
@@ -74,7 +89,7 @@ describe('Documents API', () => {
                 .field('tenTL', 'Test')
                 .field('maMonHoc', 1);
             expect(response.status).toBe(400);
-            expect(response.body.message).toBe('Vui lòng chọn file tài liệu.');
+            expect(response.body.message).toContain('Không tìm thấy đường dẫn file từ Cloudinary');
         });
 
         it('Nên tải lên thành công', async () => {
@@ -92,10 +107,13 @@ describe('Documents API', () => {
                 .set('Authorization', `Bearer ${token}`)
                 .field('tenTL', 'Test Document')
                 .field('maMonHoc', 1)
-                .attach('fileUpload', Buffer.from('dummy content'), 'test.pdf');
+                .field('cloudinaryUrl', 'http://example.com/file.pdf')
+                .field('publicId', 'test_public_id')
+                .field('mimeType', 'application/pdf')
+                .field('fileName', 'test.pdf');
             
             expect(response.status).toBe(200);
-            expect(response.body.message).toBe('Tải lên tài liệu thành công.');
+            expect(response.body.message).toBe('Tai len tai lieu thanh cong.');
         });
     });
 

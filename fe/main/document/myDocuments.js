@@ -468,6 +468,32 @@ function openUpdateFileModal(doc) {
             });
 
             try {
+                const sigRes = await fetch(`${API_URL}/documents/generate-signature`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!sigRes.ok) throw new Error('Không thể tạo chữ ký bảo mật.');
+                const sigData = await sigRes.json();
+
+                const cloudForm = new FormData();
+                cloudForm.append('file', file);
+                cloudForm.append('api_key', sigData.apiKey);
+                cloudForm.append('timestamp', sigData.timestamp);
+                cloudForm.append('signature', sigData.signature);
+                cloudForm.append('folder', sigData.folder);
+
+                const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`, {
+                    method: 'POST',
+                    body: cloudForm
+                });
+                if (!cloudRes.ok) throw new Error('Lỗi tải lên máy chủ Cloudinary.');
+                const cloudData = await cloudRes.json();
+
+                formData.delete('fileUpload');
+                formData.append('cloudinaryUrl', cloudData.secure_url);
+                formData.append('publicId', cloudData.public_id);
+                formData.append('mimeType', file.type);
+                formData.append('fileName', file.name);
+
                 const res = await fetch(`${API_URL}/documents/${doc.MaTL}/file`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -665,6 +691,40 @@ function openEditModal(doc) {
             }
 
             try {
+                if (result.value.file) {
+                    Swal.fire({
+                        title: 'Đang tải lên...',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                    });
+                    
+                    const sigRes = await fetch(`${API_URL}/documents/generate-signature`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!sigRes.ok) throw new Error('Không thể tạo chữ ký bảo mật.');
+                    const sigData = await sigRes.json();
+
+                    const cloudForm = new FormData();
+                    cloudForm.append('file', result.value.file);
+                    cloudForm.append('api_key', sigData.apiKey);
+                    cloudForm.append('timestamp', sigData.timestamp);
+                    cloudForm.append('signature', sigData.signature);
+                    cloudForm.append('folder', sigData.folder);
+
+                    const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`, {
+                        method: 'POST',
+                        body: cloudForm
+                    });
+                    if (!cloudRes.ok) throw new Error('Lỗi tải lên máy chủ Cloudinary.');
+                    const cloudData = await cloudRes.json();
+
+                    formData.delete('fileUpload');
+                    formData.append('cloudinaryUrl', cloudData.secure_url);
+                    formData.append('publicId', cloudData.public_id);
+                    formData.append('mimeType', result.value.file.type);
+                    formData.append('fileName', result.value.file.name);
+                }
+
                 const res = await fetch(`${API_URL}/documents/${doc.MaTL}`, {
                     method: 'PUT',
                     headers: {

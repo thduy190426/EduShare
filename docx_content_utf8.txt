@@ -1,0 +1,472 @@
+BỘ KHOA HỌC VÀ CÔNG NGHỆ 
+HỌC VIỆN CÔNG NGHỆ BƯU CHÍNH VIỄN THÔNG
+-----------------------------
+BÁO CÁO 
+ĐỒ ÁN MÔN HỌC
+MÔN HỌC: ĐẢM BẢO CHẤT LƯỢNG PHẦN MỀM
+ĐỀ TÀI: MẠNG XÃ HỘI CHIA SẺ TÀI LIỆU HỌC TẬP TRỰC TUYẾN
+Giảng viên hướng dẫn: Nguyễn Thị Bích Nguyên
+Thực hiện bởi nhóm sinh viên, bao gồm: 
+Phạm Quang Huy	N24DTCN041	D24TXCNPM01-N		Trưởng nhóm
+Trần Hoàng Thanh	N24DTCN077	D24TXCNPM01-N		Thành viên
+Trần Hoàng Duy	N24DTCN021	D24TXCNPM01-N		Thành viên
+TP.HCM, tháng 06/2026
+MỤC LỤC
+DANH SÁCH HÌNH, BẢNG
+DANH MỤC TỪ VIẾT TẮT
+CHƯƠNG I. TỔNG QUAN
+Giới thiệu đề tài
+Mục tiêu của đề tài
+Đề tài hướng đến việc xây dựng một mạng xã hội chuyên biệt cho mục đích học tập, nơi học sinh, sinh viên và giảng viên có thể đăng tải, tìm kiếm và trao đổi tài liệu học tập (bài giảng, đề thi, bài tập, giáo trình…) một cách nhanh chóng, có tổ chức và đáng tin cậy. Hệ thống được thiết kế nhằm giải quyết thực trạng tài liệu học tập hiện nay bị phân tán trên nhiều nền tảng khác nhau (Facebook, Zalo, Google Drive cá nhân…), khó tra cứu và thiếu cơ chế kiểm duyệt chất lượng. Mục tiêu cụ thể của đồ án là áp dụng các quy trình đảm bảo chất lượng phần mềm (đặc tả yêu cầu, thiết kế cơ sở dữ liệu chuẩn hóa, kiểm thử) để xây dựng một hệ thống vừa đáp ứng đúng nhu cầu nghiệp vụ, vừa đảm bảo độ tin cậy và khả năng mở rộng trong tương lai.
+Phạm vi áp dụng
+Phạm vi của đồ án tập trung vào việc phân tích, thiết kế và xây dựng các chức năng cốt lõi của một mạng xã hội chia sẻ tài liệu học tập, bao gồm: quản lý tài khoản người dùng theo ba vai trò (sinh viên, giáo viên, quản trị viên), đăng tải và tìm kiếm tài liệu theo môn học, tương tác xã hội (bình luận, đánh giá, lưu yêu thích), hoạt động nhóm học tập, cùng với cơ chế kiểm duyệt nội dung và xử lý báo cáo vi phạm. Đối tượng sử dụng hướng đến là học sinh, sinh viên các cấp THCS, THPT và đại học có nhu cầu trao đổi tài liệu học tập trong môi trường giáo dục tại Việt Nam. Đồ án không đi sâu vào các vấn đề hạ tầng triển khai quy mô lớn mà tập trung vào quy trình đảm bảo chất lượng trong giai đoạn phân tích, thiết kế và kiểm thử phần mềm.
+Bên cạnh đó, hệ thống còn tích hợp hệ sinh thái kinh tế vi mô (Micro-economy) với cơ chế Wallet (Ví tiền) và Coin (Xu) giúp trao thưởng cho các nội dung chia sẻ, đồng thời đảm bảo bảo mật giao dịch (Transaction Security) và tích hợp các biện pháp ngăn chặn tấn công DDoS (Rate Limiting).
+Nền tảng kỹ thuật
+Hệ thống được đề xuất xây dựng theo kiến trúc Client-Server phổ biến trong các ứng dụng web hiện đại. Về cơ sở dữ liệu, đồ án sử dụng mô hình quan hệ với 11 bảng dữ liệu được chuẩn hóa, quản lý bởi hệ quản trị cơ sở dữ liệu như MySQL, đảm bảo tính toàn vẹn dữ liệu thông qua các ràng buộc khóa chính, khóa ngoại và kiểm tra. Phần phân tích thiết kế áp dụng các công cụ mô hình hóa chuẩn UML (sơ đồ Use Case, sơ đồ hoạt động) và ERD để mô tả cấu trúc dữ liệu và luồng nghiệp vụ. Quy trình thực hiện đồ án tuân theo các nguyên tắc đảm bảo chất lượng phần mềm, bao gồm đặc tả yêu cầu chi tiết, thiết kế trước khi cài đặt, và kiểm thử chức năng theo từng vai trò người dùng trước khi triển khai.
+Cơ sở lý thuyết
+Mạng xã hội chia sẻ tài liệu học tập trực tuyến (EduShare)
+Mạng xã hội chia sẻ tài liệu học tập trực tuyến là mô hình kết hợp giữa các tính năng xã hội (kết bạn, theo dõi, bình luận, đánh giá) với mục đích phục vụ học tập và chia sẻ tri thức. Khác với mạng xã hội thông thường, nội dung được chia sẻ trong mạng xã hội học tập cần có cơ chế phân loại theo môn học, cấp học và yêu cầu kiểm duyệt chất lượng để đảm bảo tính chính xác và phù hợp với mục đích giáo dục. Mô hình này đã được áp dụng thành công ở nhiều nền tảng quốc tế như Quizlet, Studocu, Course Hero, là cơ sở lý thuyết quan trọng cho việc thiết kế chức năng của đề tài.
+Mô hình cơ sở dữ liệu quan hệ và chuẩn hóa dữ liệu
+Mô hình cơ sở dữ liệu quan hệ tổ chức dữ liệu thành các bảng có quan hệ với nhau thông qua khóa chính và khóa ngoại. Việc chuẩn hóa dữ liệu đến dạng chuẩn thứ ba giúp loại bỏ dư thừa dữ liệu, đảm bảo tính toàn vẹn và dễ dàng bảo trì khi hệ thống mở rộng. Trong đồ án, lý thuyết này được áp dụng để thiết kế 11 bảng dữ liệu, trong đó có việc sử dụng các bảng trung gian như THANHVIEN_NHOM hay TAILIEU_NHOM để biểu diễn quan hệ nhiều-nhiều (N-N) giữa người dùng, nhóm học tập và tài liệu.
+Đảm bảo chất lượng phần mềm (Software Quality Assurance)
+Đảm bảo chất lượng phần mềm là tập hợp các hoạt động có hệ thống nhằm đảm bảo phần mềm đáp ứng đúng yêu cầu đã đặc tả và đạt các tiêu chuẩn chất lượng đề ra, bao gồm: đặc tả yêu cầu rõ ràng, thiết kế trước khi cài đặt, kiểm thử ở nhiều cấp độ (Unit Test, Integration Test, System Test) và quản lý lỗi xuyên suốt vòng đời phát triển. Đồ án áp dụng các nguyên tắc SQA ngay từ giai đoạn phân tích yêu cầu (xác định rõ chức năng theo từng vai trò người dùng) cho đến giai đoạn thiết kế cơ sở dữ liệu và thử nghiệm chức năng, nhằm đảm bảo sản phẩm cuối cùng vừa đúng yêu cầu nghiệp vụ, vừa ổn định khi vận hành thực tế.
+Kiến trúc ứng dụng Web Client-Server
+Kiến trúc Client-Server là mô hình phổ biến trong phát triển ứng dụng Web, trong đó phía client (UI) gửi yêu cầu đến phía Server thông qua giao thức HTTP/HTTPS, Server xử lý nghiệp vụ và truy xuất cơ sở dữ liệu rồi trả kết quả về cho Client. Mô hình này cho phép tách biệt rõ ràng giữa tầng giao diện, tầng xử lý nghiệp vụ và tầng dữ liệu, giúp hệ thống dễ kiểm thử, bảo trì và mở rộng. Đây là cơ sở lý thuyết nền tảng cho việc thiết kế luồng xử lý của các chức năng trong đồ án, từ đăng tải tài liệu, tìm kiếm, đến tương tác bình luận và đánh giá.
+CHƯƠNG II. PHÂN TÍCH NỘI DUNG, YÊU CẦU
+Quy trình đăng tải và kiểm duyệt tài liệu
+Người dùng đăng tải tài liệu
+Sinh viên hoặc giáo viên chọn môn học, nhập tên và mô tả tài liệu, sau đó tải file lên hệ thống (PDF, DOCX, hoặc PPTX). Tài liệu mới đăng được lưu vào bảng TAILIEU với trạng thái kiểm duyệt mặc định là “Chờ duyệt”, chưa hiển thị công khai trong kết quả tìm kiếm.
+Quản trị viên kiểm duyệt
+Quản trị viên xem danh sách tài liệu đang ở trạng thái “Chờ duyệt”, kiểm tra nội dung có vi phạm bản quyền hoặc không phù hợp hay không, rồi cập nhật trạng thái thành “Đã duyệt” hoặc “Từ chối”. Nếu tài liệu do giáo viên đăng và được xác thực, hệ thống có thể gắn thêm nhãn “Tài liệu chính thống” (LaTaiLieuChinhThuc).
+Công bố tài liệu
+Sau khi được duyệt, tài liệu xuất hiện trong kết quả tìm kiếm và có thể được người dùng khác tải xuống, bình luận, đánh giá hoặc lưu vào danh sách yêu thích. Người đăng tài liệu nhận được thông báo về kết quả kiểm duyệt (được duyệt hoặc bị từ chối kèm lý do).
+- Cơ chế hoàn tiền tự động (Automated Refund): Trong trường hợp tài liệu Premium bị báo cáo vi phạm và gỡ bỏ, hệ thống tự động hoàn lại toàn bộ Coins cho người mua và thu hồi Coins từ tác giả.
+- Tài liệu Premium: Giáo viên và Admin có quyền định giá tài liệu chất lượng cao (Premium Price), người dùng cần tiêu phí Coins để mở khóa (Unlock).
+- Cơ chế thưởng (Reward System): Sinh viên đăng tài liệu miễn phí sẽ được thưởng +1 Coin cho mỗi lượt tải của người khác.
+- Cơ chế Wallet & Coins: Người dùng có thể quản lý số dư Xu (Coins), nạp Xu (Deposit) thông qua sự phê duyệt của Admin.
+Hệ thống giao dịch và Micro-economy (Premium Documents & Rewards)
+Quy trình tìm kiếm và tương tác tài liệu
+Tìm kiếm tài liệu
+Người dùng nhập từ khóa hoặc chọn bộ lọc (môn học, cấp học, loại file). Hệ thống chỉ trả về các tài liệu có trạng thái “Đã duyệt”, sắp xếp theo độ liên quan hoặc số lượt tải.
+Xem và tải xuống tài liệu
+Người dùng nhấn vào tài liệu để xem chi tiết hoặc tải xuống. Hệ thống tự động tăng biến đếm SoLuotXem hoặc SoLuotTai tương ứng trong bảng TAILIEU để phục vụ thống kê độ phổ biến.
+Tương tác với tài liệu
+Người dùng có thể bình luận, đánh giá (1-5 sao, mỗi người chỉ đánh giá một lần cho mỗi tài liệu), hoặc lưu tài liệu vào danh sách yêu thích (bookmark). Nếu phát hiện tài liệu vi phạm, người dùng có thể gửi báo cáo để quản trị viên xử lý.
+- Comment Moderation: Tác giả tài liệu được cấp quyền tự kiểm duyệt bình luận (Moderation), bao gồm xóa bình luận tiêu cực và ghim (Pin) bình luận nổi bật trên bài viết của mình.
+- Full-text Search: Bổ sung bộ máy tìm kiếm toàn văn bản (Full-text Search engine) cải thiện độ chính xác khi truy vấn tìm kiếm so với truy vấn cơ bản.
+- KYC (Know Your Customer) for Teachers: Quy trình xác thực cho phép Sinh viên tải lên các minh chứng (thẻ giáo viên, chứng chỉ) để yêu cầu nâng cấp tài khoản lên Giáo viên (Teacher Role).
+Yêu cầu chức năng nghiệp vụ
+Chức năng của đối tượng Học sinh / Sinh viên:
+- Phân hệ Xác thực (Auth): Đăng nhập, Đăng ký (kèm OTP qua email bằng Nodemailer), Xác thực OAuth2 qua Google Identity, Quên mật khẩu. Quản lý phiên bằng Access Token & Refresh Token.
+- Phân hệ Người dùng: Cập nhật hồ sơ cá nhân (Avatar upload Cloudinary), Theo dõi người dùng khác (Follow/Unfollow), Nạp Xu (Deposit) qua Admin, Nhập mã khuyến mãi (Promo Code).
+- Phân hệ Tài liệu: Tải lên tài liệu (Free/Premium, tự động băm SHA-256 chống trùng lặp, quét VirusTotal), Tìm kiếm nâng cao Full-text Search, Mua tài liệu Premium (bảo mật Transaction), Lưu bookmark, Bình luận và Đánh giá sao.
+- Phân hệ Nhóm: Tạo nhóm học tập (Công khai/Riêng tư), Tùy chỉnh ảnh bìa, Tham gia thảo luận nội bộ (đăng bài, bình luận, ghim bài viết), Chia sẻ tài liệu nội bộ nhóm.
+- Chức năng tài chính: Xem lịch sử giao dịch (Lịch sử nạp/trừ/cộng xu, hoàn xu), Quản lý ví tiền tự động.
+Chức năng của đối tượng Giáo viên / Giảng viên
+- Kế thừa 100% chức năng của Sinh viên.
+- Quy trình KYC (Nâng cấp Giáo viên): Gửi yêu cầu nâng cấp quyền kèm URL minh chứng (thẻ giáo viên/bằng cấp) để Admin xét duyệt qua bảng YEU_CAU_GIAO_VIEN.
+- Đặc quyền Tài liệu: Đăng tải tài liệu chính thức (LaTaiLieuChinhThuc = TRUE), gắn nhãn tài liệu độc quyền. Tự định giá Premium cho tài liệu của mình để nhận doanh thu xu.
+- Đặc quyền Nhóm: Quản trị nhóm, duyệt yêu cầu tham gia của sinh viên, thăng quyền Phó nhóm cho thành viên.
+Chức năng của đối tượng Quản trị viên
+- Dashboard Thống kê: Bảng điều khiển (Sử dụng Chart.js) trực quan hóa doanh thu, người dùng mới, và tài liệu phổ biến.
+- Kiểm duyệt Toàn diện: Duyệt tài liệu Upload, Xử lý báo cáo vi phạm, Xử lý giao dịch nạp xu (GIAODICH_NAPXU), Duyệt yêu cầu nâng cấp Giáo viên.
+- Quản lý Cơ sở dữ liệu: Quản lý người dùng (Khóa/Mở khóa bằng cờ TrangThai), Quản lý danh mục môn học, Quản lý nhóm (Ngưng hoạt động nhóm vi phạm).
+- Quản lý Tài chính: Tạo và quản lý mã khuyến mãi (PROMO_CODE), thực hiện Hoàn tiền (Automated Refund) trả lại xu cho người mua nếu tài liệu bị gỡ.
+Chức năng của đối tượng Khách
+- Truy cập các trang tĩnh (guestHome, about, blog, contact, copyright, forum, guide, helpCenter, privacy, terms).
+- Xem danh sách tài liệu công khai nhưng bị giới hạn xem trước, bắt buộc đăng nhập để tải hoặc tương tác sâu.
+Yêu cầu chức năng hệ thống và yêu cầu chất lượng
+Yêu cầu về hiệu năng
+Hệ thống phải xử lý được tối thiểu 100 người dùng truy cập đồng thời với thời gian phản hồi trung bình dưới 3 giây cho các chức năng tìm kiếm và xem tài liệu. Thao tác tải lên tài liệu (upload) cần hoàn tất trong vòng 10 giây đối với file có kích thước dưới 20MB.
+Yêu cầu về an toàn và bảo mật
+
+*Hệ thống được thiết kế với tiêu chuẩn bảo mật thực tế vô cùng chặt chẽ:*
+- Xác thực & Phân quyền đa lớp: Tích hợp JSON Web Token (JWT) với mô hình Access/Refresh Token (lưu trong bảng REFRESH_TOKENS), kết hợp Google OAuth2 (google-auth-library).
+- Ngăn chặn DDoS & Spam: Sử dụng `express-rate-limit` chặn đứng các hành vi spam tại endpoint login, register, upload, report.
+- Bảo mật Giao dịch (Micro-economy): Việc mua bán tài liệu được xử lý trong khối Database Transactions với lệnh Row-level Locking (`SELECT ... FOR UPDATE`), chặn đứng hoàn toàn Race Condition gây âm tiền khi spam request.
+- Tự động hóa & Chống trùng lặp: Cron Jobs dọn dẹp dữ liệu rác. Dùng SHA-256 mã hóa file để phát hiện Đạo văn/Upload trùng lặp. Cloudinary kết hợp VirusTotal loại trừ hoàn toàn rủi ro malware.
+Mật khẩu người dùng phải được mã hóa (hash) trước khi lưu vào cơ sở dữ liệu, không lưu dưới dạng plaintext. Hệ thống phân quyền rõ ràng theo ba vai trò (Sinh viên, Giáo viên, Admin), đảm bảo người dùng chỉ thực hiện được các chức năng thuộc quyền hạn của vai trò mình. Tài liệu trước khi công khai phải qua bước kiểm duyệt nhằm ngăn chặn nội dung vi phạm bản quyền hoặc không phù hợp.
+- Cloud Storage & Malware Scanning: Mọi tệp tài liệu được upload trực tiếp lên nền tảng đám mây Cloudinary nhằm tránh lỗi bảo mật Path Traversal cho hệ thống, kết hợp API quét mã độc (Automated Virus Scanning) trước khi cho phép lưu trữ.
+- Rate Limiting & Anti-Spam: Áp dụng Rate Limiting khắt khe tại các endpoint nhạy cảm như đăng nhập, gửi OTP, tải xuống và báo cáo vi phạm nhằm chống Spam/DDoS.
+- Transaction Security: Các giao dịch tài chính (mua bán tài liệu, trừ/cộng Xu) được bảo vệ hoàn toàn bằng cơ chế Database Transactions với Row-level locking (FOR UPDATE) để ngăn chặn Race Conditions (cạnh tranh dữ liệu) và đảm bảo tính ACID.
+- Authentication & Authorization: Quản lý phiên bằng JSON Web Token (JWT) thay vì Session truyền thống, kết hợp xác thực OTP qua Email (Mailtrap/Nodemailer) cho chức năng Forgot Password.
+Hơn thế nữa, hệ thống được tăng cường với các cơ chế bảo mật nâng cao:
+Yêu cầu về khả dụng và dễ sử dụng
+Giao diện cần thân thiện, dễ sử dụng với người dùng phổ thông, bố cục rõ ràng theo từng nhóm chức năng. Hệ thống cần đảm bảo thời gian hoạt động (uptime) tối thiểu 99% trong điều kiện vận hành bình thường, có cơ chế thông báo lỗi rõ ràng khi người dùng thực hiện sai định dạng dữ liệu (ví dụ: email không hợp lệ, file vượt quá kích thước cho phép).
+CHƯƠNG III. PHÂN TÍCH THIẾT KẾ
+Sơ đồ user case
+Sơ đồ USE CASE Guest (Khách)
+Sơ đồ USE CASE Student (Học sinh / Sinh viên)
+Sơ đồ USE CASE Teacher (Giáo viên / Giảng viên)
+Sơ đồ USE CASE Admin (Quản trị viên)
+Sơ đồ hoạt động
+Luồng hoạt động của Đăng kí / Đăng nhập tài khoản người dùng
+Luồng hoạt động của Đăng tải và Kiểm duyệt tài liệu
+Luồng hoạt động của Tìm kiếm và Tải xuống tài liệu
+Luồng hoạt động của Tương tác tài liệu
+Luồng hoạt động của Xử lí báo cáo vi phạm
+Thiết kế cơ sở dữ liệu
+Mô hình ERD
+Sơ đồ Diagram
+Cấu trúc các bảng
+1. NGUOIDUNG (Người dùng)
+2. MONHOC (Môn học)
+3. TAILIEU (Tài liệu)
+4. BINHLUAN (Bình luận)
+5. DANHGIA (Đánh giá)
+6. NHOM (Nhóm học tập)
+7. THANHVIEN_NHOM (Bảng trung gian N-N)
+8. TAILIEU_NHOM (Tài liệu chia sẻ trong nhóm - N-N)
+9. BOOKMARK (Lưu yêu thích)
+10. BAOCAOVIPHAM (Báo cáo vi phạm)
+11. THONGBAO (Thông báo)
+12. GIAODICH_NAPXU (Giao dịch nạp xu)
+13. LICH_SU_XU (Lịch sử biến động số dư)
+14. TAILIEU_DAMUA (Tài liệu đã mua)
+15. REFRESH_TOKENS (Token bảo mật)
+16. PROMO_CODE (Mã khuyến mãi)
+17. YEU_CAU_GIAO_VIEN (KYC Nâng cấp Giáo viên)
+18. BAIVIET_NHOM (Bài viết thảo luận nhóm)
+19. BINHLUAN_BAIVIET (Bình luận trong nhóm)
+Thiết kế giao diện
+Giao diện màn hình đăng nhập
+Cung cấp biểu mẫu cho phép người dùng nhập Email và Mật khẩu. Giao diện thiết kế tối giản, tập trung vào form đăng nhập, có kèm liên kết 'Quên mật khẩu' và 'Đăng ký ngay' dành cho người dùng mới.
+Giao diện màn hình đăng ký
+ Bao gồm các trường nhập liệu cơ bản như Họ tên, Email, Mật khẩu và Xác nhận mật khẩu. Hệ thống hiển thị các thông báo lỗi trực quan ngay dưới ô nhập liệu nếu dữ liệu không hợp lệ.
+Giao diện màn hình khách (chưa đăng nhập)
+Là trang đích (Landing Page) hiển thị các thông tin giới thiệu về nền tảng, tính năng nổi bật và một số tài liệu tiêu biểu để thu hút người dùng đăng ký.
+Giao diện màn hình người dùng (khi đăng nhập)
+Là trang chủ sau khi đăng nhập thành công. Giao diện hiển thị thanh điều hướng (Navbar) với các menu chức năng, thanh tìm kiếm ở giữa và danh sách các tài liệu mới nhất, phổ biến nhất dưới dạng thẻ (Card) trực quan.
+Giao diện màn hình tìm kiếm tài liệu môn học
+Giao diện bao gồm thanh tìm kiếm mở rộng với các bộ lọc nâng cao bên trái (lọc theo môn học, cấp học, loại file). Kết quả tìm kiếm hiển thị ở vùng không gian chính với tính năng phân trang.
+Giao diện màn hình chi tiết tài liệu
+Màn hình quan trọng nhất, chia làm 2 phần chính: bên trái là bộ xem trước tài liệu (Document Viewer), bên phải là thông tin chi tiết (tác giả, lượt xem, nút tải xuống, lưu yêu thích). Phía dưới là khu vực bình luận và đánh giá số sao.
+Giao diện màn hình tài liệu của tôi
+Hiển thị dưới dạng danh sách hoặc bảng lưới các tài liệu mà người dùng đã đăng tải, kèm theo trạng thái kiểm duyệt (Chờ duyệt, Đã duyệt, Bị từ chối) để người dùng dễ dàng theo dõi.
+Giao diện màn hình đăng tải tài liệu
+Cung cấp một khung kéo thả (Drag & Drop) hoặc nút chọn file, cùng với các ô nhập liệu Tên tài liệu, Mô tả, và chọn Môn học. Giao diện tích hợp thanh tiến trình (Progress bar) khi upload.
+Giao diện màn hình nhóm học tập
+Hiển thị danh sách các nhóm học tập mà người dùng đã tham gia hoặc có thể tham gia. Các nhóm được trình bày dưới dạng thẻ Card với ảnh bìa, tên nhóm và số lượng thành viên.
+ Giao diện màn hình chi tiết nhóm
+Bao gồm banner nhóm, danh sách thành viên bên trái và khu vực dòng thời gian (Feed) ở giữa để hiển thị các tài liệu được chia sẻ riêng trong nội bộ nhóm.
+ Giao diện màn hình hồ sơ người dùng
+Hiển thị thông tin cá nhân (Ảnh đại diện, Họ tên, Email). Cung cấp các nút chỉnh sửa thông tin và phần hiển thị số liệu thống kê cá nhân (số tài liệu đã đăng, số lượt tải).
+ Giao diện màn hình thông báo
+Một danh sách thả xuống (Dropdown) trên Navbar hoặc một trang riêng, liệt kê các thông báo từ hệ thống, tài liệu mới, hoặc phản hồi bình luận. Các thông báo chưa đọc được tô màu nền nổi bật.
+ Giao diện màn hình quản lí Admin
+Là trang tổng quan (Dashboard) dành cho Quản trị viên. Giao diện chia cột với menu điều hướng bên trái và các biểu đồ thống kê trực quan (đường, tròn) hiển thị số liệu hệ thống ở vùng chính.
+ Giao diện màn hình quản lí người dùng
+Trình bày dữ liệu người dùng dưới dạng bảng (Data Grid) tích hợp thanh tìm kiếm, bộ lọc trạng thái và các nút thao tác Khóa/Mở khóa hoặc thay đổi phân quyền ngay trên từng dòng.
+ Giao diện màn hình kiểm duyệt tài liệu
+Danh sách các tài liệu đang ở trạng thái 'Chờ duyệt'. Mỗi dòng có nút xem trước nội dung, nút 'Duyệt' (màu xanh) và 'Từ chối' (màu đỏ kèm popup nhập lý do).
+ Giao diện màn hình báo cáo vi phạm: Quản lý các phiếu báo cáo (Tickets) từ người dùng. Giao diện hiển thị chi tiết lý do báo cáo, tài liệu bị báo cáo và các nút thao tác xử lý vi phạm (gỡ tài liệu).
+Thiết kế xử lý
+Xử lý 1: Đăng ký / Đăng nhập tài khoản
+Mô tả các bước xử lý:
+1. Người dùng nhập Họ tên, Email, Mật khẩu (đăng ký) hoặc Email, Mật khẩu (đăng nhập).
+2. Hệ thống kiểm tra định dạng Email hợp lệ và kiểm tra Email đã tồn tại trong bảng NGUOIDUNG hay chưa (ràng buộc UNIQUE).
+3. Nếu đăng ký: mật khẩu được băm (hash) bằng thuật toán bcrypt trước khi lưu vào trường MatKhau; vai trò mặc định được gán là ’SinhVien’.
+4. Nếu đăng nhập: hệ thống so khớp mật khẩu nhập vào (sau khi hash) với MatKhau đã lưu; nếu khớp, tạo phiên đăng nhập (session/token) và kiểm tra TrangThai phải là ’HoatDong’.
+5. Nếu tài khoản đang ở trạng thái ’BiKhoa’, hệ thống từ chối đăng nhập và hiển thị thông báo lỗi tương ứng.
+Đặc tả xử lý (Pseudocode):
+BEGIN DangNhap(email, matKhau)
+  nd <- SELECT * FROM NGUOIDUNG WHERE Email = email
+  IF nd IS NULL THEN
+    RETURN Loi("Email không tồn tại")
+  IF nd.TrangThai = ’BiKhoa’ THEN
+    RETURN Loi("Tài khoản đã bị khóa")
+  IF Hash(matKhau) != nd.MatKhau THEN
+    RETURN Loi("Sai mật khẩu")
+  TaoPhienDangNhap(nd.MaND, nd.VaiTro)
+  RETURN ThanhCong(nd)
+END
+Xử lý 2: Đăng tải và kiểm duyệt tài liệu
+Mô tả các bước xử lý:
+1. Sinh viên hoặc Giáo viên chọn môn học, nhập tên, mô tả và tải file (PDF, DOCX, PPTX) lên hệ thống.
+2. Hệ thống kiểm tra dung lượng file (giới hạn dưới 20MB) và định dạng file hợp lệ trước khi lưu.
+3. Bản ghi mới được tạo trong bảng TAILIEU với TrangThaiKiemDuyet mặc định là ’ChoDuyet’; nếu người đăng là Giáo viên, có thể đề xuất gắn cờ LaTaiLieuChinhThuc = TRUE.
+4. Quản trị viên truy cập danh sách tài liệu ’ChoDuyet’, xem nội dung và kiểm tra vi phạm bản quyền hoặc nội dung không phù hợp.
+5. Quản trị viên cập nhật TrangThaiKiemDuyet thành ’DaDuyet’ hoặc ’TuChoi’; nếu từ chối, nhập lý do kèm theo.
+6. Hệ thống gửi một bản ghi vào bảng THONGBAO (LoaiTB = ’HeThong’) cho người đăng để thông báo kết quả kiểm duyệt.
+7. Nếu được duyệt, tài liệu chính thức xuất hiện trong kết quả tìm kiếm công khai.
+Đặc tả xử lý (Pseudocode):
+BEGIN DangTaiTaiLieu(maND, tenTL, file, maMonHoc, moTa)
+  IF KichThuoc(file) > 20MB THEN
+    RETURN Loi("File vượt quá dung lượng cho phép")
+  fileURL <- LuuFile(file)
+  tl <- INSERT INTO TAILIEU
+        (TenTL, FileURL, LoaiFile, MoTa, MaMonHoc,
+         MaND_NguoiDang, TrangThaiKiemDuyet)
+        VALUES (tenTL, fileURL, LoaiFile(file), moTa,
+                maMonHoc, maND, ’ChoDuyet’)
+  RETURN ThanhCong(tl)
+END
+BEGIN KiemDuyetTaiLieu(maTL, quyetDinh, lyDoTuChoi)
+  tl <- SELECT * FROM TAILIEU WHERE MaTL = maTL
+  IF quyetDinh = ’Duyet’ THEN
+    UPDATE TAILIEU SET TrangThaiKiemDuyet = ’DaDuyet’
+    WHERE MaTL = maTL
+    GuiThongBao(tl.MaND_NguoiDang, ’HeThong’,
+                "Tài liệu của bạn đã được duyệt")
+  ELSE
+    UPDATE TAILIEU SET TrangThaiKiemDuyet = ’TuChoi’
+    WHERE MaTL = maTL
+    GuiThongBao(tl.MaND_NguoiDang, ’HeThong’,
+                "Tài liệu bị từ chối: " + lyDoTuChoi)
+END
+Xử lý 3: Tìm kiếm tài liệu
+Mô tả các bước xử lý:
+1. Người dùng nhập từ khóa và/hoặc chọn bộ lọc (môn học, cấp học, loại file) trên màn hình tìm kiếm.
+2. Hệ thống xây dựng câu truy vấn trên bảng TAILIEU kết hợp JOIN với MONHOC, chỉ lấy các bản ghi có TrangThaiKiemDuyet = ’DaDuyet’.
+3. Kết quả được sắp xếp theo độ liên quan của từ khóa (khớp TenTL/MoTa) hoặc theo SoLuotTai giảm dần, tùy theo lựa chọn sắp xếp của người dùng.
+4. Hệ thống áp dụng phân trang (pagination) để giới hạn số lượng kết quả trả về mỗi lần truy vấn.
+5. Danh sách tài liệu phù hợp được trả về và hiển thị dưới dạng card trên giao diện.
+Đặc tả xử lý (Pseudocode):
+BEGIN TimKiemTaiLieu(tuKhoa, maMonHoc, capHoc, loaiFile, sapXep, trang)
+  query <- "SELECT * FROM TAILIEU WHERE TrangThaiKiemDuyet = ’DaDuyet’"
+  IF tuKhoa != NULL THEN
+    query += " AND (TenTL LIKE %tuKhoa% OR MoTa LIKE %tuKhoa%)"
+  IF maMonHoc != NULL THEN
+    query += " AND MaMonHoc = maMonHoc"
+  IF loaiFile != NULL THEN
+    query += " AND LoaiFile = loaiFile"
+  IF sapXep = ’PhoBien’ THEN
+    query += " ORDER BY SoLuotTai DESC"
+  ELSE
+    query += " ORDER BY DoLienQuan(tuKhoa) DESC"
+  query += " LIMIT 20 OFFSET (trang - 1) * 20"
+  ketQua <- ThucThi(query)
+  RETURN ketQua
+END
+Xử lý 4: Xem và tải xuống tài liệu
+Mô tả các bước xử lý:
+1. Người dùng nhấn vào một tài liệu trong danh sách kết quả để xem chi tiết.
+2. Hệ thống kiểm tra TrangThaiKiemDuyet của tài liệu phải là ’DaDuyet’ trước khi cho phép truy cập nội dung.
+3. Hệ thống tăng biến đếm SoLuotXem thêm 1 đơn vị mỗi khi tài liệu được mở xem chi tiết.
+4. Khi người dùng nhấn nút Tải xuống, hệ thống tăng biến đếm SoLuotTai thêm 1 đơn vị và trả về đường dẫn FileURL để trình duyệt thực hiện tải file.
+Đặc tả xử lý (Pseudocode):
+BEGIN XemTaiLieu(maTL)
+  tl <- SELECT * FROM TAILIEU WHERE MaTL = maTL
+  IF tl.TrangThaiKiemDuyet != ’DaDuyet’ THEN
+    RETURN Loi("Tài liệu chưa được duyệt")
+  UPDATE TAILIEU SET SoLuotXem = SoLuotXem + 1
+  WHERE MaTL = maTL
+  RETURN tl
+END
+BEGIN TaiXuongTaiLieu(maTL)
+  tl <- SELECT * FROM TAILIEU WHERE MaTL = maTL
+  IF tl.TrangThaiKiemDuyet != ’DaDuyet’ THEN
+    RETURN Loi("Tài liệu chưa được duyệt")
+  UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1
+  WHERE MaTL = maTL
+[Chèn hình ảnh 4.3 Màn hình Chi tiết tài liệu và Bình luận tại đây]
+  RETURN tl.FileURL
+END
+Xử lý 5: Bình luận và trả lời lồng nhau
+Mô tả các bước xử lý:
+1. Người dùng nhập nội dung bình luận cho một tài liệu cụ thể; nếu là trả lời một bình luận khác, hệ thống ghi nhận MaBL_Cha tham chiếu đến bình luận gốc.
+2. Hệ thống lưu bản ghi mới vào bảng BINHLUAN với NgayBinhLuan mặc định là thời điểm hiện tại.
+3. Khi hiển thị, hệ thống truy vấn đệ quy theo MaBL_Cha để dựng cây bình luận (bình luận gốc và các trả lời lồng nhau theo từng cấp).
+4. Nếu người trả lời là chủ tài liệu hoặc là Giáo viên, hệ thống gửi thông báo loại ’PhanHoiBL’ đến người đã đăng bình luận gốc.
+Đặc tả xử lý (Pseudocode):
+BEGIN ThemBinhLuan(maTL, maND, noiDung, maBLCha)
+  bl <- INSERT INTO BINHLUAN
+        (MaTL, MaND, MaBL_Cha, NoiDung)
+        VALUES (maTL, maND, maBLCha, noiDung)
+  IF maBLCha != NULL THEN
+    blCha <- SELECT * FROM BINHLUAN WHERE MaBL = maBLCha
+    GuiThongBao(blCha.MaND, ’PhanHoiBL’,
+                "Có người đã trả lời bình luận của bạn")
+  RETURN bl
+END
+BEGIN LayCayBinhLuan(maTL)
+  goc <- SELECT * FROM BINHLUAN
+         WHERE MaTL = maTL AND MaBL_Cha IS NULL
+  FOR EACH bl IN goc DO
+[Chèn hình ảnh 4.3 Màn hình Chi tiết tài liệu và Bình luận tại đây]
+    bl.TraLoi <- LayTraLoi(bl.MaBL)   // gọi đệ quy
+  RETURN goc
+END
+Xử lý 6: Đánh giá tài liệu (Rating)
+Mô tả các bước xử lý:
+1. Người dùng chọn số sao (1–5) để đánh giá một tài liệu đã xem.
+2. Hệ thống kiểm tra ràng buộc UNIQUE(MaTL, MaND) - nếu người dùng đã từng đánh giá tài liệu này, hệ thống từ chối tạo bản ghi mới và yêu cầu cập nhật đánh giá cũ thay vì tạo mới.
+3. Hệ thống kiểm tra giá trị SoSao nằm trong khoảng cho phép (CHECK 1-5) trước khi lưu.
+4. Sau khi lưu, hệ thống tính lại điểm đánh giá trung bình của tài liệu bằng cách lấy AVG(SoSao) trên tất cả bản ghi DANHGIA thuộc tài liệu đó.
+Đặc tả xử lý (Pseudocode):
+BEGIN DanhGiaTaiLieu(maTL, maND, soSao)
+  IF soSao < 1 OR soSao > 5 THEN
+    RETURN Loi("Số sao phải từ 1 đến 5")
+  daDanhGia <- SELECT * FROM DANHGIA
+               WHERE MaTL = maTL AND MaND = maND
+  IF daDanhGia IS NOT NULL THEN
+    UPDATE DANHGIA SET SoSao = soSao
+    WHERE MaTL = maTL AND MaND = maND
+  ELSE
+    INSERT INTO DANHGIA (MaTL, MaND, SoSao)
+    VALUES (maTL, maND, soSao)
+[Chèn hình ảnh 4.3 Màn hình Chi tiết tài liệu và Bình luận tại đây]
+  diemTB <- SELECT AVG(SoSao) FROM DANHGIA
+            WHERE MaTL = maTL
+  RETURN diemTB
+END
+Xử lý 7: Lưu tài liệu yêu thích (Bookmark)
+Mô tả các bước xử lý:
+1. Người dùng nhấn biểu tượng bookmark trên một tài liệu.
+2. Hệ thống kiểm tra khóa chính kép (MaND, MaTL) trong bảng BOOKMARK - nếu đã tồn tại, thực hiện thao tác bỏ lưu (xóa bản ghi); nếu chưa tồn tại, thực hiện thêm mới.
+3. Đây là cơ chế toggle hai chiều dựa trên việc kiểm tra sự tồn tại của bản ghi trước khi quyết định INSERT hay DELETE.
+Đặc tả xử lý (Pseudocode):
+BEGIN ToggleBookmark(maND, maTL)
+  bm <- SELECT * FROM BOOKMARK
+        WHERE MaND = maND AND MaTL = maTL
+  IF bm IS NOT NULL THEN
+    DELETE FROM BOOKMARK
+    WHERE MaND = maND AND MaTL = maTL
+    RETURN "Đã bỏ lưu"
+  ELSE
+    INSERT INTO BOOKMARK (MaND, MaTL)
+    VALUES (maND, maTL)
+    RETURN "Đã lưu vào yêu thích"
+END
+Xử lý 8: Tham gia nhóm học tập và chia sẻ tài liệu trong nhóm
+Mô tả các bước xử lý:
+1. Người dùng (chủ nhóm) tạo nhóm mới với tên, mô tả và môn học liên quan; hệ thống gán MaND_QuanTri là người tạo nhóm và tự động thêm người này vào THANHVIEN_NHOM với VaiTroTrongNhom = ’QuanTri’.
+2. Người dùng khác có thể gửi yêu cầu tham gia nhóm; hệ thống thêm bản ghi vào bảng THANHVIEN_NHOM với khóa chính kép (MaND, MaNhom) và VaiTroTrongNhom = ’ThanhVien’.
+3. Một người dùng có thể tham gia nhiều nhóm khác nhau (quan hệ N-N), hệ thống không giới hạn số lượng nhóm tham gia.
+4. Khi chia sẻ tài liệu vào nhóm, hệ thống thêm bản ghi vào bảng trung gian TAILIEU_NHOM với khóa chính kép (MaTL, MaNhom), liên kết tài liệu đã có sẵn vào nhóm mà không tạo bản sao.
+Đặc tả xử lý (Pseudocode):
+BEGIN TaoNhom(maND, tenNhom, moTa, maMonHoc)
+  nh <- INSERT INTO NHOM
+        (TenNhom, MoTa, MaND_QuanTri, MaMonHoc)
+        VALUES (tenNhom, moTa, maND, maMonHoc)
+  INSERT INTO THANHVIEN_NHOM (MaND, MaNhom, VaiTroTrongNhom)
+  VALUES (maND, nh.MaNhom, ’QuanTri’)
+  RETURN nh
+END
+BEGIN ThamGiaNhom(maND, maNhom)
+  daThamGia <- SELECT * FROM THANHVIEN_NHOM
+               WHERE MaND = maND AND MaNhom = maNhom
+  IF daThamGia IS NOT NULL THEN
+    RETURN Loi("Bạn đã là thành viên của nhóm này")
+  INSERT INTO THANHVIEN_NHOM (MaND, MaNhom, VaiTroTrongNhom)
+  VALUES (maND, maNhom, ’ThanhVien’)
+[Chèn hình ảnh 4.8 Màn hình Thống kê hệ thống tại đây]
+END
+BEGIN ChiaSeTaiLieuVaoNhom(maTL, maNhom)
+  INSERT INTO TAILIEU_NHOM (MaTL, MaNhom)
+  VALUES (maTL, maNhom)
+END
+Xử lý 9: Gửi và xử lý báo cáo vi phạm
+Mô tả các bước xử lý:
+1. Người dùng phát hiện tài liệu vi phạm (bản quyền, nội dung sai, spam…) và gửi báo cáo kèm lý do (LyDo) và ghi chú bổ sung (GhiChu).
+2. Hệ thống lưu bản ghi vào bảng BAOCAOVIPHAM với TrangThai mặc định là ’ChoXuLy’.
+3. Quản trị viên xem danh sách báo cáo đang ’ChoXuLy’, đối chiếu với tài liệu liên quan để xác minh tính xác thực của báo cáo.
+4. Quản trị viên cập nhật TrangThai thành ’DaXuLy’ (nếu vi phạm là đúng - đồng thời có thể chuyển TrangThaiKiemDuyet của tài liệu liên quan thành ’TuChoi’ để gỡ khỏi hệ thống) hoặc ’TuChoi’ (nếu báo cáo không hợp lệ).
+Đặc tả xử lý (Pseudocode):
+BEGIN GuiBaoCaoViPham(maTL, maND, lyDo, ghiChu)
+  bc <- INSERT INTO BAOCAOVIPHAM
+        (MaTL, MaND, LyDo, GhiChu, TrangThai)
+        VALUES (maTL, maND, lyDo, ghiChu, ’ChoXuLy’)
+  RETURN bc
+END
+BEGIN XuLyBaoCaoViPham(maBC, quyetDinh)
+  bc <- SELECT * FROM BAOCAOVIPHAM WHERE MaBC = maBC
+  IF quyetDinh = ’ViPham’ THEN
+    UPDATE BAOCAOVIPHAM SET TrangThai = ’DaXuLy’
+    WHERE MaBC = maBC
+    UPDATE TAILIEU SET TrangThaiKiemDuyet = ’TuChoi’
+    WHERE MaTL = bc.MaTL
+  ELSE
+    UPDATE BAOCAOVIPHAM SET TrangThai = ’TuChoi’
+    WHERE MaBC = maBC
+END
+ Xử lý 10: Gửi thông báo cho người dùng
+Mô tả các bước xử lý:
+1. Hệ thống tự động tạo thông báo trong các trường hợp: tài liệu mới phù hợp môn học người dùng theo dõi (LoaiTB = ’TaiLieuMoi’), có phản hồi bình luận (LoaiTB = ’PhanHoiBL’), hoặc thông báo từ hệ thống như kết quả kiểm duyệt (LoaiTB = ’HeThong’).
+2. Mỗi thông báo được lưu vào bảng THONGBAO với DaDoc mặc định là FALSE.
+3. Khi người dùng mở danh sách thông báo, các bản ghi được hiển thị sắp xếp theo NgayTao giảm dần, phân biệt trực quan giữa thông báo đã đọc và chưa đọc.
+4. Khi người dùng nhấn vào một thông báo hoặc chọn ’Đánh dấu đã đọc’, hệ thống cập nhật DaDoc thành TRUE.
+Đặc tả xử lý (Pseudocode):
+BEGIN GuiThongBao(maND, loaiTB, noiDung)
+  INSERT INTO THONGBAO
+  (MaND, NoiDung, LoaiTB, DaDoc)
+  VALUES (maND, noiDung, loaiTB, FALSE)
+END
+BEGIN DanhDauDaDoc(maTB)
+  UPDATE THONGBAO SET DaDoc = TRUE
+  WHERE MaTB = maTB
+END
+BEGIN LayThongBao(maND)
+  RETURN SELECT * FROM THONGBAO
+         WHERE MaND = maND
+         ORDER BY NgayTao DESC
+END
+CHƯƠNG IV. PHÁT TRIỂN/THỰC THI
+4.1. Phân hệ Khách và Đăng nhập / Đăng ký
+Màn hình Giới thiệu & Đăng ký / Đăng nhập
+- Luồng hoạt động: Người dùng chưa có tài khoản truy cập vào hệ thống sẽ được điều hướng tới màn hình này. Tại đây, người dùng điền thông tin cá nhân (Họ tên, Email, Mật khẩu) vào biểu mẫu. Hệ thống tiến hành xác thực định dạng dữ liệu trực tiếp tại giao diện. Nếu đăng nhập, hệ thống sẽ gửi token về và chuyển hướng người dùng vào Trang chủ.
+- Thao tác: Nhập liệu vào các ô Textbox, nhấn nút 'Đăng ký' hoặc 'Đăng nhập'.
+4.2. Phân hệ Người dùng (Sinh viên / Giáo viên)
+Màn hình Trang chủ & Tìm kiếm tài liệu
+- Luồng hoạt động: Sau khi đăng nhập, hệ thống tải danh sách tài liệu mới nhất và phổ biến nhất đã được duyệt. Phía trên màn hình là thanh tìm kiếm và các bộ lọc cho phép lọc theo môn học, cấp học và định dạng file.
+- Thao tác: Nhập từ khóa, chọn bộ lọc và nhấn 'Tìm kiếm'. Nhấn vào một tài liệu (card) để xem chi tiết.
+Màn hình Chi tiết tài liệu
+- Luồng hoạt động: Hiển thị bộ xem tài liệu trực tuyến cho phép đọc trước nội dung. Dưới trình xem tài liệu là thông tin mô tả, thông tin người đăng, số lượt xem/tải. Tại đây tích hợp hệ thống đánh giá bằng số sao và phần bình luận đa cấp.
+- Thao tác: Cuộn để đọc tài liệu trực tuyến. Nhấn nút 'Tải xuống' để lấy file gốc về máy. Nhấn biểu tượng ngôi sao để đánh giá. Gõ văn bản và nhấn 'Gửi' để bình luận hoặc trả lời bình luận người khác.
+Màn hình Đăng tải tài liệu (Upload)
+- Luồng hoạt động: Giao diện cho phép người dùng kéo thả file hoặc nhấn chọn file từ thiết bị. Hệ thống kiểm tra dung lượng (<20MB) và đuôi file (PDF, DOCX...). Sau khi upload thành công, tài liệu được lưu với trạng thái 'Chờ duyệt'. Đối với Giáo viên, giao diện sẽ xuất hiện thêm tùy chọn đánh dấu 'Tài liệu chính thống'.
+- Thao tác: Kéo thả file, điền Tên tài liệu, Mô tả, chọn Môn học tương ứng và nhấn nút 'Đăng tải'.
+Màn hình Nhóm học tập
+- Luồng hoạt động: Hiển thị danh sách các nhóm học tập theo môn học. Người dùng có thể nhấn xin tham gia nhóm. Bên trong màn hình chi tiết nhóm, thành viên có thể chia sẻ các tài liệu chỉ lưu hành nội bộ trong nhóm đó.
+- Thao tác: Tìm kiếm nhóm, nhấn 'Tham gia'. Trong nhóm, nhấn 'Chia sẻ tài liệu vào nhóm'.
+4.3. Phân hệ Quản trị viên (Admin Dashboard)
+Màn hình Quản lý người dùng
+- Luồng hoạt động: Hiển thị danh sách tất cả người dùng trong hệ thống dưới dạng bảng lưới. Quản trị viên có thể tìm kiếm user theo email hoặc phân quyền lại.
+- Thao tác: Nhấn nút 'Khóa' để chặn truy cập của người dùng vi phạm, hoặc 'Mở khóa' để khôi phục.
+Màn hình Kiểm duyệt tài liệu
+- Luồng hoạt động: Liệt kê các tài liệu mới tải lên mang trạng thái 'Chờ duyệt'. Admin có thể mở xem trực tiếp nội dung để đối chiếu, kiểm tra bản quyền.
+- Thao tác: Nhấn nút 'Duyệt' để công khai tài liệu, hoặc 'Từ chối' và điền lý do vi phạm vào form.
+Màn hình Báo cáo và Thống kê
+- Luồng hoạt động: Hiển thị các báo cáo vi phạm từ người dùng để admin xử lý (gỡ tài liệu). Phần thống kê hiển thị các biểu đồ (đường, cột, tròn) tóm tắt số lượng truy cập, số lượt tải về và tài liệu phổ biến nhất theo mốc thời gian.
+- Thao tác: Xem biểu đồ, lọc thống kê theo tuần/tháng. Xử lý các ticket báo cáo vi phạm.
+CHƯƠNG V. TRIỂN KHAI
+Cài đặt (Dựa trên cấu trúc dự án thực tế)
+1. Database: Tạo CSDL `edushare_db` và import toàn bộ 21 bảng từ `be/database.sql`. Chạy `be/alter_db.js` để tự động map schema mới nhất.
+2. Cấu hình Backend: Điền file `.env` (DB_HOST, JWT_SECRET, CLOUDINARY_API_KEY, VIRUSTOTAL_API_KEY, GOOGLE_CLIENT_ID). Chạy `npm install` và `npm start` (Node.js).
+3. Cấu hình Frontend: Chạy trên Live Server, trỏ biến `API_URL` trong thư mục `fe/main/` đến đúng cổng backend.
+Tiến độ hoàn thành dự án (100% Core Features)
+- Phân hệ FE (28+ Trang HTML): Hoàn thiện toàn bộ luồng Auth, User, Document, Group, Admin, Guest với SweetAlert2 & Chart.js.
+- Phân hệ BE (Restful API): Hoàn thiện hệ thống xác thực JWT/OAuth, Giao dịch FOR UPDATE, Quét VirusTotal, Upload Cloudinary, Hoàn tiền tự động.
+- Database (21 Bảng): Triển khai đầy đủ mô hình CSDL quan hệ với các bảng Transaction, Follow, Lịch sử Xu, Token.
+Thử nghiệm
+Tài khoản dùng để test các chức năng của Học sinh/Sinh viên:
+Tài khoản: sinhvien@edushare.vn
+Mật khẩu: Sv@123456
+Tài khoản dùng để test các chức năng của Admin:
+Tài khoản: admin@edushare.vn
+Mật khẩu: Admin@123456
+CHƯƠNG VI. KẾT LUẬN
+6.1. Kết quả đạt được
+- Về mặt lý thuyết: Nhóm đã tìm hiểu và áp dụng thành công các quy trình trong Đảm bảo chất lượng phần mềm, từ việc thu thập và phân tích đặc tả yêu cầu, thiết kế hệ thống (Use Case, Activity Diagram) cho đến việc chuẩn hóa cơ sở dữ liệu.
+- Về mặt thực hành: Xây dựng thành công bộ khung và các chức năng cốt lõi cho nền tảng Mạng xã hội chia sẻ tài liệu học tập. Hệ thống đáp ứng các luồng nghiệp vụ cơ bản như đăng ký/đăng nhập, phân quyền 3 vai trò (Sinh viên, Giáo viên, Quản trị viên), quy trình đăng tải và kiểm duyệt tài liệu chặt chẽ, cùng các tính năng tương tác xã hội (bình luận, đánh giá, yêu thích).
+- Tính thực tiễn: Hệ thống thể hiện được sự chuyên biệt hóa cho môi trường giáo dục, khắc phục tình trạng phân tán tài liệu và thiếu kiểm duyệt so với các nền tảng lưu trữ hoặc mạng xã hội thông thường.
+6.2. Ưu khuyết điểm
+Ưu điểm:
+- Giao diện thân thiện, dễ sử dụng, tập trung vào trải nghiệm cốt lõi là tra cứu và học tập.
+- Cơ chế kiểm duyệt tài liệu (trạng thái Chờ duyệt -> Đã duyệt) và hệ thống báo cáo vi phạm giúp môi trường học tập trở nên lành mạnh, tôn trọng bản quyền.
+- Thiết kế cơ sở dữ liệu chuẩn hóa giúp hệ thống hoạt động ổn định và tránh dư thừa dữ liệu. Hệ thống phân quyền chặt chẽ với Role-Based Access Control.
+Khuyết điểm:
+- Chưa tích hợp được các công cụ tìm kiếm toàn văn bản nâng cao (như Elasticsearch) cho các tài liệu có dung lượng lớn.
+- Các tính năng đọc trực tiếp đôi khi phụ thuộc vào tốc độ mạng và API bên thứ ba, cần tối ưu thêm cache.
+- Chưa hỗ trợ cơ chế trao thưởng đủ mạnh để kích thích người dùng liên tục đóng góp nội dung chất lượng.
+6.3. Hướng mở rộng trong tương lai
+- Phát triển ứng dụng đa nền tảng: Xây dựng thêm phiên bản trên thiết bị di động (iOS/Android) để tăng tính tiện dụng.
+- Ứng dụng Trí tuệ nhân tạo: Tự động tóm tắt nội dung tài liệu, phân loại môn học thông minh và gợi ý tài liệu học tập theo thói quen/ngành học của người dùng.
+- Xây dựng hệ thống điểm thưởng: Tích hợp cơ chế điểm để sinh viên có thể trao đổi các tài liệu độc quyền.
+- Tối ưu hóa hạ tầng: Triển khai theo kiến trúc Microservices và lưu trữ đám mây để tăng cường khả năng chịu tải trong các mùa thi điểm rơi.
+TÀI LIỆU THAM KHẢO
+[1] Nguyễn Thị Bích Nguyên (2025). Bài giảng Đảm bảo chất lượng phần mềm. Học viện Công nghệ Bưu chính Viễn thông.
+[2] Ian Sommerville (2015). Software Engineering (10th Edition). Pearson.
+[3] Roger S. Pressman, Bruce R. Maxim (2019). Software Engineering: A Practitioner's Approach (9th Edition). McGraw-Hill.
+[4] Các mô hình mạng xã hội học tập thực tế tham khảo: Quizlet, Studocu, Course Hero.
+[5] Tài liệu hướng dẫn thiết kế cơ sở dữ liệu quan hệ (RDBMS) và UML.

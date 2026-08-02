@@ -1,7 +1,48 @@
-import { API_URL } from '../shared/config.js';
+import { API_URL, fetchAppConfig } from '../shared/config.js';
 import { isValidEmail, isValidName } from '../shared/utils.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    const config = await fetchAppConfig();
+
+    // 1. Initialize Google Sign-In
+    const googleScript = document.createElement('script');
+    googleScript.src = 'https://accounts.google.com/gsi/client';
+    googleScript.async = true;
+    googleScript.defer = true;
+    googleScript.onload = () => {
+        if (config.googleClientId) {
+            google.accounts.id.initialize({
+                client_id: config.googleClientId,
+                callback: handleGoogleLogin
+            });
+            const btnContainer = document.getElementById('googleSigninBtnContainer');
+            if (btnContainer) {
+                google.accounts.id.renderButton(
+                    btnContainer,
+                    { theme: 'outline', size: 'large', width: 250 }
+                );
+            }
+        }
+    };
+    document.head.appendChild(googleScript);
+
+    // 2. Initialize reCAPTCHA
+    window.onRecaptchaLoad = function() {
+        const recaptchaContainer = document.getElementById('recaptcha-container');
+        if (recaptchaContainer && config.recaptchaSiteKey) {
+            grecaptcha.render(recaptchaContainer, {
+                'sitekey': config.recaptchaSiteKey,
+                'callback': enableSubmitBtn,
+                'expired-callback': disableSubmitBtn
+            });
+        }
+    };
+    const recaptchaScript = document.createElement('script');
+    recaptchaScript.src = 'https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoad';
+    recaptchaScript.async = true;
+    recaptchaScript.defer = true;
+    document.head.appendChild(recaptchaScript);
+
     const fetchSchoolsAndMajors = async () => {
         try {
             const [schoolRes, majorRes] = await Promise.all([
