@@ -54,3 +54,7 @@ temp/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Python and text scripts
+*.py
+*.txt
