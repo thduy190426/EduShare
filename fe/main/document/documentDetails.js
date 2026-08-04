@@ -1,11 +1,14 @@
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
 import { updateSEO } from '../shared/seo.js';
+import { getSocket } from '../shared/socketClient.js';
 
 let currentMaTL = null;
 const token = getToken();
 let hasSubmittedRating = false;
 let currentUserMaND = null;
+let allComments = [];
+let documentOwnerId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -89,7 +92,23 @@ async function fetchDocumentDetails() {
         const data = await response.json();
         renderDocumentInfo(data.document, data.hasPurchased);
         updateSEO(data.document.TenTL, data.document.TextSEO || data.document.MoTa);
-        renderComments(data.comments, data.document.MaND_NguoiDang);
+        
+        allComments = data.comments || [];
+        documentOwnerId = data.document.MaND_NguoiDang;
+        renderComments(allComments, documentOwnerId);
+
+        const socket = getSocket();
+        if (socket) {
+            socket.emit('join_document', currentMaTL);
+            socket.off('new_document_comment');
+            socket.on('new_document_comment', (comment) => {
+                const exists = allComments.find(c => c.MaBL === comment.MaBL);
+                if (!exists) {
+                    allComments.push(comment);
+                    renderComments(allComments, documentOwnerId);
+                }
+            });
+        }
         fetchRelatedDocuments();
         fetchRelatedGroups();
 
@@ -135,7 +154,7 @@ function renderRelatedDocuments(documents) {
     if (!listEl) return;
 
     if (documents.length === 0) {
-        listEl.innerHTML = '<div class="related-state">Chưa có tài liệu có liên quan.</div>';
+        listEl.innerHTML = '<div class="related-state" style="text-align: left;">Chưa có tài liệu có liên quan.</div>';
         return;
     }
 
@@ -187,6 +206,18 @@ function renderRelatedDocuments(documents) {
 }
 
 function renderDocumentInfo(doc, hasPurchased) {
+    if (doc.IsDeleted) {
+        document.querySelector('.document-header').insertAdjacentHTML('beforebegin', `
+            <div style="background-color: #FEF3C7; color: #92400E; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #F59E0B; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem;"></i>
+                <div>
+                    <strong>Tài liệu này đã bị tác giả hoặc Admin gỡ khỏi hệ thống.</strong><br>
+                    <span style="font-size: 0.9em;">Tuy nhiên, bạn vẫn có thể xem và tải xuống vì bạn là Tác giả hoặc đã thanh toán cho tài liệu này trước đó.</span>
+                </div>
+            </div>
+        `);
+    }
+
     document.getElementById('doc-title').textContent = doc.TenTL;
     const authorNameEl = document.getElementById('doc-author-name');
     const authorProfileUrl = getUserProfileUrl(doc.MaND_NguoiDang);
@@ -614,17 +645,29 @@ function setupEventListeners() {
         });
     });
 
-    const commentInput = document.getElementById('comment-input');
     const btnSubmitComment = document.getElementById('btn-submit-comment');
     
-    if (commentInput && btnSubmitComment) {
-        initTribute(commentInput);
+    let commentEditor;
+    if (typeof Quill !== 'undefined' && document.getElementById('comment-editor')) {
+        commentEditor = new Quill('#comment-editor', {
+            theme: 'snow',
+            placeholder: 'Viết bình luận hoặc đặt câu hỏi về tài liệu này...',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
+            }
+        });
+        
         btnSubmitComment.disabled = true;
         btnSubmitComment.style.opacity = '0.5';
         btnSubmitComment.style.cursor = 'not-allowed';
 
-        commentInput.addEventListener('input', () => {
-            const val = commentInput.value.trim();
+        commentEditor.on('text-change', () => {
+            const val = commentEditor.getText().trim();
             if (val.length > 0 && val.length <= 1000) {
                 btnSubmitComment.disabled = false;
                 btnSubmitComment.style.opacity = '1';
@@ -637,7 +680,7 @@ function setupEventListeners() {
         });
 
         btnSubmitComment.addEventListener('click', () => {
-            const noiDung = commentInput.value;
+            const noiDung = commentEditor.root.innerHTML;
             submitComment(noiDung, null);
         });
     }
@@ -657,7 +700,7 @@ async function fetchRelatedGroups() {
         
         cardEl.style.display = 'block';
         if (groups.length === 0) {
-            listEl.innerHTML = '<div style="font-size: 13px; color: var(--text-secondary); text-align: center; padding: 12px 0;">Chưa có nhóm nào có liên quan.</div>';
+            listEl.innerHTML = '<div style="font-size: 13px; color: var(--text-secondary); text-align: left; padding: 12px 0;">Chưa có nhóm nào có liên quan.</div>';
         } else {
             renderRelatedGroups(groups);
         }
@@ -770,9 +813,9 @@ async function submitComment(noiDung, maBL_Cha) {
         
         if (res.ok) {
             lastCommentTime = Date.now();
-            const inputEl = document.getElementById('comment-input');
-            if (inputEl && !maBL_Cha) {
-                inputEl.value = '';
+            if (typeof Quill !== 'undefined' && document.getElementById('comment-editor')) {
+                const qInstance = Quill.find(document.getElementById('comment-editor'));
+                if (qInstance) qInstance.setText('');
             }
             fetchDocumentDetails(); 
         } else {
@@ -789,9 +832,10 @@ async function submitComment(noiDung, maBL_Cha) {
     } finally {
         if (btn) {
             btn.innerHTML = originalHtml;
-            const inputEl = maBL_Cha ? document.getElementById(`reply-input-${maBL_Cha}`) : document.getElementById('comment-input');
-            if (inputEl) {
-                inputEl.dispatchEvent(new Event('input'));
+            const replyEditorContainer = maBL_Cha ? document.getElementById(`reply-editor-${maBL_Cha}`) : document.getElementById('comment-editor');
+            if (replyEditorContainer) {
+                const qInstance = Quill.find(replyEditorContainer);
+                if (qInstance) qInstance.setText('');
             }
         }
     }
@@ -859,7 +903,7 @@ function renderComments(comments, documentOwnerId) {
                 ${pinnedBadge}
                 <span class="comment-time">${dateHtml}</span>
               </div>
-              <div class="comment-text">${escapeHTML(comment.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
+              <div class="comment-text">${DOMPurify.sanitize(comment.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
               <div class="comment-actions">
                 <span class="comment-action reply-btn" data-id="${comment.MaBL}"><i class="fa-solid fa-reply" style="margin-right: 4px;"></i> Phản hồi</span>
                 ${deleteBtnHtml}
@@ -899,11 +943,11 @@ function renderComments(comments, documentOwnerId) {
 
             formContainer.innerHTML = `
               <div class="comment-avatar" style="${avatarStyle}">${avatarHtml}</div>
-              <div class="comment-input-area" style="flex:1;">
-                <textarea id="reply-input-${parentId}" class="comment-textarea" placeholder="Viết phản hồi..."></textarea>
-                <div style="display:flex; justify-content: flex-end; gap: 8px;">
-                  <button id="btn-cancel-reply-${parentId}" class="btn-cancel" style="padding: 8px 16px; border-radius: 8px; border: 1px solid #E5E7EB; background: white; color: #4B5563; font-weight: 500; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
-                  <button id="btn-submit-reply-${parentId}" class="btn-submit" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi phản hồi</button>
+              <div class="comment-input-area" style="flex:1; border: 1px solid #CBD5E1; border-radius: 8px; overflow: hidden;">
+                <div id="reply-editor-${parentId}" style="background: white; font-family: inherit; font-size: 14px; min-height: 80px; border: none;"></div>
+                <div style="display:flex; justify-content: flex-end; gap: 8px; background: white; padding: 8px; border-top: 1px solid #e5e7eb;">
+                  <button id="btn-cancel-reply-${parentId}" class="btn-cancel" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #E5E7EB; background: white; color: #4B5563; font-weight: 500; cursor: pointer; transition: all 0.2s;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
+                  <button id="btn-submit-reply-${parentId}" class="btn-submit" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi</button>
                 </div>
               </div>
             `;
@@ -914,32 +958,44 @@ function renderComments(comments, documentOwnerId) {
             btnCancelReply.addEventListener('mouseover', () => btnCancelReply.style.background = '#F9FAFB');
             btnCancelReply.addEventListener('mouseout', () => btnCancelReply.style.background = 'white');
 
-            const replyInput = document.getElementById(`reply-input-${parentId}`);
-            initTribute(replyInput);
             const btnSubmitReply = document.getElementById(`btn-submit-reply-${parentId}`);
-
-            replyInput.focus();
-
-            replyInput.addEventListener('input', () => {
-                const val = replyInput.value.trim();
-                if (val.length > 0 && val.length <= 1000) {
-                    btnSubmitReply.disabled = false;
-                    btnSubmitReply.style.opacity = '1';
-                    btnSubmitReply.style.cursor = 'pointer';
-                } else {
-                    btnSubmitReply.disabled = true;
-                    btnSubmitReply.style.opacity = '0.5';
-                    btnSubmitReply.style.cursor = 'not-allowed';
-                }
-            });
-
-            btnSubmitReply.addEventListener('click', () => {
-                const noiDung = replyInput.value;
-                submitComment(noiDung, parentId);
-            });
+            
+            let replyEditor;
+            if (typeof Quill !== 'undefined') {
+                replyEditor = new Quill(`#reply-editor-${parentId}`, {
+                    theme: 'snow',
+                    placeholder: 'Viết phản hồi...',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['link'],
+                            ['clean']
+                        ]
+                    }
+                });
+                
+                replyEditor.on('text-change', () => {
+                    const val = replyEditor.getText().trim();
+                    if (val.length > 0 && val.length <= 1000) {
+                        btnSubmitReply.disabled = false;
+                        btnSubmitReply.style.opacity = '1';
+                        btnSubmitReply.style.cursor = 'pointer';
+                    } else {
+                        btnSubmitReply.disabled = true;
+                        btnSubmitReply.style.opacity = '0.5';
+                        btnSubmitReply.style.cursor = 'not-allowed';
+                    }
+                });
+            }
 
             btnCancelReply.addEventListener('click', () => {
                 formContainer.remove();
+            });
+
+            btnSubmitReply.addEventListener('click', () => {
+                const noiDung = replyEditor ? replyEditor.root.innerHTML : '';
+                submitComment(noiDung, parentId);
             });
         });
     });

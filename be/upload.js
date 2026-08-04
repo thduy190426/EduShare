@@ -42,7 +42,30 @@ async function getFileHash(filePath) {
         rs.on('end', () => resolve(hash.digest('hex')));
     });
 }
-const xss = require('xss');
+const xssLibrary = require('xss');
+const myXss = new xssLibrary.FilterXSS({
+    whiteList: {
+        ...xssLibrary.getDefaultWhiteList(),
+        p: ['style', 'class'],
+        span: ['style', 'class'],
+        strong: [],
+        em: [],
+        u: [],
+        s: [],
+        blockquote: [],
+        ol: [],
+        ul: [],
+        li: ['class'],
+        h1: [],
+        h2: [],
+        br: [],
+        a: ['href', 'target', 'rel'],
+        img: ['src', 'alt', 'width', 'height']
+    },
+    stripIgnoreTag: true,
+    stripIgnoreTagBody: ['script']
+});
+const xss = (html) => myXss.process(html);
 require('dotenv').config();
 
 cloudinary.config({
@@ -117,6 +140,7 @@ const router = express.Router();
 const { authMiddleware, teacherMiddleware } = require('./middlewares/auth');
 const { uploadLimiter, rateLimiter, reportLimiter, downloadLimiter, commentLimiter } = require('./middlewares/rateLimit');
 const { scanFileVirus } = require('./services/virusScanner');
+const { moderationMiddleware } = require('./middlewares/moderation');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, os.tmpdir()),
@@ -188,7 +212,7 @@ router.get('/subjects/popular', async (req, res) => {
         const [rows] = await pool.execute(`
             SELECT MH.MaMonHoc, MH.TenMonHoc, MH.CapHoc, COUNT(TL.MaTL) as DocCount
             FROM MONHOC MH
-            LEFT JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc AND TL.TrangThaiKiemDuyet = 'DaDuyet'
+            LEFT JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc AND TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.IsDeleted = FALSE
             WHERE MH.TrangThai = 'HoatDong'
             GROUP BY MH.MaMonHoc, MH.TenMonHoc, MH.CapHoc
             ORDER BY DocCount DESC, MH.TenMonHoc ASC
@@ -224,7 +248,7 @@ router.get('/levels', async (req, res) => {
             SELECT DISTINCT MH.CapHoc
             FROM MONHOC MH
             JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc
-            WHERE TL.TrangThaiKiemDuyet = "DaDuyet" AND MH.CapHoc IS NOT NULL AND MH.CapHoc != ''
+            WHERE TL.TrangThaiKiemDuyet = "DaDuyet" AND TL.IsDeleted = FALSE AND MH.CapHoc IS NOT NULL AND MH.CapHoc != ''
             ORDER BY MH.CapHoc ASC
         `);
         res.status(200).json({ levels: rows.map(r => r.CapHoc) });
@@ -237,7 +261,7 @@ router.get('/levels', async (req, res) => {
 router.get('/generate-signature', authMiddleware, (req, res) => {
     try {
         const timestamp = Math.round((new Date).getTime() / 1000);
-        const folder = 'documents'; // Hoặc thư mục tùy chọn
+        const folder = 'documents'; 
         const signature = cloudinary.utils.api_sign_request({
             timestamp: timestamp,
             folder: folder
@@ -289,7 +313,7 @@ function downloadFile(url, destPath) {
     });
 }
 
-router.post('/upload', authMiddleware, uploadLimiter, upload.none(), async (req, res) => {
+router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationMiddleware(['tenTL', 'moTa']), async (req, res) => {
     const { cloudinaryUrl, publicId, mimeType, fileName } = req.body;
     
     if (!cloudinaryUrl) {
@@ -412,7 +436,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
             FROM TAILIEU TL
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
-            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet'
+            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.IsDeleted = FALSE
               AND TL.MaTL NOT IN (SELECT MaTL FROM LICH_SU_TAI WHERE MaND = ?)
         `;
 
@@ -515,7 +539,7 @@ router.get('/search', async (req, res) => {
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
         `;
-        let whereClause = ` WHERE TL.TrangThaiKiemDuyet = 'DaDuyet'`;
+        let whereClause = ` WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.IsDeleted = FALSE`;
 
         const params = [];
         const countParams = [];
@@ -643,7 +667,7 @@ router.get('/:maTL/related', async (req, res) => {
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             LEFT JOIN DANHGIA DG ON DG.MaTL = TL.MaTL
-            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet'
+            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.IsDeleted = FALSE
               AND TL.MaTL <> ?
               AND (TL.MaMonHoc <=> ? OR TL.LoaiFile = ?)
             GROUP BY
@@ -727,7 +751,7 @@ router.get('/feed', authMiddleware, async (req, res) => {
             JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             LEFT JOIN DANHGIA DG ON TL.MaTL = DG.MaTL
-            WHERE TD.MaND_TheoDoi = ${userId} AND TL.TrangThaiKiemDuyet = 'DaDuyet'
+            WHERE TD.MaND_TheoDoi = ${userId} AND TL.TrangThaiKiemDuyet = 'DaDuyet' AND TL.IsDeleted = FALSE
             GROUP BY TL.MaTL
             ORDER BY TL.NgayDang DESC
             LIMIT ${limit}
@@ -816,6 +840,10 @@ router.get('/:maTL', async (req, res) => {
             } catch (e) {
 
             }
+        }
+
+        if (taiLieu.IsDeleted && !hasPurchased && !canViewFullDoc) {
+            return res.status(404).json({ message: 'Tài liệu này đã bị gỡ khỏi hệ thống.' });
         }
 
         if (taiLieu.LaTaiLieuDocQuyen && !hasPurchased && !canViewFullDoc) {
@@ -1092,6 +1120,11 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
             await connection.commit();
             connection.release();
 
+            const { sendNotificationToUser } = require('./services/socket');
+            sendNotificationToUser(doc.MaND_NguoiDang, 'document_bought', {
+                message: `Bạn vừa nhận được ${giaXu} Xu do có người mua tài liệu "${doc.TenTL}".`
+            });
+
             res.status(200).json({ message: 'Mua tài liệu thành công!' });
         } catch (dbErr) {
             await connection.rollback();
@@ -1169,7 +1202,7 @@ router.post('/:maTL/rate', authMiddleware, rateLimiter, async (req, res) => {
 });
 
 
-router.post('/:maTL/comments', authMiddleware, commentLimiter, async (req, res) => {
+router.post('/:maTL/comments', authMiddleware, commentLimiter, moderationMiddleware(['noiDung']), async (req, res) => {
     const maTL = req.params.maTL;
     const maND = req.user.MaND;
     let { noiDung, maBL_Cha } = req.body;
@@ -1235,7 +1268,22 @@ router.post('/:maTL/comments', authMiddleware, commentLimiter, async (req, res) 
             }
         }
 
-        res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId });
+        const [newCommentRows] = await pool.execute(`
+            SELECT BL.MaBL, BL.NoiDung, BL.NgayBinhLuan, BL.DaChinhSua, BL.Ghim, BL.MaBL_Cha,
+                   ND.MaND, ND.HoTen, ND.AvatarURL, ND.Role
+            FROM BINHLUAN BL
+            JOIN NGUOIDUNG ND ON BL.MaND = ND.MaND
+            WHERE BL.MaBL = ?
+        `, [result.insertId]);
+
+        if (newCommentRows.length > 0) {
+            const io = req.app.get('io');
+            if (io) {
+                io.to(`document_${maTL}`).emit('new_document_comment', newCommentRows[0]);
+            }
+        }
+
+        res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId, comment: newCommentRows[0] });
     } catch (error) {
         console.error('Lỗi comment:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -1321,7 +1369,7 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
     try {
         const pool = req.app.locals.pool;
 
-        const [docs] = await pool.execute('SELECT TenTL FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        const [docs] = await pool.execute('SELECT TenTL, MaND_NguoiDang FROM TAILIEU WHERE MaTL = ?', [maTL]);
         if (docs.length === 0) {
             return res.status(404).json({ message: 'Tài liệu không tồn tại.' });
         }
@@ -1354,6 +1402,12 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
                 `Tài liệu "${docs[0].TenTL}" đã bị tạm ẩn do có quá nhiều báo cáo vi phạm. Vui lòng kiểm tra.`,
                 '../admin/adminViolationReports.html',
                 maND
+            );
+            
+            // Thông báo cho tác giả
+            await pool.execute(
+                'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+                [docs[0].MaND_NguoiDang, 'HeThong', `Tài liệu "${docs[0].TenTL}" của bạn đã bị tạm ẩn do nhận được quá nhiều báo cáo vi phạm từ cộng đồng. Admin sẽ kiểm tra lại.`, `../document/myDocuments.html`]
             );
         } else {
             await notifyActiveAdmins(
@@ -1652,6 +1706,39 @@ router.get('/:maTL/stream', async (req, res) => {
     } catch (err) {
         console.error('Lỗi stream file:', err);
         res.status(500).json({ message: 'Lỗi máy chủ' });
+    }
+});
+
+router.delete('/:maTL', authMiddleware, async (req, res) => {
+    const maTL = req.params.maTL;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [docs] = await pool.execute('SELECT MaND_NguoiDang, IsDeleted FROM TAILIEU WHERE MaTL = ?', [maTL]);
+        if (docs.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+        }
+
+        const doc = docs[0];
+        
+        // Only author or admin can delete
+        if (doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin') {
+            return res.status(403).json({ message: 'Bạn không có quyền xóa tài liệu này.' });
+        }
+
+        if (doc.IsDeleted) {
+            return res.status(400).json({ message: 'Tài liệu này đã bị xóa rồi.' });
+        }
+
+        // Thực hiện xóa mềm
+        await pool.execute('UPDATE TAILIEU SET IsDeleted = TRUE WHERE MaTL = ?', [maTL]);
+
+        res.status(200).json({ message: 'Đã xóa tài liệu (Xóa mềm).' });
+    } catch (error) {
+        console.error('Lỗi API DELETE /documents/:maTL:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 

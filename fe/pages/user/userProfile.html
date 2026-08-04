@@ -233,7 +233,7 @@
         </div>
       </div>
 
-      <div class="form-card" id="twofa-section" style="display: none; border-left: 4px solid #10b981;">
+      <div class="form-card" id="twofa-section" style="border-left: 4px solid #10b981;">
         <div class="collapsible-header" id="btn-toggle-2fa" style="cursor: pointer;">
           <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Xác thực 2 bước (2FA)</h2>
           <span class="toggle-status"
@@ -247,6 +247,7 @@
           <div style="padding: 10px 0;">
             <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Tăng cường bảo mật cho tài khoản của bạn bằng cách yêu cầu mã xác thực từ ứng dụng Google Authenticator hoặc Authy mỗi khi đăng nhập.</p>
             <button type="button" id="btn-setup-2fa" class="btn-primary" style="background-color: #10b981;"><i class="fa-solid fa-qrcode" style="margin-right: 6px;"></i> Thiết lập 2FA</button>
+            <button type="button" id="btn-disable-2fa" class="btn-primary" style="background-color: #ef4444; display: none;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Tắt 2FA</button>
             <div id="2fa-status-msg" style="margin-top: 10px; font-weight: 600; color: #10b981; display: none;"><i class="fa-solid fa-circle-check"></i> Xác thực 2 bước đang được BẬT</div>
           </div>
         </div>
@@ -467,11 +468,17 @@
       <p style="color: #4B5563; font-size: 15px; margin-bottom: 24px; line-height: 1.6;">Tài liệu <strong
           id="reject-reason-doc-title" style="color: #111827;"></strong> của bạn đã bị từ chối với lý do sau:</p>
 
-      <div
-        style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
-        <p id="reject-reason-content"
-          style="color: #111827; font-size: 14px; margin: 0; font-style: italic; white-space: pre-wrap; word-break: break-word;">
-        </p>
+      <div style="margin-bottom: 20px;">
+        <label class="form-label"
+          style="font-weight: 600; color: #374151; display: flex; align-items: center; margin-bottom: 10px;"><i
+            class="fa-solid fa-circle-exclamation" style="color: #EF4444; margin-right: 8px; font-size: 16px;"></i>
+          Lý do</label>
+        <div
+          style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px;">
+          <p id="reject-reason-content"
+            style="color: #111827; font-size: 14px; margin: 0; font-style: italic; white-space: pre-wrap; word-break: break-word;">
+          </p>
+        </div>
       </div>
 
       <div class="form-group" style="margin-bottom: 28px;">

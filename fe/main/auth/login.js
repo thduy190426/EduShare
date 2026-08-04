@@ -4,7 +4,6 @@ import { isValidEmail, saveLoginSession, getTimeBasedGreeting } from '../shared/
 document.addEventListener('DOMContentLoaded', async () => {
     const config = await fetchAppConfig();
 
-    // 1. Initialize Facebook
     window.fbAsyncInit = function() {
         FB.init({
             appId      : config.facebookAppId || '',
@@ -20,7 +19,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     fbScript.crossOrigin = 'anonymous';
     document.head.appendChild(fbScript);
 
-    // 2. Initialize Google Sign-In
     const googleScript = document.createElement('script');
     googleScript.src = 'https://accounts.google.com/gsi/client';
     googleScript.async = true;
@@ -42,7 +40,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     document.head.appendChild(googleScript);
 
-    // 3. Initialize reCAPTCHA
     window.onRecaptchaLoad = function() {
         const recaptchaContainer = document.getElementById('recaptcha-container');
         if (recaptchaContainer && config.recaptchaSiteKey) {

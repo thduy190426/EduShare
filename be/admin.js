@@ -424,7 +424,7 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
             await conn.execute(`DELETE FROM DANHGIA WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM BAOCAOVIPHAM WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM THONGBAO WHERE MaTL IN (${placeholders})`, documentIds);
-            await conn.execute(`DELETE FROM TAILIEU_DAMUA WHERE MaTL IN (${placeholders})`, documentIds);
+            // Bỏ dòng xóa TAILIEU_DAMUA để người đã mua vẫn tải được (Soft Delete)
             await conn.execute(`DELETE FROM TAILIEU_NHOM WHERE MaTL IN (${placeholders})`, documentIds);
             if (await tableExists('LICH_SU_TAI')) {
                 await conn.execute(`DELETE FROM LICH_SU_TAI WHERE MaTL IN (${placeholders})`, documentIds);
@@ -465,7 +465,7 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
 
         if (documentIds.length > 0) {
             const placeholders = documentIds.map(() => '?').join(',');
-            await conn.execute(`DELETE FROM TAILIEU WHERE MaTL IN (${placeholders})`, documentIds);
+            await conn.execute(`UPDATE TAILIEU SET IsDeleted = TRUE WHERE MaTL IN (${placeholders})`, documentIds);
 
             try {
                 for (const doc of docRows) {
@@ -1608,12 +1608,10 @@ router.delete('/promos/:id', adminMiddleware, async (req, res) => {
     }
 });
 
-// API xuất báo cáo doanh thu ra file CSV
 router.get('/export/revenue', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         
-        // Lấy danh sách các giao dịch đã duyệt (Doanh thu thực tế)
         const [rows] = await pool.execute(`
             SELECT G.*, N.HoTen, N.Email 
             FROM GIAODICH_NAPXU G
@@ -1622,7 +1620,7 @@ router.get('/export/revenue', adminMiddleware, async (req, res) => {
             ORDER BY G.NgayDuyet DESC
         `);
 
-        let csvContent = '\uFEFF'; // UTF-8 BOM
+        let csvContent = '\uFEFF'; 
         csvContent += 'Mã GD,Người Dùng,Email,Số Tiền (VNĐ),Số Xu,Khuyến Mãi,Ngày Tạo,Ngày Duyệt\n';
 
         let tongDoanhThu = 0;
@@ -1648,7 +1646,6 @@ router.get('/export/revenue', adminMiddleware, async (req, res) => {
             csvContent += values.join(',') + '\n';
         }
 
-        // Thêm dòng tổng cộng ở cuối
         csvContent += `\nTổng Cộng,,,${tongDoanhThu},${tongXu},,,\n`;
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');

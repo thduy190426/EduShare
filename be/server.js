@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { initSocket } = require('./services/socket');
 const helmet = require('helmet');
 const crypto = require('crypto');
 const mysql = require('mysql2/promise');
@@ -125,6 +127,10 @@ const requestLogger = (req, res, next) => {
 };
 
 const app = express();
+const server = http.createServer(app);
+const io = initSocket(server);
+app.set('io', io);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet({
@@ -603,6 +609,27 @@ app.post('/api/auth/2fa/verify-setup', authMiddleware, async (req, res) => {
     }
 });
 
+app.post('/api/auth/2fa/disable', authMiddleware, async (req, res) => {
+    const { password } = req.body;
+    try {
+        const [rows] = await pool.execute('SELECT MatKhau, AuthType FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy user' });
+        const user = rows[0];
+
+        if (user.AuthType === 'Local') {
+            if (!password) return res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại.' });
+            const isMatch = await bcrypt.compare(password, user.MatKhau);
+            if (!isMatch) return res.status(401).json({ message: 'Mật khẩu không chính xác.' });
+        }
+
+        await pool.execute('UPDATE NGUOIDUNG SET IsTwoFactorEnabled = FALSE WHERE MaND = ?', [req.user.MaND]);
+        res.json({ message: 'Xác thực 2 bước đã được tắt thành công' });
+    } catch (error) {
+        logger.error('2FA Disable failed', error);
+        res.status(500).json({ message: 'Lỗi máy chủ' });
+    }
+});
+
 app.post('/api/refresh-token', async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ message: 'Thiếu Refresh Token.' });
@@ -989,7 +1016,7 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, () => logBanner(PORT));
+    server.listen(PORT, () => logBanner(PORT));
 }
 
-module.exports = app;
+module.exports = { app, server };

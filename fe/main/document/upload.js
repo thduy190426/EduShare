@@ -14,6 +14,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const tenTLInput = document.getElementById('tenTL');
     const btnUpload = uploadForm.querySelector('button[type="submit"]');
     const subjectLevelInfo = createSubjectLevelInfo(subjectSelect);
+    
+    let moTaEditor;
+    if (typeof Quill !== 'undefined') {
+        moTaEditor = new Quill('#moTa-editor', {
+            theme: 'snow',
+            placeholder: 'Viết mô tả ngắn gọn về nội dung tài liệu...',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
+            }
+        });
+    }
 
     function checkUploadConditions() {
         const tenTL = tenTLInput.value.trim();
@@ -208,7 +224,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tenTL = document.getElementById('tenTL').value.trim();
         const maMonHoc = subjectSelect.value;
-        const moTa = document.getElementById('moTa').value.trim();
+        
+        let moTa = '';
+        if (moTaEditor) {
+            const moTaText = moTaEditor.getText().trim();
+            if (moTaText) {
+                moTa = moTaEditor.root.innerHTML;
+            }
+        }
+        
         const file = fileUpload.files[0];
 
         if (!maMonHoc) {
@@ -270,15 +294,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang chuẩn bị tải lên...';
-            
-            // 1. Get signature from backend
+
             const sigRes = await fetch(`${API_URL}/documents/generate-signature`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!sigRes.ok) throw new Error('Không thể tạo chữ ký bảo mật.');
             const sigData = await sigRes.json();
 
-            // 2. Upload to Cloudinary with Progress
             btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên Cloud...';
             const cloudForm = new FormData();
             cloudForm.append('file', file);
@@ -327,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 uploadProgressText.textContent = 'Đang lưu trữ dữ liệu...';
             }
 
-            // 3. Send final data to Backend
             btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu trữ dữ liệu...';
             formData.append('cloudinaryUrl', cloudData.secure_url);
             formData.append('publicId', cloudData.public_id);

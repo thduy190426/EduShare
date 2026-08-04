@@ -58,7 +58,6 @@ ul { list-style: none; }
 .search-box input { width: 100%; padding-left: 44px; height: 40px; border-radius: var(--radius-btn); border: 1px solid var(--border); background: var(--white); outline: none; transition: all 0.2s; font-size: 14px; }
 .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
 
-/* Custom Multiselect */
 .custom-multiselect { position: relative; min-width: 200px; }
 .multiselect-header { height: 40px; border: 1px solid var(--border); border-radius: var(--radius-btn); padding: 0 16px; font-size: 14px; background: var(--white); display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s ease; color: var(--text-primary); }
 .custom-multiselect.open .multiselect-header { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }

@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting, renderDocumentSkeleton, renderGroupSkeleton } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
@@ -363,12 +363,7 @@ async function fetchRecommendedGroups() {
     if (!grid) return;
     if (!token) return;
 
-    grid.innerHTML = `
-        <div class="home-empty-state">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            <p>Đang tải nhóm học tập...</p>
-        </div>
-    `;
+    grid.innerHTML = renderGroupSkeleton(3);
 
     try {
         const response = await fetch(`${API_URL}/groups/recommended?limit=3`, {
@@ -482,11 +477,13 @@ async function fetchRecommendedDocuments() {
             return;
         }
 
+        const grid = document.getElementById('recommendedDocGrid');
+        if (grid) grid.innerHTML = renderDocumentSkeleton(4);
+
         const response = await fetch(`${API_URL}/documents/recommended`, { headers });
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu gợi ý');
         
         const data = await response.json();
-        const grid = document.getElementById('recommendedDocGrid');
         if (!data.documents || data.documents.length === 0) {
             grid.innerHTML = '<p style="text-align:center;width:100%;color:#6b7280;">Chưa có gợi ý nào cho bạn lúc này.</p>';
         } else {
@@ -582,6 +579,8 @@ async function fetchTrendingDocuments() {
     try {
         const params = new URLSearchParams({ sapXep: 'NoiBat', limit: '4' });
         if (selectedSubjectId) params.set('maMonHoc', selectedSubjectId);
+        const grid = document.getElementById('trendingDocGrid');
+        if (grid) grid.innerHTML = renderDocumentSkeleton(4);
         const response = await fetch(`${API_URL}/documents/search?${params.toString()}`);
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu');
 
@@ -600,6 +599,8 @@ async function fetchLatestDocuments() {
     try {
         const params = new URLSearchParams({ trang: '1', limit: '4' });
         if (selectedSubjectId) params.set('maMonHoc', selectedSubjectId);
+        const grid = document.getElementById('homeDocGrid');
+        if (grid) grid.innerHTML = renderDocumentSkeleton(4);
         const response = await fetch(`${API_URL}/documents/search?${params.toString()}`);
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu');
 

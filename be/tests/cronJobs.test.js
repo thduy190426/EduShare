@@ -54,7 +54,7 @@ describe('Cron Jobs', () => {
         await rewardJob();
         
         expect(mockConnection.beginTransaction).toHaveBeenCalled();
-        expect(mockConnection.execute).toHaveBeenCalledTimes(6); // 2 users * 3 queries
+        expect(mockConnection.execute).toHaveBeenCalledTimes(6); 
         expect(mockConnection.commit).toHaveBeenCalled();
         expect(mockConnection.release).toHaveBeenCalled();
     });

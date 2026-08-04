@@ -130,7 +130,7 @@ async function deleteUserAndRelatedData(conn, maND) {
 
     if (documentIds.length > 0) {
         const placeholders = documentIds.map(() => '?').join(',');
-        await conn.execute(`DELETE FROM TAILIEU WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`UPDATE TAILIEU SET IsDeleted = TRUE WHERE MaTL IN (${placeholders})`, documentIds);
     }
 
     return conn.execute('DELETE FROM NGUOIDUNG WHERE MaND = ?', [maND]);
@@ -205,7 +205,7 @@ router.get('/top-contributors', async (req, res) => {
 router.get('/profile', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu, HienThiLichSuTai, HienThiDanhGia, AuthType FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
+        const [rows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, Tuoi, GioiTinh, DiaChi, TruongHoc, KhoaNganh, SoDuXu, HienThiLichSuTai, HienThiDanhGia, AuthType, IsTwoFactorEnabled FROM NGUOIDUNG WHERE MaND = ?', [req.user.MaND]);
 
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
 
@@ -605,6 +605,14 @@ router.delete('/profile/avatar', authMiddleware, async (req, res) => {
 router.get('/my-documents', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const offset = (page - 1) * limit;
+
+        const [countResult] = await pool.execute('SELECT COUNT(*) AS total FROM TAILIEU WHERE MaND_NguoiDang = ?', [req.user.MaND]);
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limit);
+
         const [rows] = await pool.execute(`
             SELECT
                 TL.MaTL,
@@ -627,9 +635,10 @@ router.get('/my-documents', authMiddleware, async (req, res) => {
             LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
             WHERE TL.MaND_NguoiDang = ?
             ORDER BY TL.NgayDang DESC
-        `, [req.user.MaND]);
+            LIMIT ? OFFSET ?
+        `, [req.user.MaND, limit.toString(), offset.toString()]);
 
-        res.status(200).json({ documents: rows });
+        res.status(200).json({ documents: rows, total, totalPages, currentPage: page });
     } catch (error) {
         console.error('Lỗi my-documents:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -640,6 +649,18 @@ router.get('/my-documents', authMiddleware, async (req, res) => {
 router.get('/bookmarks', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const offset = (page - 1) * limit;
+
+        const [countResult] = await pool.execute(`
+            SELECT COUNT(*) AS total FROM BOOKMARK B
+            JOIN TAILIEU TL ON B.MaTL = TL.MaTL
+            WHERE B.MaND = ? AND TL.TrangThaiHienThi = 'Hien'
+        `, [req.user.MaND]);
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limit);
+
         const [rows] = await pool.execute(`
             SELECT TL.*, MH.TenMonHoc, B.NgayLuu, ND.HoTen AS TenNguoiDang,
                    COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
@@ -650,9 +671,10 @@ router.get('/bookmarks', authMiddleware, async (req, res) => {
             LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             WHERE B.MaND = ? AND TL.TrangThaiHienThi = 'Hien'
             ORDER BY B.NgayLuu DESC
-        `, [req.user.MaND]);
+            LIMIT ? OFFSET ?
+        `, [req.user.MaND, limit.toString(), offset.toString()]);
 
-        res.status(200).json({ documents: rows });
+        res.status(200).json({ documents: rows, total, totalPages, currentPage: page });
     } catch (error) {
         console.error('Lỗi bookmarks:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -830,14 +852,23 @@ router.get('/following', authMiddleware, async (req, res) => {
 router.get('/my-reports', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const offset = (page - 1) * limit;
+
+        const [countResult] = await pool.execute('SELECT COUNT(*) AS total FROM BAOCAOVIPHAM WHERE MaND = ?', [req.user.MaND]);
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limit);
+
         const [rows] = await pool.execute(`
             SELECT BC.*, TL.TenTL, TL.FileURL 
             FROM BAOCAOVIPHAM BC 
             JOIN TAILIEU TL ON BC.MaTL = TL.MaTL 
             WHERE BC.MaND = ? 
             ORDER BY BC.NgayBaoCao DESC
-        `, [req.user.MaND]);
-        res.status(200).json({ reports: rows });
+            LIMIT ? OFFSET ?
+        `, [req.user.MaND, limit.toString(), offset.toString()]);
+        res.status(200).json({ reports: rows, total, totalPages, currentPage: page });
     } catch (error) {
         console.error('Lỗi lấy báo cáo:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -847,6 +878,14 @@ router.get('/my-reports', authMiddleware, async (req, res) => {
 router.get('/purchased-documents', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5;
+        const offset = (page - 1) * limit;
+
+        const [countResult] = await pool.execute('SELECT COUNT(*) AS total FROM TAILIEU_DAMUA WHERE MaND = ?', [req.user.MaND]);
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limit);
+
         const [rows] = await pool.execute(`
             SELECT TL.MaTL, TL.TenTL, TL.MoTa, TL.LoaiFile, TL.MaMonHoc, TL.TrangThaiKiemDuyet,
                    TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.LaTaiLieuDocQuyen, TL.GiaXu,
@@ -860,8 +899,9 @@ router.get('/purchased-documents', authMiddleware, async (req, res) => {
             LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
             WHERE TDM.MaND = ?
             ORDER BY TDM.NgayMua DESC
-        `, [req.user.MaND]);
-        res.status(200).json({ documents: rows });
+            LIMIT ? OFFSET ?
+        `, [req.user.MaND, limit.toString(), offset.toString()]);
+        res.status(200).json({ documents: rows, total, totalPages, currentPage: page });
     } catch (error) {
         console.error('Lỗi lấy tài liệu đã mua:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });

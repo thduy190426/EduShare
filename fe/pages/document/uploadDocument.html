@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.3/purify.min.js"></script>
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
 <body>
   
@@ -87,9 +90,11 @@
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: 20px;">
           <label class="form-label">Mô tả tài liệu:</label>
-          <textarea id="moTa" class="form-control" placeholder="Viết mô tả ngắn về nội dung tài liệu..."></textarea>
+          <div style="border-radius: 8px; overflow: hidden; border: 1px solid #CBD5E1;">
+            <div id="moTa-editor" style="height: 150px; background: white; font-family: inherit; font-size: 15px;"></div>
+          </div>
         </div>
 
         <div class="form-group" id="premium-form-group" style="display: none; background: #FFFBEB; padding: 15px; border: 1px solid #FDE68A; border-radius: 8px;">

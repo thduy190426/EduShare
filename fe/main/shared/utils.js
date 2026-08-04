@@ -327,3 +327,49 @@ export const renderPagination = (containerId, totalPages, currentPage, onPageCha
     }
     container.appendChild(nextBtn);
 };
+
+export const renderDocumentSkeleton = (count = 6) => {
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="doc-card skeleton-card skeleton-box">
+                <div class="skeleton-thumb skeleton-box"></div>
+                <div class="skeleton-content">
+                    <div class="skeleton-meta">
+                        <div class="skeleton-text skeleton-box"></div>
+                        <div class="skeleton-text skeleton-box" style="width: 25%;"></div>
+                    </div>
+                    <div class="skeleton-title skeleton-box"></div>
+                    <div class="skeleton-desc skeleton-box"></div>
+                    <div class="skeleton-desc short skeleton-box"></div>
+                    <div class="skeleton-footer">
+                        <div class="skeleton-author">
+                            <div class="skeleton-avatar skeleton-box"></div>
+                            <div class="skeleton-name skeleton-box"></div>
+                        </div>
+                        <div class="skeleton-stats skeleton-box"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    return html;
+};
+
+export const renderGroupSkeleton = (count = 6) => {
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="group-card skeleton-card skeleton-box">
+                <div class="skeleton-group-cover skeleton-box"></div>
+                <div class="skeleton-group-info">
+                    <div class="skeleton-group-title skeleton-box"></div>
+                    <div class="skeleton-group-desc skeleton-box"></div>
+                    <div class="skeleton-group-desc skeleton-box" style="width: 80%;"></div>
+                    <div class="skeleton-group-meta skeleton-box"></div>
+                </div>
+            </div>
+        `;
+    }
+    return html;
+};

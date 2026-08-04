@@ -1,5 +1,6 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderGroupSkeleton } from '../shared/utils.js';
+import { getSocket } from '../shared/socketClient.js';
 
 const token = getToken();
 
@@ -309,7 +310,7 @@ window.fetchGroups = async function(page = 1, isAppend = false) {
     if (scrollSpinner) scrollSpinner.style.display = 'flex';
     if (scrollEndMessage) scrollEndMessage.style.display = 'none';
 
-    if (!isAppend && grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải danh sách nhóm...</p></div>';
+    if (!isAppend && grid) grid.innerHTML = renderGroupSkeleton(6);
     
     try {
         const res = await fetch(`${API_URL}/groups?page=${page}&limit=${currentLimit}`, {
@@ -374,7 +375,7 @@ window.fetchMyGroups = async function(page = 1, isAppend = false) {
     if (scrollSpinner) scrollSpinner.style.display = 'flex';
     if (scrollEndMessage) scrollEndMessage.style.display = 'none';
 
-    if (!isAppend && grid) grid.innerHTML = '<div style="text-align:center; padding:40px; width:100%;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--primary-color);"></i><p style="margin-top:10px; color:var(--text-secondary);">Đang tải nhóm của bạn...</p></div>';
+    if (!isAppend && grid) grid.innerHTML = renderGroupSkeleton(6);
 
     const recSection = document.getElementById('recommended-section');
     if (recSection) recSection.style.display = 'none';
@@ -757,6 +758,47 @@ async function initGroupDetails() {
         Swal.fire('Không tìm thấy ID nhóm!');
         window.location.href = 'groupList.html';
         return;
+    }
+
+    const socket = getSocket();
+    if (socket) {
+        socket.emit('join_group', currentGroupId);
+        socket.off('new_group_comment');
+        socket.on('new_group_comment', (payload) => {
+            const { postId, comment } = payload;
+            const list = document.getElementById(`comment-list-${postId}`);
+            if (list) {
+                const dateObj = new Date(comment.NgayBinhLuan);
+                const dateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()} | ${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
+                
+                const avatarHtml = comment.AvatarURL 
+                    ? `<img src="${escapeHTML(getAssetUrl(comment.AvatarURL))}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
+                    : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">${escapeHTML(comment.HoTen.charAt(0).toUpperCase())}</div>`;
+                
+                const cmtDiv = document.createElement('div');
+                cmtDiv.className = 'comment-item';
+                cmtDiv.style.animation = 'slideDown 0.3s ease-out';
+                cmtDiv.innerHTML = `
+                    ${avatarHtml}
+                    <div class="comment-bubble">
+                        <div class="comment-author-name">${escapeHTML(comment.HoTen)}</div>
+                        <div class="comment-content">${window.DOMPurify ? window.DOMPurify.sanitize(comment.NoiDung).replace(/@\\[(.*?)\\]\\((\\d+)\\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>') : escapeHTML(comment.NoiDung)}</div>
+                        <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
+                    </div>
+                `;
+                list.appendChild(cmtDiv);
+                list.scrollTop = list.scrollHeight;
+                
+                const btn = document.querySelector(`button[onclick="toggleComments(${postId})"]`);
+                if (btn) {
+                    const match = btn.innerHTML.match(/\((\d+)\)/);
+                    if (match) {
+                        const count = parseInt(match[1]) + 1;
+                        btn.innerHTML = `<i class="fa-regular fa-comment"></i> Bình luận (${count})`;
+                    }
+                }
+            }
+        });
     }
 
     const payload = decodeJWT(token);
@@ -2251,78 +2293,87 @@ function createGroupDocCard(doc) {
         ? `<div class="avatar-sm" style="background:transparent; color:transparent;"><img loading="lazy" src="${escapeHTML(getAssetUrl(doc.AvatarURL))}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>` 
         : `<div class="avatar-sm">${escapeHTML(doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase())}</div>`;
 
-    let coverHtml = '';
-    const fileExt = doc.LoaiFile.toLowerCase();
-    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt);
+    let icon = 'fa-file';
+    let thumbClass = '';
+    let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
 
-    if (isImage) {
-        coverHtml = `<div class="doc-cover has-image"><img loading="lazy" src="${escapeHTML(getAssetUrl(doc.FileURL))}" alt="Cover"></div>`;
-    } else {
-        const previewUrl = doc.PreviewURL ? escapeHTML(getAssetUrl(doc.PreviewURL)) : null;
-        if (previewUrl) {
-            coverHtml = `<div class="doc-cover has-image"><img loading="lazy" src="${previewUrl}" alt="Cover"></div>`;
-        } else {
-            let iconClass = 'fa-file-lines';
-            if (['pdf'].includes(fileExt)) iconClass = 'fa-file-pdf';
-            if (['doc', 'docx'].includes(fileExt)) iconClass = 'fa-file-word';
-            if (['xls', 'xlsx'].includes(fileExt)) iconClass = 'fa-file-excel';
-            if (['ppt', 'pptx'].includes(fileExt)) iconClass = 'fa-file-powerpoint';
-            if (['mp4', 'webm', 'mov'].includes(fileExt)) iconClass = 'fa-file-video';
-            if (['mp3', 'wav', 'ogg'].includes(fileExt)) iconClass = 'fa-file-audio';
-            if (['zip', 'rar', '7z'].includes(fileExt)) iconClass = 'fa-file-zipper';
-            
-            coverHtml = `<div class="doc-cover"><i class="fa-solid ${iconClass} doc-icon"></i><div class="doc-file-type">${escapeHTML(fileExt).toUpperCase()}</div></div>`;
-        }
+    if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; thumbClass = 'thumb-pdf'; }
+    else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-chart-column'; thumbClass = 'thumb-pptx'; }
+    else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-pen-to-square'; thumbClass = 'thumb-docx'; }
+    else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(loaiFile)) { icon = 'fa-image'; thumbClass = 'thumb-img'; }
+    
+    const officialBadge = doc.LaTaiLieuChinhThuc ? `<div class="badge-official"><i class="fa-solid fa-check"></i> Tài liệu chính thống</div>` : '';
+    const premiumBadge = doc.GiaXu > 0 ? `<div class="badge-premium" style="position: absolute; top: 12px; left: 12px; z-index: 10; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #FDE68A;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 4px;"></i> PREMIUM (${doc.GiaXu || 0} Xu)</div>` : '';
+    
+    let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
+    let previewTarget = null;
+    if (doc.PreviewURL) {
+        previewTarget = doc.PreviewURL;
+    } else if (loaiFile === 'pdf' && doc.FileURL) {
+        previewTarget = doc.FileURL;
+    }
+
+    if (previewTarget) {
+        thumbHtml = `
+            <iframe
+                src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
+                title="Preview"
+                style="width: 100%; height: 100%; border: none; object-fit: cover; pointer-events: none;"
+                scrolling="no">
+            </iframe>
+        `;
+    } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(loaiFile) && doc.FileURL) {
+        thumbHtml = `<img src="${getAssetUrl(doc.FileURL)}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">`;
     }
 
     const bookmarkActive = bookmarkedDocs.has(doc.MaTL);
     
-    function renderStars(d) {
-        let html = '';
-        for (let i = 1; i <= 5; i++) {
-            if (i <= Math.floor(d)) html += '<i class="fa-solid fa-star"></i>';
-            else if (i === Math.ceil(d) && !Number.isInteger(d)) html += '<i class="fa-solid fa-star-half-stroke"></i>';
-            else html += '<i class="fa-regular fa-star"></i>';
-        }
-        return html;
-    }
-    const starHtml = renderStars(Number(doc.DiemDanhGia) || 0);
-    
-    function formatNumber(num) { return new Intl.NumberFormat('vi-VN').format(num); }
-
-    const div = document.createElement('div');
-    div.className = 'doc-card';
+    const div = document.createElement('a');
+    div.href = `../document/documentDetails.html?id=${doc.MaTL}`;
+    div.target = '_blank';
+    div.className = `doc-card ${doc.LaTaiLieuChinhThuc ? 'official' : ''}`;
     if (doc.TrangThaiNhom === 'An') div.style.opacity = '0.6';
+
+    const formatRatingSummary = (score, count) => {
+        if (!count || count === 0) return '0.0 (0 đánh giá)';
+        return `${Number(score).toFixed(1)} (${count} đánh giá)`;
+    };
+
     div.innerHTML = `
-        ${coverHtml}
-        <div class="doc-info">
-          <div class="doc-title">${escapeHTML(doc.TenTL)} ${badgeHtml}</div>
-          <div class="doc-meta">
-            <span class="subject-badge">${escapeHTML(doc.TenMonHoc) || 'Chung'}</span>
-            <span style="display:flex; align-items:center; gap:4px; font-weight:600; color:#F59E0B;">${starHtml} <span style="font-size:11px;">(${doc.SoDanhGia || 0})</span></span>
-          </div>
-          <div class="doc-stats">
-            <span title="Lượt tải"><i class="fa-solid fa-download"></i> ${formatNumber(doc.SoLuotTai || 0)}</span>
-            <span title="Lượt xem"><i class="fa-solid fa-eye"></i> ${formatNumber(doc.SoLuotXem || 0)}</span>
-            ${doc.GiaXu > 0 ? `<span style="color:#F59E0B;" title="Giá"><i class="fa-solid fa-coins"></i> ${formatNumber(doc.GiaXu)}</span>` : '<span style="color:var(--success);"><i class="fa-solid fa-check"></i> Miễn phí</span>'}
-          </div>
-          <div style="display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-            ${avatarHtml}
-            <div style="display:flex; flex-direction:column;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-primary); line-height:1.2;">${escapeHTML(doc.TenNguoiDang)}</span>
-                <span style="font-size:11px; color:var(--text-secondary);">${dateStr}</span>
+        <div class="doc-thumb ${thumbClass}">
+            ${officialBadge}
+            ${premiumBadge}
+            ${thumbHtml}
+            <div class="doc-overlay">
+                <span class="btn-preview">Xem chi tiết</span>
             </div>
-            <div class="doc-actions-overlay" style="margin-left: auto;">
-                <button class="doc-action-btn ${bookmarkActive ? 'active' : ''}" type="button" title="${bookmarkActive ? 'Bỏ lưu' : 'Lưu tài liệu'}" onclick="event.stopPropagation(); window.toggleBookmark(${doc.MaTL}, this)">
-                  <i class="${bookmarkActive ? 'fa-solid' : 'fa-regular'} fa-bookmark"></i>
-                </button>
-                <button class="doc-action-btn" type="button" title="Tùy chọn" onclick="event.stopPropagation(); window.showDocContextMenu(event, ${doc.MaTL}, ${isGroupAdmin})">
-                  <i class="fa-solid fa-ellipsis-vertical"></i>
-                </button>
+            <button class="bookmark-btn ${bookmarkActive ? 'active' : ''}" type="button" title="${bookmarkActive ? 'Bỏ lưu' : 'Lưu tài liệu'}" onclick="event.preventDefault(); window.toggleBookmark(${doc.MaTL}, this)">
+                <i class="${bookmarkActive ? 'fa-solid' : 'fa-regular'} fa-bookmark"></i>
+            </button>
+        </div>
+        <div class="doc-content">
+            <div class="doc-meta" style="display: flex; justify-content: space-between; align-items: center;">
+                <span class="doc-meta-item" style="max-width: 65%;"><span><i class="fa-solid fa-folder" style="flex-shrink: 0;"></i></span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHTML(doc.TenMonHoc || 'Chung')}">${escapeHTML(doc.TenMonHoc || 'Chung')}</span></span>
+                <span class="doc-meta-item" style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
             </div>
-          </div>
+            <h3 class="doc-title">${escapeHTML(doc.TenTL)} ${doc.TrangThaiNhom === 'An' ? `<span style="background:#FEE2E2; color:#EF4444; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:600; margin-left:4px;">Bị ẩn</span>` : ''}</h3>
+            <div class="doc-desc">${escapeHTML(doc.MoTa || 'Không có mô tả')}</div>
+            <div class="doc-footer">
+                <div class="doc-author">
+                    ${avatarHtml}
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; display: inline-block; vertical-align: middle;">${escapeHTML(doc.TenNguoiDang)}</span>
+                </div>
+                <div class="doc-stats" style="display: flex; gap: 8px; align-items: center;">
+                    <span style="white-space: nowrap;"><i class="fa-solid fa-download" style="color: #6B7280; margin-right: 4px;"></i> ${(doc.SoLuotTai || 0).toLocaleString()}</span>
+                    <span style="white-space: nowrap;"><i class="fa-solid fa-star" style="color: #F59E0B; margin-right: 4px;"></i> ${formatRatingSummary(doc.DiemDanhGia, doc.SoDanhGia)}</span>
+                    <button class="doc-action-btn" style="width: 24px; height: 24px; background: transparent; box-shadow: none; padding: 0; margin-left: 2px; display: flex; align-items: center; justify-content: center; opacity: 1;" type="button" title="Tùy chọn" onclick="event.preventDefault(); window.showDocContextMenu(event, ${doc.MaTL}, ${isGroupAdmin})">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     `;
+
     div.addEventListener('click', (e) => {
         if (!e.target.closest('button')) {
             window.open(`/fe/pages/document/documentDetails.html?id=${doc.MaTL}`, '_blank');
@@ -2402,29 +2453,45 @@ function setupDiscussions() {
     }
 
     const btnCreate = document.getElementById('btn-create-post');
-    const inputContent = document.getElementById('new-post-content');
+    let postEditor;
+    if (typeof Quill !== 'undefined' && document.getElementById('post-editor')) {
+        postEditor = new Quill('#post-editor', {
+            theme: 'snow',
+            placeholder: 'Bạn muốn thảo luận gì trong nhóm này?',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
+            }
+        });
+    }
     
-    if (btnCreate && inputContent) {
-        btnCreate.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi bình luận';
+    if (btnCreate) {
+        btnCreate.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi bài';
         btnCreate.disabled = true;
         btnCreate.style.opacity = '0.6';
         btnCreate.style.cursor = 'not-allowed';
 
-        inputContent.addEventListener('input', () => {
-            if (inputContent.value.trim().length > 0) {
-                btnCreate.disabled = false;
-                btnCreate.style.opacity = '1';
-                btnCreate.style.cursor = 'pointer';
-            } else {
-                btnCreate.disabled = true;
-                btnCreate.style.opacity = '0.6';
-                btnCreate.style.cursor = 'not-allowed';
-            }
-        });
+        if (postEditor) {
+            postEditor.on('text-change', () => {
+                if (postEditor.getText().trim().length > 0) {
+                    btnCreate.disabled = false;
+                    btnCreate.style.opacity = '1';
+                    btnCreate.style.cursor = 'pointer';
+                } else {
+                    btnCreate.disabled = true;
+                    btnCreate.style.opacity = '0.6';
+                    btnCreate.style.cursor = 'not-allowed';
+                }
+            });
+        }
 
         btnCreate.addEventListener('click', async () => {
-            const content = inputContent.value.trim();
-            if (!content) return;
+            const content = postEditor ? postEditor.root.innerHTML : '';
+            if (!postEditor || postEditor.getText().trim().length === 0) return;
             
             const lastPost = localStorage.getItem(`lastGroupPost_${currentGroupId}`);
             if (lastPost && Date.now() - parseInt(lastPost) < 30000) {
@@ -2446,7 +2513,9 @@ function setupDiscussions() {
                 });
                 if (res.ok) {
                     localStorage.setItem(`lastGroupPost_${currentGroupId}`, Date.now().toString());
-                    inputContent.value = '';
+                    if (postEditor) {
+                        postEditor.setText('');
+                    }
                     btnCreate.disabled = true;
                     btnCreate.style.opacity = '0.6';
                     btnCreate.style.cursor = 'not-allowed';
@@ -2558,7 +2627,7 @@ function createPostCard(post) {
                 ${actionButtons}
             </div>
         </div>
-        <div class="post-content">${escapeHTML(post.NoiDung)}</div>
+        <div class="post-content">${DOMPurify.sanitize(post.NoiDung)}</div>
         <div class="post-actions">
             <button class="post-action-btn" onclick="toggleComments(${post.MaBaiViet})">
                 <i class="fa-regular fa-comment"></i> Bình luận (${post.SoBinhLuan || 0})
@@ -2655,7 +2724,7 @@ window.toggleComments = async (postId) => {
                     ${avatarHtml}
                     <div class="comment-bubble">
                         <div class="comment-author-name">${escapeHTML(cmt.HoTen)}</div>
-                        <div class="comment-content">${escapeHTML(cmt.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
+                        <div class="comment-content">${DOMPurify.sanitize(cmt.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
                         <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
                     </div>
                 `;

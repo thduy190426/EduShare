@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 const { authMiddleware } = require('./middlewares/auth');
+const { moderationMiddleware } = require('./middlewares/moderation');
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -45,7 +46,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), async (req, res) => {
     const { tenNhom, moTa, maMonHoc } = req.body;
     const maND = req.user.MaND;
 
@@ -155,6 +156,15 @@ router.get('/recommended', authMiddleware, async (req, res) => {
                            ) THEN 2
                            ELSE 0
                        END
+                       +
+                       CASE
+                           WHEN N.MaMonHoc IN (
+                               SELECT DISTINCT UM.MaMonHoc
+                               FROM NGUOIDUNG_MONHOC UM
+                               WHERE UM.MaND = ?
+                           ) THEN 3
+                           ELSE 0
+                       END
                    ) AS DiemGoiY
             FROM NHOM N
             JOIN NGUOIDUNG ND ON N.MaND_QuanTri = ND.MaND
@@ -163,7 +173,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
             WHERE N.TrangThai = 'HoatDong' AND TV.MaNhom IS NULL
             ORDER BY DiemGoiY DESC, SoLuongThanhVien DESC, N.NgayTao DESC
             LIMIT ${limit}
-        `, [maND, maND, maND]);
+        `, [maND, maND, maND, maND]);
 
         res.status(200).json({ groups: rows });
     } catch (error) {
@@ -398,6 +408,11 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Tài liệu này đã được chia sẻ trong nhóm.' });
         }
 
+        const MAX_DOCS_PER_GROUP = 25;
+        const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM TAILIEU_NHOM WHERE MaNhom = ?', [maNhom]);
+        if (countRows[0].total >= MAX_DOCS_PER_GROUP) {
+            return res.status(400).json({ message: `Nhóm đã đạt giới hạn tối đa ${MAX_DOCS_PER_GROUP} tài liệu. Vui lòng gỡ bớt tài liệu cũ để chia sẻ thêm.` });
+        }
 
         await pool.execute('INSERT INTO TAILIEU_NHOM (MaTL, MaNhom) VALUES (?, ?)', [maTL, maNhom]);
 
@@ -438,7 +453,7 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
             SELECT COUNT(*) AS totalCount
             FROM TAILIEU_NHOM TN
             JOIN TAILIEU T ON TN.MaTL = T.MaTL
-            WHERE TN.MaNhom = ? AND T.TrangThaiHienThi = 'Hien'
+            WHERE TN.MaNhom = ? AND T.TrangThaiHienThi = 'Hien' AND T.IsDeleted = FALSE
         `;
         let countParams = [maNhom];
 
@@ -460,7 +475,7 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
             JOIN TAILIEU T ON TN.MaTL = T.MaTL
             LEFT JOIN NGUOIDUNG N ON T.MaND_NguoiDang = N.MaND
             LEFT JOIN MONHOC MH ON T.MaMonHoc = MH.MaMonHoc
-            WHERE TN.MaNhom = ? AND T.TrangThaiHienThi = 'Hien'
+            WHERE TN.MaNhom = ? AND T.TrangThaiHienThi = 'Hien' AND T.IsDeleted = FALSE
         `;
         const params = [maNhom];
 
@@ -583,7 +598,7 @@ router.get('/:maNhom', authMiddleware, async (req, res) => {
     }
 });
 
-router.put('/:maNhom', authMiddleware, async (req, res) => {
+router.put('/:maNhom', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), async (req, res) => {
     const maNhom = req.params.maNhom;
     const maND = req.user.MaND;
     const { tenNhom, moTa, maMonHoc, anhBia, isPrivate } = req.body;
@@ -857,7 +872,7 @@ router.get('/:maNhom/posts', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/:maNhom/posts', authMiddleware, async (req, res) => {
+router.post('/:maNhom/posts', authMiddleware, moderationMiddleware(['noiDung']), async (req, res) => {
     const maNhom = req.params.maNhom;
     const { noiDung } = req.body;
     const maND = req.user.MaND;
@@ -962,7 +977,7 @@ router.get('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) =
     }
 });
 
-router.post('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) => {
+router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddleware(['noiDung']), async (req, res) => {
     const { maNhom, postId } = req.params;
     const { noiDung } = req.body;
     const maND = req.user.MaND;
@@ -1002,7 +1017,25 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) 
             }
         }
 
-        res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId });
+        const [newCommentRows] = await pool.execute(`
+            SELECT BL.MaBL, BL.NoiDung, BL.NgayBinhLuan,
+                   ND.MaND, ND.HoTen, ND.AvatarURL
+            FROM BINHLUAN_BAIVIET BL
+            JOIN NGUOIDUNG ND ON BL.MaND = ND.MaND
+            WHERE BL.MaBL = ?
+        `, [result.insertId]);
+
+        if (newCommentRows.length > 0) {
+            const io = req.app.get('io');
+            if (io) {
+                io.to(`group_${maNhom}`).emit('new_group_comment', {
+                    postId,
+                    comment: newCommentRows[0]
+                });
+            }
+        }
+
+        res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId, comment: newCommentRows[0] });
     } catch (error) {
         console.error('Lỗi API POST /groups/:maNhom/posts/:postId/comments:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });

@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { escapeHTML, formatRatingSummary, getAssetUrl } from '../shared/utils.js';
+import { escapeHTML, formatRatingSummary, getAssetUrl, renderDocumentSkeleton } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     fetchFeaturedDocuments();
@@ -87,6 +87,8 @@ function renderSubjects(subjects) {
 async function fetchFeaturedDocuments() {
     const grid = document.getElementById('homeDocGrid');
     if (!grid) return;
+
+    grid.innerHTML = renderDocumentSkeleton(6);
 
     try {
         const response = await fetch(`${API_URL}/documents/search?trang=1&limit=6&sapXep=NoiBat`);

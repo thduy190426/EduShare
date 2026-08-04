@@ -1,5 +1,6 @@
 import { API_URL } from './config.js';
 import { decodeJWT, getAssetUrl, getToken, getRefreshToken, getAvatar, clearAuthSession, showToast, getTimeBasedGreeting } from './utils.js';
+import { getSocket } from './socketClient.js';
 
 const SIDEBAR_ITEMS = [
     { label: 'Trang chủ', icon: 'fa-house', href: '../user/userHome.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -400,9 +401,40 @@ function setupNotificationNavigation() {
     });
 }
 
+function setupRealtimeNotifications() {
+    const socket = getSocket();
+    if (!socket) return;
+    
+    socket.on('notification', (payload) => {
+        const { type, data } = payload;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: 'Thông báo mới',
+                text: data.message || 'Bạn có một thông báo mới',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true
+            });
+        } else if (typeof showToast === 'function') {
+            showToast('info', data.message || 'Bạn có thông báo mới');
+        }
+        
+        const badgeEls = document.querySelectorAll('.notification-badge, #notificationCount, .badge-count');
+        badgeEls.forEach(badge => {
+            let count = parseInt(badge.textContent || '0');
+            badge.textContent = count + 1;
+            badge.style.display = 'inline-flex';
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     renderSidebar();
     renderNavbarUserProfile();
     setupUserProfileNavigation();
     setupNotificationNavigation();
+    setupRealtimeNotifications();
 });

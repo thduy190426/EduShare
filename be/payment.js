@@ -200,6 +200,11 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
             await connection.commit();
             connection.release();
 
+            const { sendNotificationToUser } = require('./services/socket');
+            sendNotificationToUser(tx.MaND, 'payment_approved', {
+                message: `Giao dịch nạp ${tx.SoXu} xu của bạn đã được phê duyệt thành công!`
+            });
+
             res.status(200).json({ message: 'Duyệt thành công!' });
         } catch (dbErr) {
             await connection.rollback();
@@ -238,6 +243,13 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
             );
 
             await connection.commit();
+            connection.release();
+
+            const { sendNotificationToUser } = require('./services/socket');
+            sendNotificationToUser(txRows[0].MaND, 'payment_rejected', {
+                message: `Giao dịch nạp xu (Mã GD: ${maGD}) của bạn đã bị từ chối do không nhận được thanh toán.`
+            });
+
             res.status(200).json({ message: 'Đã từ chối giao dịch.' });
         } catch (dbErr) {
             await connection.rollback();
@@ -268,7 +280,7 @@ router.delete('/delete/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-// API xuất báo cáo lịch sử nạp xu ra file CSV
+
 router.get('/export/history', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
@@ -279,7 +291,7 @@ router.get('/export/history', adminMiddleware, async (req, res) => {
             ORDER BY G.NgayTao DESC
         `);
 
-        let csvContent = '\uFEFF'; // UTF-8 BOM
+        let csvContent = '\uFEFF'; 
         csvContent += 'Mã GD,Người Dùng,Email,Số Tiền (VNĐ),Số Xu,Khuyến Mãi,Ngày Tạo,Ngày Duyệt,Trạng Thái\n';
 
         for (const row of rows) {

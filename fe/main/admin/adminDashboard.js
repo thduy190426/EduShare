@@ -38,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 a.remove();
                 window.URL.revokeObjectURL(url);
             } catch (err) {
-                // Ignore Swal error if not imported, or log
                 console.error(err);
                 alert(err.message);
             } finally {

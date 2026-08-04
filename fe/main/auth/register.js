@@ -4,7 +4,6 @@ import { isValidEmail, isValidName } from '../shared/utils.js';
 document.addEventListener('DOMContentLoaded', async () => {
     const config = await fetchAppConfig();
 
-    // 1. Initialize Google Sign-In
     const googleScript = document.createElement('script');
     googleScript.src = 'https://accounts.google.com/gsi/client';
     googleScript.async = true;
@@ -26,7 +25,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     document.head.appendChild(googleScript);
 
-    // 2. Initialize reCAPTCHA
     window.onRecaptchaLoad = function() {
         const recaptchaContainer = document.getElementById('recaptcha-container');
         if (recaptchaContainer && config.recaptchaSiteKey) {

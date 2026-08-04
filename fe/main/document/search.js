@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderDocumentSkeleton } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
@@ -305,8 +305,11 @@ document.addEventListener('DOMContentLoaded', () => {
         isLoading = true;
         currentPage = page;
 
-        if (scrollSpinner) scrollSpinner.style.display = 'flex';
+        if (scrollSpinner && isAppend) scrollSpinner.style.display = 'flex';
         if (scrollEndMessage) scrollEndMessage.style.display = 'none';
+        if (!isAppend && resultsGrid) {
+            resultsGrid.innerHTML = renderDocumentSkeleton(6);
+        }
 
         const queryParams = new URLSearchParams();
 

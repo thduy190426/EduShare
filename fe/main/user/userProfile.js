@@ -263,16 +263,23 @@ async function initProfile() {
         if (profile.VaiTro === 'SinhVien') {
             document.getElementById('upgrade-teacher-section').style.display = 'block';
             initUpgradeTeacher();
-        } else if (profile.VaiTro === 'Admin' || profile.VaiTro === 'GiaoVien') {
-            const twoFaSection = document.getElementById('twofa-section');
-            if (twoFaSection) {
-                twoFaSection.style.display = 'block';
-                if (profile.IsTwoFactorEnabled) {
-                    const btnSetup = document.getElementById('btn-setup-2fa');
-                    const msgSetup = document.getElementById('2fa-status-msg');
-                    if (btnSetup) btnSetup.style.display = 'none';
-                    if (msgSetup) msgSetup.style.display = 'block';
-                }
+        }
+        
+        const twoFaSection = document.getElementById('twofa-section');
+        if (twoFaSection) {
+            twoFaSection.style.display = 'block';
+            const btnSetup = document.getElementById('btn-setup-2fa');
+            const btnDisable = document.getElementById('btn-disable-2fa');
+            const msgSetup = document.getElementById('2fa-status-msg');
+            
+            if (profile.IsTwoFactorEnabled) {
+                if (btnSetup) btnSetup.style.display = 'none';
+                if (btnDisable) btnDisable.style.display = 'inline-block';
+                if (msgSetup) msgSetup.style.display = 'block';
+            } else {
+                if (btnSetup) btnSetup.style.display = 'inline-block';
+                if (btnDisable) btnDisable.style.display = 'none';
+                if (msgSetup) msgSetup.style.display = 'none';
             }
         }
     } catch (err) {
@@ -684,6 +691,28 @@ async function deleteAvatar() {
 
 
 
+
+function renderPagination(container, currentPage, totalPages, fetchFnName) {
+    if (totalPages <= 1) return;
+    const paginationEl = document.createElement('div');
+    paginationEl.className = 'pagination';
+    paginationEl.style.display = 'flex';
+    paginationEl.style.justifyContent = 'center';
+    paginationEl.style.gap = '8px';
+    paginationEl.style.marginTop = '16px';
+    paginationEl.style.width = '100%';
+    
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const bg = i === currentPage ? 'var(--primary)' : '#fff';
+        const color = i === currentPage ? '#fff' : 'var(--text-primary)';
+        const border = i === currentPage ? 'var(--primary)' : '#CBD5E1';
+        html += `<button onclick="${fetchFnName}(${i})" style="padding: 6px 12px; border: 1px solid ${border}; border-radius: 6px; background: ${bg}; color: ${color}; cursor: pointer; transition: all 0.2s;">${i}</button>`;
+    }
+    paginationEl.innerHTML = html;
+    container.appendChild(paginationEl);
+}
+
 async function initDocuments() {
     await fetchMyDocuments();
     await fetchBookmarks();
@@ -692,14 +721,14 @@ async function initDocuments() {
     await fetchMyReports();
 }
 
-async function fetchMyDocuments() {
+async function fetchMyDocuments(page = 1) {
     try {
-        const res = await fetch(`${API_URL}/users/my-documents`, {
+        const res = await fetch(`${API_URL}/users/my-documents?page=${page}&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         const tab = document.getElementById('tab-my-docs');
-        if (tab) tab.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi (${data.documents ? data.documents.length : 0})`;
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi (${data.total || 0})`;
         const container = document.getElementById('my-docs-container');
         container.innerHTML = '';
         
@@ -752,20 +781,20 @@ async function fetchMyDocuments() {
             `;
             container.appendChild(el);
         });
-        addLoadMoreButton(container, 5);
+        renderPagination(container, data.currentPage, data.totalPages, 'fetchMyDocuments');
     } catch (err) {
         console.error(err);
     }
 }
 
-async function fetchBookmarks() {
+async function fetchBookmarks(page = 1) {
     try {
-        const res = await fetch(`${API_URL}/users/bookmarks`, {
+        const res = await fetch(`${API_URL}/users/bookmarks?page=${page}&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         const tab = document.getElementById('tab-bookmarks');
-        if (tab) tab.innerHTML = `<i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu (${data.documents ? data.documents.length : 0})`;
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu (${data.total || 0})`;
         const container = document.getElementById('bookmarks-container');
         container.innerHTML = '';
         
@@ -808,20 +837,20 @@ async function fetchBookmarks() {
             `;
             container.appendChild(el);
         });
-        addLoadMoreButton(container, 5);
+        renderPagination(container, data.currentPage, data.totalPages, 'fetchBookmarks');
     } catch (err) {
         console.error(err);
     }
 }
 
-async function fetchPurchasedDocuments() {
+async function fetchPurchasedDocuments(page = 1) {
     try {
-        const res = await fetch(`${API_URL}/users/purchased-documents`, {
+        const res = await fetch(`${API_URL}/users/purchased-documents?page=${page}&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         const tab = document.getElementById('tab-purchased');
-        if (tab) tab.innerHTML = `<i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM (${data.documents ? data.documents.length : 0})`;
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM (${data.total || 0})`;
         const container = document.getElementById('purchased-container');
         container.innerHTML = '';
         
@@ -865,7 +894,7 @@ async function fetchPurchasedDocuments() {
             `;
             container.appendChild(el);
         });
-        addLoadMoreButton(container, 5);
+        renderPagination(container, data.currentPage, data.totalPages, 'fetchPurchasedDocuments');
     } catch (err) {
         console.error(err);
     }
@@ -918,19 +947,20 @@ async function fetchTransactions() {
             `;
             container.appendChild(el);
         });
+        
     } catch (err) {
         console.error(err);
     }
 }
 
-async function fetchMyReports() {
+async function fetchMyReports(page = 1) {
     try {
-        const res = await fetch(`${API_URL}/users/my-reports`, {
+        const res = await fetch(`${API_URL}/users/my-reports?page=${page}&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         const tab = document.getElementById('tab-my-reports');
-        if (tab) tab.innerHTML = `<i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm (${data.reports ? data.reports.length : 0})`;
+        if (tab) tab.innerHTML = `<i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm (${data.total || 0})`;
         const container = document.getElementById('my-reports-container');
         container.innerHTML = '';
         
@@ -968,6 +998,7 @@ async function fetchMyReports() {
             `;
             container.appendChild(el);
         });
+        renderPagination(container, data.currentPage, data.totalPages, 'fetchMyReports');
     } catch (err) {
         console.error(err);
     }
@@ -1215,6 +1246,9 @@ function setupEventListeners() {
 
     const btnSetup2Fa = document.getElementById('btn-setup-2fa');
     if (btnSetup2Fa) btnSetup2Fa.addEventListener('click', handleSetup2FA);
+    
+    const btnDisable2Fa = document.getElementById('btn-disable-2fa');
+    if (btnDisable2Fa) btnDisable2Fa.addEventListener('click', handleDisable2FA);
     
     const btnSendPwOtp = document.getElementById('btn-send-pw-otp');
     if (btnSendPwOtp) btnSendPwOtp.addEventListener('click', sendChangePasswordOtp);
@@ -1707,6 +1741,7 @@ async function handleSetup2FA() {
             if (verifyRes.ok) {
                 Swal.fire('Thành công', 'Xác thực 2 bước đã được bật.', 'success');
                 document.getElementById('btn-setup-2fa').style.display = 'none';
+                document.getElementById('btn-disable-2fa').style.display = 'inline-block';
                 document.getElementById('2fa-status-msg').style.display = 'block';
             } else {
                 Swal.fire('Lỗi', verifyData.message || 'Mã không hợp lệ', 'error');
@@ -1714,5 +1749,43 @@ async function handleSetup2FA() {
         }
     } catch (err) {
         Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function handleDisable2FA() {
+    const { value: password } = await Swal.fire({
+        title: 'Tắt Xác thực 2 bước (2FA)',
+        text: 'Vui lòng nhập mật khẩu hiện tại để xác nhận.',
+        input: 'password',
+        inputPlaceholder: 'Mật khẩu hiện tại',
+        showCancelButton: true,
+        confirmButtonText: 'Xác nhận tắt',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#ef4444'
+    });
+
+    if (password !== undefined) {
+        try {
+            const res = await fetch(`${API_URL}/auth/2fa/disable`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ password })
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                Swal.fire('Thành công', data.message, 'success');
+                document.getElementById('btn-setup-2fa').style.display = 'inline-block';
+                document.getElementById('btn-disable-2fa').style.display = 'none';
+                document.getElementById('2fa-status-msg').style.display = 'none';
+            } else {
+                Swal.fire('Lỗi', data.message || 'Không thể tắt 2FA', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
+        }
     }
 }
