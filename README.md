@@ -80,13 +80,13 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
   - Tạo nhóm học tập (Công khai / Riêng tư). Tùy chỉnh ảnh bìa nhóm, giới thiệu nhóm.
   - Quản lý thành viên (Mời, duyệt yêu cầu, thăng quyền phó nhóm/quản trị).
   - Tab Thảo luận: Đăng bài, bình luận, ghim bài. Tích hợp chức năng **Gắn thẻ (@Mention)** để nhắc tên thành viên nhanh chóng.
-  - Tab Tài liệu: Chia sẻ tài liệu nội bộ nhóm an toàn.
+  - Tab Tài liệu: Chia sẻ tài liệu nội bộ nhóm an toàn (Tích hợp Auto-Moderation bảo vệ không gian nhóm).
 
 ### Quản trị viên (Admin)
 
 - **Dashboard thống kê**: Theo dõi doanh thu, số người dùng, tài liệu mới, top đóng góp qua biểu đồ.
 - **Kiểm duyệt nội dung**: 
-  - Duyệt/Từ chối tài liệu, xử lý báo cáo vi phạm. Hoàn tiền tự động cho người mua nếu tài liệu bị gỡ.
+  - Duyệt/Từ chối tài liệu, xử lý báo cáo vi phạm với **Auto-Moderation** (tự động ẩn tài liệu nếu quá 5 report). Hoàn tiền tự động cho người mua nếu tài liệu bị gỡ (Xóa mềm - Soft Delete).
   - Xét duyệt yêu cầu Nâng cấp Giảng viên, Giao dịch nạp xu.
 - **Quản lý người dùng**: Khóa/Mở khóa tài khoản, phân quyền với an toàn dữ liệu tuyệt đối (Anti Race-condition).
 - **Mã khuyến mãi (Promo Code)**: Tạo, chỉnh sửa và quản lý Promo Code để tặng Xu cho người dùng.
@@ -96,7 +96,55 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 
 ---
 
-## 5. Cấu trúc thư mục
+## 5. Hệ thống các trang giao diện (Frontend Pages)
+
+Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ và hoàn chỉnh, được chia nhỏ thành nhiều phân hệ logic chuyên biệt nhằm đảm bảo trải nghiệm người dùng (UX) tối ưu nhất:
+
+### 1. Phân hệ Khách (Guest & Public Pages)
+- **`guestHome.html`**: Trang chủ dành cho khách chưa đăng nhập. Giới thiệu tổng quan và hiển thị tài liệu nổi bật (Trending).
+- **`about.html`**: Giới thiệu về sứ mệnh, tầm nhìn và đội ngũ phát triển EduShare.
+- **`guide.html`**: Hướng dẫn sử dụng nền tảng cho người mới bắt đầu.
+- **`helpCenter.html`**: Trung tâm trợ giúp, bộ câu hỏi thường gặp (FAQ).
+- **`blog.html` & `forum.html`**: Khu vực tin tức, blog và diễn đàn trao đổi mở.
+- **`contact.html`, `privacy.html`, `terms.html`, `copyright.html`**: Các trang thông tin liên hệ, chính sách bảo mật, điều khoản sử dụng và bản quyền.
+
+### 2. Phân hệ Xác thực (Authentication)
+- **`login.html`**: Giao diện đăng nhập bảo mật (hỗ trợ đăng nhập truyền thống và Google OAuth2).
+- **`register.html`**: Đăng ký tài khoản thành viên mới.
+- **`register-verify.html`**: Form nhập mã xác thực OTP qua Email sau khi đăng ký.
+- **`forgot-password.html`**: Luồng quy trình quên và khôi phục mật khẩu.
+
+### 3. Phân hệ Người dùng & Cá nhân hóa (User Module)
+- **`userHome.html`**: Trang chủ cá nhân hóa sau khi đăng nhập (Bảng feed tài liệu, gợi ý nhóm, top contributor).
+- **`userProfile.html`**: Hồ sơ cá nhân (Cập nhật thông tin, đổi Avatar, yêu cầu cấp quyền Giảng viên).
+- **`otherUserProfile.html`**: Xem hồ sơ công khai của các tác giả/người dùng khác.
+- **`buyCoins.html`**: Giao diện nạp EduCoin thông qua các cổng thanh toán/ngân hàng.
+- **`transactionHistory.html`**: Xem chi tiết lịch sử giao dịch (nạp xu, mua bán tài liệu).
+- **`notifications.html`**: Trung tâm quản lý và theo dõi thông báo từ hệ thống.
+
+### 4. Phân hệ Tài liệu (Document Module)
+- **`documentDetails.html`**: Giao diện xem chi tiết tài liệu, bình luận, đánh giá, tải xuống miễn phí hoặc mua tài liệu VIP.
+- **`myDocuments.html`**: Kho lưu trữ cá nhân (tài liệu đã đăng, đã mua, đã lưu/bookmark và lịch sử tải về).
+- **`searchResults.html`**: Trang tìm kiếm tài liệu nâng cao (hỗ trợ lọc theo môn học, cấp học và định dạng tệp).
+- **`uploadDocument.html`**: Giao diện đăng tải tài liệu trực quan, thiết lập giá bán và mô tả.
+
+### 5. Phân hệ Nhóm học tập (Group Module)
+- **`groupList.html`**: Khám phá, tìm kiếm và tham gia các nhóm học tập trên nền tảng.
+- **`groupDetails.html`**: Không gian sinh hoạt chung của nhóm (Thảo luận nội bộ theo luồng, chia sẻ và lưu trữ tài liệu nhóm an toàn).
+
+### 6. Phân hệ Quản trị (Admin Panel)
+- **`adminDashboard.html`**: Bảng điều khiển trung tâm với biểu đồ thống kê trực quan.
+- **`adminModeration.html`**: Khu vực xét duyệt/từ chối tài liệu mới đăng.
+- **`adminUserManagement.html`**: Quản lý danh sách người dùng, cấp quyền, xử lý vi phạm tài khoản.
+- **`adminViolationReports.html`**: Xử lý các báo cáo vi phạm tài liệu (Tích hợp tính năng Auto-moderation).
+- **`adminGroups.html`**: Quản trị hoạt động của tất cả các nhóm trên nền tảng.
+- **`adminPayments.html` / `adminPromos.html`**: Kiểm soát giao dịch nạp rút, phát hành mã khuyến mãi.
+- **`adminTeacherRequests.html`**: Xét duyệt hồ sơ xin cấp quyền Giảng viên (Teacher Requests).
+- **`adminSubjects.html`**: Quản lý, cấu trúc danh mục môn học hệ thống.
+
+---
+
+## 6. Cấu trúc thư mục
 
 ```
 EduShare/
@@ -112,13 +160,13 @@ EduShare/
 └── fe/                       # Frontend (HTML / CSS / Vanilla JS)
     ├── assets/               # Hình ảnh, biểu tượng tĩnh, CSS chung
     ├── css/                  # StyleSheet theo từng chức năng và layout
-    ├── pages/                # Các trang HTML (auth, admin, user, document, group)
+    ├── pages/                # Các trang HTML được phân chia theo module (chi tiết tại mục 5)
     └── main/                 # File JS xử lý logic tương ứng cho từng trang
 ```
 
 ---
 
-## 6. Hướng dẫn cài đặt
+## 7. Hướng dẫn cài đặt
 
 ### Yêu cầu môi trường
 
@@ -185,14 +233,14 @@ Server chạy tại: `http://localhost:3000`
 
 ---
 
-## 7. Hướng phát triển tiếp theo
+## 8. Hướng phát triển tiếp theo
 
 - Tích hợp **Socket.io** để đẩy thông báo thời gian thực thay cho cơ chế Polling hiện tại, hoàn thiện Real-time Notification.
 - Bổ sung quy trình **Rút tiền (Cashout)** hoặc tích hợp cổng thanh toán tự động (VNPAY/MoMo).
 - Chuyển đổi khung giao diện sang **React / Next.js** (SSR) nhằm tối ưu trải nghiệm SPA và tăng trưởng SEO tự nhiên.
 - Phát triển Mobile App bằng React Native hoặc Flutter sử dụng lại bộ API hiện có.
 
-## 8. Kiểm thử tự động (Unit Tests)
+## 9. Kiểm thử tự động (Unit Tests)
 
 Hệ thống được tích hợp bộ Unit Tests bao phủ toàn bộ các Module Backend (Sử dụng **Jest** và **Supertest**).
 - **Auth API**: Đăng ký, Đăng nhập, 2FA, Khôi phục mật khẩu, Token Refresh.

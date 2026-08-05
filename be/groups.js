@@ -21,6 +21,7 @@ router.get('/', authMiddleware, async (req, res) => {
             SELECT N.*, ND.HoTen AS TenNguoiQuanTri, MH.TenMonHoc,
                    (SELECT COUNT(*) FROM THANHVIEN_NHOM WHERE MaNhom = N.MaNhom) AS SoLuongThanhVien,
                    N.IsPrivate,
+                   EXISTS(SELECT 1 FROM YEUCAUTHAMGIA_NHOM YC WHERE YC.MaNhom = N.MaNhom AND YC.MaND = ?) AS HasRequested,
                    EXISTS(SELECT 1 FROM THANHVIEN_NHOM TV WHERE TV.MaNhom = N.MaNhom AND TV.MaND = ?) AS IsMember
             FROM NHOM N
             JOIN NGUOIDUNG ND ON N.MaND_QuanTri = ND.MaND
@@ -28,7 +29,7 @@ router.get('/', authMiddleware, async (req, res) => {
             WHERE N.TrangThai = 'HoatDong'
             ORDER BY N.NgayTao DESC
             LIMIT ${limit} OFFSET ${offset}
-        `, [maND]);
+        `, [maND, maND]);
 
         res.status(200).json({ 
             groups: rows,
@@ -136,6 +137,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
         const [rows] = await pool.execute(`
             SELECT N.*, ND.HoTen AS TenNguoiQuanTri, MH.TenMonHoc,
                    (SELECT COUNT(*) FROM THANHVIEN_NHOM WHERE MaNhom = N.MaNhom) AS SoLuongThanhVien,
+                   (SELECT COUNT(*) FROM YEUCAUTHAMGIA_NHOM WHERE MaNhom = N.MaNhom AND MaND = ?) AS HasRequested,
                    0 AS IsMember,
                    (
                        CASE
@@ -173,7 +175,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
             WHERE N.TrangThai = 'HoatDong' AND TV.MaNhom IS NULL
             ORDER BY DiemGoiY DESC, SoLuongThanhVien DESC, N.NgayTao DESC
             LIMIT ${limit}
-        `, [maND, maND, maND, maND]);
+        `, [maND, maND, maND, maND, maND]);
 
         res.status(200).json({ groups: rows });
     } catch (error) {
@@ -190,7 +192,7 @@ router.post('/:maNhom/join', authMiddleware, async (req, res) => {
         const pool = req.app.locals.pool;
 
 
-        const [groupCheck] = await pool.execute('SELECT TrangThai FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        const [groupCheck] = await pool.execute('SELECT TrangThai, MaND_QuanTri, TenNhom FROM NHOM WHERE MaNhom = ?', [maNhom]);
         if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
         if (groupCheck[0].TrangThai !== 'HoatDong') return res.status(400).json({ message: 'Nhóm đã bị khóa.' });
 
@@ -209,9 +211,53 @@ router.post('/:maNhom/join', authMiddleware, async (req, res) => {
             [maND, maNhom]
         );
 
+        const [userRows] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        const userName = userRows.length > 0 ? userRows[0].HoTen : 'Một người dùng';
+        const thongBaoMsg = `${userName} đã gửi yêu cầu tham gia nhóm "${groupCheck[0].TenNhom}".`;
+        const linkDich = `/fe/pages/group/groupDetails.html?id=${maNhom}`;
+
+        await pool.execute(
+            'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
+            [groupCheck[0].MaND_QuanTri, 'HeThong', thongBaoMsg, linkDich]
+        );
+
         res.status(200).json({ message: 'Đã gửi yêu cầu tham gia. Vui lòng chờ phê duyệt.' });
     } catch (error) {
         console.error('Lỗi API /groups/:maNhom/join:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maNhom/cancel-join', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [requestCheck] = await pool.execute('SELECT * FROM YEUCAUTHAMGIA_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+        if (requestCheck.length === 0) {
+            return res.status(400).json({ message: 'Không tìm thấy yêu cầu tham gia nào.' });
+        }
+
+        await pool.execute('DELETE FROM YEUCAUTHAMGIA_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
+
+        const [groupCheck] = await pool.execute('SELECT MaND_QuanTri, TenNhom FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        if (groupCheck.length > 0) {
+            const [userRows] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+            const userName = userRows.length > 0 ? userRows[0].HoTen : 'Một người dùng';
+            const thongBaoMsg = `${userName} đã gửi yêu cầu tham gia nhóm "${groupCheck[0].TenNhom}".`;
+            const linkDich = `/fe/pages/group/groupDetails.html?id=${maNhom}`;
+
+            await pool.execute(
+                'DELETE FROM THONGBAO WHERE MaND = ? AND NoiDung = ? AND LinkDich = ?',
+                [groupCheck[0].MaND_QuanTri, thongBaoMsg, linkDich]
+            );
+        }
+
+        res.status(200).json({ message: 'Đã hủy yêu cầu tham gia.' });
+    } catch (error) {
+        console.error('Lỗi API /groups/:maNhom/cancel-join:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
@@ -408,7 +454,9 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Tài liệu này đã được chia sẻ trong nhóm.' });
         }
 
-        const MAX_DOCS_PER_GROUP = 25;
+        const [settingRows] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "MAX_DOCS_PER_GROUP"');
+        const MAX_DOCS_PER_GROUP = settingRows.length > 0 ? parseInt(settingRows[0].GiaTri, 10) : 25;
+        
         const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM TAILIEU_NHOM WHERE MaNhom = ?', [maNhom]);
         if (countRows[0].total >= MAX_DOCS_PER_GROUP) {
             return res.status(400).json({ message: `Nhóm đã đạt giới hạn tối đa ${MAX_DOCS_PER_GROUP} tài liệu. Vui lòng gỡ bớt tài liệu cũ để chia sẻ thêm.` });

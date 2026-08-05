@@ -424,7 +424,6 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
             await conn.execute(`DELETE FROM DANHGIA WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM BAOCAOVIPHAM WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM THONGBAO WHERE MaTL IN (${placeholders})`, documentIds);
-            // Bỏ dòng xóa TAILIEU_DAMUA để người đã mua vẫn tải được (Soft Delete)
             await conn.execute(`DELETE FROM TAILIEU_NHOM WHERE MaTL IN (${placeholders})`, documentIds);
             if (await tableExists('LICH_SU_TAI')) {
                 await conn.execute(`DELETE FROM LICH_SU_TAI WHERE MaTL IN (${placeholders})`, documentIds);
@@ -1091,8 +1090,7 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
         const [pendingDocCount] = await pool.execute('SELECT COUNT(*) as count FROM TAILIEU WHERE TrangThaiKiemDuyet = "ChoDuyet"');
         const [pendingPaymentCount] = await pool.execute('SELECT COUNT(*) as count FROM GIAODICH_NAPXU WHERE TrangThai = "ChoDuyet"');
         const [pendingTeacherCount] = await pool.execute('SELECT COUNT(*) as count FROM YEU_CAU_GIAO_VIEN WHERE TrangThai = "ChoDuyet"');
-
-
+        const [pendingSubjectCount] = await pool.execute('SELECT COUNT(*) as count FROM DEXUAT_MONHOC WHERE TrangThai = "ChoDuyet"');
         const [usersByRoleRows] = await pool.execute('SELECT VaiTro, COUNT(*) as count FROM NGUOIDUNG GROUP BY VaiTro');
         
         const [docsByStatusRows] = await pool.execute('SELECT TrangThaiKiemDuyet, COUNT(*) as count FROM TAILIEU GROUP BY TrangThaiKiemDuyet');
@@ -1134,6 +1132,7 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
             pendingDocs: pendingDocCount[0].count,
             pendingPayments: pendingPaymentCount[0].count,
             pendingTeachers: pendingTeacherCount[0].count,
+            pendingSubjects: pendingSubjectCount[0].count,
             usersByRole: usersByRoleRows,
             docsByStatus: docsByStatusRows,
             docsBySubject: docsBySubjectRows,

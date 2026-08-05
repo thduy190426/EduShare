@@ -192,6 +192,7 @@ const routes = [
     ['/api/groups', require('./groups')],
     ['/api/subjects', require('./subjects')],
     ['/api/payment', require('./payment')],
+    ['/api/settings', require('./settings')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -526,7 +527,7 @@ app.post('/api/auth/2fa/login', loginLimiter, async (req, res) => {
             secret: user.TwoFactorSecret,
             encoding: 'base32',
             token: totpCode,
-            window: 1
+            window: 4
         });
 
         if (!verified) {
@@ -594,7 +595,7 @@ app.post('/api/auth/2fa/verify-setup', authMiddleware, async (req, res) => {
             secret: secret,
             encoding: 'base32',
             token: token,
-            window: 1
+            window: 4
         });
 
         if (verified) {

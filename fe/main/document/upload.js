@@ -1,6 +1,21 @@
 import { API_URL } from '../shared/config.js';
 import { getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
 
+let maxUploadSizeMB = 20; // Default fallback
+
+async function fetchUploadSettings() {
+    try {
+        const response = await fetch(`${API_URL}/settings`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data.MAX_UPLOAD_SIZE_MB) {
+                maxUploadSizeMB = parseFloat(data.MAX_UPLOAD_SIZE_MB.giaTri) || 20;
+            }
+        }
+    } catch (e) { console.error('Lỗi tải cấu hình upload', e); }
+}
+fetchUploadSettings();
+
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
     const uploadForm = document.getElementById('uploadForm');
@@ -136,8 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = this.files[0];
         if (file) {
             
-            if (file.size > 20 * 1024 * 1024) {
-                Swal.fire('Dung lượng file vượt quá giới hạn 20MB.');
+            if (file.size > maxUploadSizeMB * 1024 * 1024) {
+                Swal.fire(`Dung lượng file vượt quá giới hạn ${maxUploadSizeMB}MB.`);
                 this.value = ''; 
                 return;
             }

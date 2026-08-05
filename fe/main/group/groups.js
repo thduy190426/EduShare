@@ -685,6 +685,8 @@ function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
         let actionButton = '';
         if (g.IsMember) {
             actionButton = `<button class="btn-primary" style="flex:1;" onclick="window.location.href='groupDetails.html?id=${g.MaNhom}'"><i class="fa-solid fa-arrow-right-to-bracket" style="margin-right: 5px;"></i> Xem nhóm</button>`;
+        } else if (g.HasRequested) {
+            actionButton = `<button class="btn-primary" style="flex:1; background:var(--danger, #ef4444); border-color:var(--danger, #ef4444);" onclick="window.cancelJoinGroup(${g.MaNhom}, this)"><i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu</button>`;
         } else {
             actionButton = `<button class="btn-primary" style="flex:1;" onclick="window.joinGroup(${g.MaNhom}, this)"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
         }
@@ -704,8 +706,8 @@ function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
             <p class="group-desc">${escapeHTML(g.MoTa) || 'Không có mô tả'}</p>
           </div>
           <div class="group-footer" style="display:flex; gap:10px;">
-            ${actionButton}
             <button class="btn-outline-primary" style="flex:1;" onclick="window.location.href='groupDetails.html?id=${g.MaNhom}'"><i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chi tiết</button>
+            ${actionButton}
           </div>
         `;
         grid.appendChild(div);
@@ -746,6 +748,43 @@ window.joinGroup = async (maNhom, btnElement) => {
     }
 };
 
+window.cancelJoinGroup = async (maNhom, btnElement) => {
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang huỷ...';
+    }
+    try {
+        const res = await fetch(`${API_URL}/groups/${maNhom}/cancel-join`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            if (window.location.pathname.includes('groupDetails.html')) {
+                window.location.reload();
+            } else if (currentTab === 'explore') {
+                fetchGroups();
+            } else {
+                fetchMyGroups();
+            }
+        } else {
+            Swal.fire({ icon: 'error', title: 'Lỗi', text: data.message });
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = '<i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu';
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra' });
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = '<i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu';
+        }
+    }
+};
+
 
 
 let currentGroupId = null;
@@ -782,7 +821,7 @@ async function initGroupDetails() {
                     ${avatarHtml}
                     <div class="comment-bubble">
                         <div class="comment-author-name">${escapeHTML(comment.HoTen)}</div>
-                        <div class="comment-content">${window.DOMPurify ? window.DOMPurify.sanitize(comment.NoiDung).replace(/@\\[(.*?)\\]\\((\\d+)\\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>') : escapeHTML(comment.NoiDung)}</div>
+                        <div class="comment-content">${window.DOMPurify ? window.DOMPurify.sanitize(comment.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/otherUserProfile.html?id=$2" class="tagged-user">@$1</a>') : escapeHTML(comment.NoiDung)}</div>
                         <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
                     </div>
                 `;
@@ -1120,10 +1159,7 @@ function initGroupDetailControls() {
         const btnCloseRequests = document.getElementById('btn-close-requests');
         const btnCancelRequests = document.getElementById('btn-cancel-requests');
 
-        const closeRequestsModal = () => {
-            requestsModal.style.opacity = '0';
-            setTimeout(() => { requestsModal.style.display = 'none'; }, 300);
-        };
+        const closeRequestsModal = () => window.closeModalWithAnimation(requestsModal);
 
         if (btnCloseRequests) btnCloseRequests.addEventListener('click', closeRequestsModal);
         if (btnCancelRequests) btnCancelRequests.addEventListener('click', closeRequestsModal);
@@ -1133,7 +1169,7 @@ function initGroupDetailControls() {
 
         btnViewRequests.addEventListener('click', () => {
             groupMenuContent.classList.remove('show');
-            loadRequestsList();
+            window.loadRequestsList();
             requestsModal.style.display = 'flex';
             requestAnimationFrame(() => {
                 requestsModal.style.opacity = '1';
@@ -1391,18 +1427,22 @@ async function fetchGroupInfo() {
                 btnJoinGroupDetail.style.display = 'none';
             } else if (data.hasRequested) {
                 btnJoinGroupDetail.style.display = 'inline-flex';
-                btnJoinGroupDetail.innerHTML = '<i class="fa-solid fa-clock" style="margin-right: 6px;"></i> Đã gửi yêu cầu';
-                btnJoinGroupDetail.disabled = true;
-                btnJoinGroupDetail.style.opacity = '0.7';
-                btnJoinGroupDetail.style.cursor = 'not-allowed';
-                btnJoinGroupDetail.onclick = null;
+                btnJoinGroupDetail.innerHTML = '<i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Huỷ yêu cầu';
+                btnJoinGroupDetail.disabled = false;
+                btnJoinGroupDetail.style.opacity = '1';
+                btnJoinGroupDetail.style.cursor = 'pointer';
+                btnJoinGroupDetail.style.backgroundColor = 'var(--danger, #ef4444)';
+                btnJoinGroupDetail.style.borderColor = 'var(--danger, #ef4444)';
+                btnJoinGroupDetail.onclick = () => window.cancelJoinGroup(new URLSearchParams(window.location.search).get('id'), btnJoinGroupDetail);
             } else {
                 btnJoinGroupDetail.style.display = 'inline-flex';
                 btnJoinGroupDetail.innerHTML = '<i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i> Yêu cầu tham gia';
                 btnJoinGroupDetail.disabled = false;
                 btnJoinGroupDetail.style.opacity = '1';
                 btnJoinGroupDetail.style.cursor = 'pointer';
-                btnJoinGroupDetail.onclick = () => window.joinGroup(new URLSearchParams(window.location.search).get('id'));
+                btnJoinGroupDetail.style.backgroundColor = '';
+                btnJoinGroupDetail.style.borderColor = '';
+                btnJoinGroupDetail.onclick = () => window.joinGroup(new URLSearchParams(window.location.search).get('id'), btnJoinGroupDetail);
             }
         }
 
@@ -1416,7 +1456,6 @@ async function fetchGroupInfo() {
                   <i class="fa-solid ${group.IsPrivate ? 'fa-lock' : 'fa-earth-americas'}" style="margin-right: 4px;"></i> 
                   ${group.IsPrivate ? 'Riêng tư' : 'Công khai'}
                 </span>
-                <span class="js-user-link" data-user-id="${group.MaND_QuanTri || ''}" title="Xem hồ sơ quản trị viên" style="cursor:pointer;"><i class="fa-solid fa-user-shield" style="margin-right: 4px;"></i> ${escapeHTML(group.TenNguoiQuanTri)}</span>
               </div>
             </div>
         `;
@@ -1801,7 +1840,7 @@ async function fetchGroupDocuments() {
                     ${thumbHtml}
                     ${officialBadge}
                     ${premiumBadge}
-                    ${doc.TrangThaiNhom === 'An' ? '<div class="badge-official" style="background: var(--warning); top: 10px; right: 10px; left: auto;"><i class="fa-solid fa-eye-slash"></i> Đang ẩn</div>' : ''}
+                    ${doc.TrangThaiNhom === 'An' ? '<div class="badge-official" style="background: var(--warning); top: 10px; right: 48px; left: auto;"><i class="fa-solid fa-eye-slash"></i> Đang ẩn</div>' : ''}
                     <div class="bookmark-btn">
                         ${bookmarkedDocs.has(doc.MaTL) 
                             ? '<i class="fa-solid fa-bookmark" style="color: var(--primary);"></i>' 
@@ -2724,7 +2763,7 @@ window.toggleComments = async (postId) => {
                     ${avatarHtml}
                     <div class="comment-bubble">
                         <div class="comment-author-name">${escapeHTML(cmt.HoTen)}</div>
-                        <div class="comment-content">${DOMPurify.sanitize(cmt.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
+                        <div class="comment-content">${DOMPurify.sanitize(cmt.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/otherUserProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
                         <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
                     </div>
                 `;
@@ -2834,4 +2873,85 @@ window.initTribute = function(element) {
         }
     });
     tribute.attach(element);
+};
+
+window.loadRequestsList = async function() {
+    const listEl = document.getElementById('requests-list');
+    if (!listEl) return;
+    
+    listEl.innerHTML = '<div style="text-align:center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>';
+    
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/requests`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            if (!data.requests || data.requests.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">Không có yêu cầu tham gia nào.</div>';
+                return;
+            }
+            
+            listEl.innerHTML = data.requests.map(req => `
+                <div class="request-item" style="display:flex; justify-content:space-between; align-items:center; padding: 12px; background:var(--bg); border-radius:8px;">
+                    <div style="display:flex; align-items:center; gap:10px; cursor:pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'" onclick="window.location.href='../user/otherUserProfile.html?id=${req.MaND}'" title="Xem hồ sơ">
+                        <div style="width:36px; height:36px; border-radius:50%; background:var(--primary-light); color:var(--primary); display:flex; justify-content:center; align-items:center; font-weight:bold;">
+                            ${req.HoTen ? req.HoTen.charAt(0).toUpperCase() : '?'}
+                        </div>
+                        <div>
+                            <div style="font-weight:600; font-size:14px; color:var(--text-primary);">${escapeHTML(req.HoTen)}</div>
+                            <div style="font-size:12px; color:var(--text-secondary);">${new Date(req.NgayYeuCau).toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'}).replace(',', ' |')}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn-primary" style="padding:6px 12px; font-size:13px;" onclick="window.handleRequest(${req.MaND}, 'approve', this)"><i class="fa-solid fa-check" style="margin-right:4px;"></i> Duyệt</button>
+                        <button class="btn-outline-primary" style="padding:6px 12px; font-size:13px; color:var(--danger, #ef4444); border-color:var(--danger, #ef4444);" onclick="window.handleRequest(${req.MaND}, 'reject', this)"><i class="fa-solid fa-xmark" style="margin-right:4px;"></i> Từ chối</button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listEl.innerHTML = `<div style="text-align:center; padding: 20px; color: red;">Lỗi: ${data.message}</div>`;
+        }
+    } catch (err) {
+        console.error(err);
+        listEl.innerHTML = '<div style="text-align:center; padding: 20px; color: red;">Lỗi tải danh sách yêu cầu.</div>';
+    }
+};
+
+window.handleRequest = async function(targetId, action, btn) {
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/requests/${targetId}/${action}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
+            }
+            window.loadRequestsList(); 
+            if (action === 'approve') {
+                if (typeof fetchGroupMembers === 'function') fetchGroupMembers();
+            }
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Lỗi', text: data.message });
+            }
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+    } catch (err) {
+        console.error(err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Có lỗi xảy ra' });
+        }
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
 };

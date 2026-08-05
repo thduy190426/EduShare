@@ -919,15 +919,24 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
                     await connection.execute('UPDATE TAILIEU SET SoLuotTai = SoLuotTai + 1 WHERE MaTL = ?', [maTL]);
 
                     if (!doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND) {
-                        await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + 1 WHERE MaND = ?', [doc.MaND_NguoiDang]);
-                        await connection.execute(
-                            "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', 1, ?)",
-                            [doc.MaND_NguoiDang, `Thưởng 1 Xu vì có người tải tài liệu: ${doc.TenTL}`]
+                        const maxDailyReward = 5;
+                        const [todayRewards] = await connection.execute(
+                            `SELECT COUNT(*) as count FROM LICH_SU_XU 
+                             WHERE MaND = ? AND LoaiGiaoDich = 'ThuongXu' AND DATE(NgayTao) = CURDATE()`,
+                            [doc.MaND_NguoiDang]
                         );
-                        await connection.execute(
-                            "INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, 'HeThong')",
-                            [doc.MaND_NguoiDang, `Bạn vừa nhận được +1 Xu từ lượt tải tài liệu "${doc.TenTL}".`]
-                        );
+
+                        if (todayRewards[0].count < maxDailyReward) {
+                            await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + 1 WHERE MaND = ?', [doc.MaND_NguoiDang]);
+                            await connection.execute(
+                                "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', 1, ?)",
+                                [doc.MaND_NguoiDang, `Thưởng 1 Xu vì có người tải tài liệu: ${doc.TenTL}`]
+                            );
+                            await connection.execute(
+                                "INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, 'HeThong')",
+                                [doc.MaND_NguoiDang, `Bạn vừa nhận được +1 Xu từ lượt tải tài liệu "${doc.TenTL}". (Giới hạn: ${todayRewards[0].count + 1}/${maxDailyReward} Xu thưởng mỗi ngày)`]
+                            );
+                        }
                     }
                 }
                 await connection.commit();
@@ -1056,7 +1065,7 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-        const [docs] = await pool.execute('SELECT MaND_NguoiDang, GiaXu, LaTaiLieuDocQuyen, TenTL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet"', [maTL]);
+        const [docs] = await pool.execute('SELECT MaND_NguoiDang, GiaXu, LaTaiLieuDocQuyen, TenTL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND IsDeleted = FALSE', [maTL]);
         if (docs.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy tài liệu PREMIUM.' });
         }
@@ -1392,7 +1401,10 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
             [maTL]
         );
 
-        if (reportCount[0].count >= 5) {
+        const [settingRows] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "MAX_REPORTS_AUTO_HIDE"');
+        const MAX_REPORTS_AUTO_HIDE = settingRows.length > 0 ? parseInt(settingRows[0].GiaTri, 10) : 5;
+
+        if (reportCount[0].count >= MAX_REPORTS_AUTO_HIDE) {
             await pool.execute(
                 'UPDATE TAILIEU SET TrangThaiKiemDuyet = "ChoDuyet" WHERE MaTL = ?',
                 [maTL]
@@ -1404,7 +1416,6 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
                 maND
             );
             
-            // Thông báo cho tác giả
             await pool.execute(
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [docs[0].MaND_NguoiDang, 'HeThong', `Tài liệu "${docs[0].TenTL}" của bạn đã bị tạm ẩn do nhận được quá nhiều báo cáo vi phạm từ cộng đồng. Admin sẽ kiểm tra lại.`, `../document/myDocuments.html`]
@@ -1723,7 +1734,6 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
 
         const doc = docs[0];
         
-        // Only author or admin can delete
         if (doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin') {
             return res.status(403).json({ message: 'Bạn không có quyền xóa tài liệu này.' });
         }
@@ -1732,7 +1742,6 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Tài liệu này đã bị xóa rồi.' });
         }
 
-        // Thực hiện xóa mềm
         await pool.execute('UPDATE TAILIEU SET IsDeleted = TRUE WHERE MaTL = ?', [maTL]);
 
         res.status(200).json({ message: 'Đã xóa tài liệu (Xóa mềm).' });

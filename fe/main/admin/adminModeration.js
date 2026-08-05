@@ -292,7 +292,7 @@ function renderDocuments(documents, status) {
         statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span style="color:var(--warning); font-size:14px; font-weight:600;">Chờ duyệt</span></div>`;
         
         if (doc.PhanHoiTuChoi) {
-            statusBadgeHtml += `<div style="font-size:12px; color:#D97706; margin-top:6px; max-width: 180px; white-space: normal; background: #FEF3C7; padding: 6px; border-radius: 4px; border: 1px solid #FDE68A;" title="${doc.PhanHoiTuChoi.replace(/"/g, '&quot;')}"><i class="fa-solid fa-comment-dots" style="margin-right:4px;"></i> <strong>Phản hồi:</strong> ${doc.PhanHoiTuChoi}</div>`;
+            statusBadgeHtml += `<div style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#D97706; background: #FEF3C7; padding: 3px 8px; border-radius: 12px; margin-top: 6px; border: 1px solid #FDE68A; cursor:pointer; font-weight: 500;" onclick="Swal.fire({title: 'Người dùng phản hồi', text: \`${doc.PhanHoiTuChoi.replace(/`/g, '\\`')}\`, icon: 'info', confirmButtonColor: '#3B82F6'})"><i class="fa-solid fa-comment-dots"></i> Xem phản hồi</div>`;
         }
 
         actionBtnsHtml += `
@@ -317,7 +317,10 @@ function renderDocuments(documents, status) {
             <button class="btn-action btn-delete-doc" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="Xóa vĩnh viễn" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}"><i class="fa-solid fa-trash"></i></button>
         `;
     } else if (status === 'TuChoi') {
-        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--danger);"></span><span style="color:var(--danger); font-size:14px; font-weight:600;">Từ chối</span></div><div style="font-size:12px; color:var(--text-secondary); margin-top:4px; max-width: 150px; white-space: normal;" title="${doc.LyDoTuChoi || ''}">Lý do: ${doc.LyDoTuChoi || 'Không rõ'}</div>`;
+        statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--danger);"></span><span style="color:var(--danger); font-size:14px; font-weight:600;">Từ chối</span></div>`;
+        if (doc.LyDoTuChoi) {
+            statusBadgeHtml += `<div style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#EF4444; background: #FEF2F2; padding: 3px 8px; border-radius: 12px; margin-top: 6px; border: 1px solid #FECACA; cursor:pointer; font-weight: 500;" onclick="Swal.fire({title: 'Lý do từ chối', text: \`${doc.LyDoTuChoi.replace(/`/g, '\\`')}\`, icon: 'info', confirmButtonColor: '#3B82F6'})"><i class="fa-solid fa-circle-info"></i> Xem lý do</div>`;
+        }
         actionBtnsHtml += `
             <button class="btn-action btn-delete-doc" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="Xóa vĩnh viễn" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}"><i class="fa-solid fa-trash"></i></button>
         `;

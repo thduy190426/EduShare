@@ -57,7 +57,7 @@ function renderPromos() {
                 <td>+${promo.DiscountPercent}%</td>
                 <td style="color: var(--text-secondary); font-size: 14px;">${escapeHTML(promo.Description || '')}</td>
                 <td>
-                    <span class="status-badge ${promo.IsActive ? 'active' : 'inactive'}" style="display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; background: ${promo.IsActive ? '#dcfce7' : '#ffedd5'}; color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; font-size: 13px; font-weight: 500;">
+                    <span class="status-badge ${promo.IsActive ? 'active' : 'inactive'}" style="display: inline-flex; align-items: center; color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; font-size: 13px; font-weight: 500;">
                         <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background-color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; margin-right: 6px;"></span>
                         ${promo.IsActive ? 'Hoạt động' : 'Tạm ngừng'}
                     </span>

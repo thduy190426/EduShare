@@ -180,7 +180,7 @@ function renderSubjectSuggestions(suggestions) {
         return;
     }
 
-    suggestions.forEach(item => {
+    suggestions.forEach((item, index) => {
         let dateStr = '';
         if (item.NgayDeXuat) {
             const dateObj = new Date(item.NgayDeXuat);

@@ -16,10 +16,11 @@ const SIDEBAR_ITEMS = [
     { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], badge: 'pendingPayments', group: 'admin' },
     { label: 'Duyệt giáo viên', icon: 'fa-id-card-clip', href: '../admin/adminTeacherRequests.html', roles: ['Admin'], badge: 'pendingTeachers', group: 'admin' },
     { label: 'Người dùng', icon: 'fa-users-gear', href: '../admin/adminUserManagement.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], group: 'admin' },
+    { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], badge: 'pendingSubjects', group: 'admin' },
     { label: 'Quản lý nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
     { label: 'Báo cáo', icon: 'fa-flag', href: '../admin/adminViolationReports.html', roles: ['Admin'], badge: 'pendingReports', group: 'admin' },
-    { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], group: 'admin' }
+    { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], group: 'admin' },
+    { label: 'Cấu hình hệ thống', icon: 'fa-gear', href: '../admin/adminSettings.html', roles: ['Admin'], group: 'admin' }
 ];
 
 async function renderSidebar() {
@@ -199,6 +200,7 @@ async function renderSidebar() {
                 updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
                 updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
                 updateSidebarBadge('badge-pendingTeachers', data.pendingTeachers || 0);
+                updateSidebarBadge('badge-pendingSubjects', data.pendingSubjects || 0);
             }
         } catch (e) {
             console.error('Lỗi load Admin badges:', e);
@@ -301,6 +303,7 @@ window.refreshSidebarBadges = async function () {
             updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
             updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
             updateSidebarBadge('badge-pendingTeachers', data.pendingTeachers || 0);
+            updateSidebarBadge('badge-pendingSubjects', data.pendingSubjects || 0);
         } catch (e) {
             console.error('Lỗi refresh sidebar badges:', e);
         }

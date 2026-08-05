@@ -12,13 +12,14 @@ const authMiddleware = async (req, res, next) => {
         
         const pool = req.app.locals.pool;
         if (pool) {
-            const [userRows] = await pool.execute('SELECT TrangThai FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
+            const [userRows] = await pool.execute('SELECT TrangThai, VaiTro FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
             if (userRows.length === 0) {
-                return res.status(401).json({ message: 'Người dùng không tồn tại.' });
+                return res.status(401).json({ message: 'Người dùng không tồn tại.' });
             }
             if (userRows[0].TrangThai !== 'HoatDong') {
-                return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động.' });
+                return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động.' });
             }
+            decoded.VaiTro = userRows[0].VaiTro;
         }
         
         req.user = decoded;

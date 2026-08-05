@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cấu hình Hệ thống - EduShare Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminDashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link rel="stylesheet" href="../../css/admin/adminSettings.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<body>
+  
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">A</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Admin</span>
+          <span class="user-role" id="navUserRole">Quản trị viên</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <main class="content-area">
+      <div class="page-header">
+        <h1 class="page-title">Cấu hình Hệ thống</h1>
+      </div>
+
+      <div class="settings-card">
+        <form id="settingsForm">
+            <div class="settings-form-group">
+                <label for="XU_TO_VND_RATE">Tỷ giá quy đổi Xu</label>
+                <input type="number" id="XU_TO_VND_RATE" name="XU_TO_VND_RATE" min="1" required>
+                <span class="description" id="desc_XU_TO_VND_RATE">Đang tải...</span>
+            </div>
+
+            <div class="settings-form-group">
+                <label for="MAX_DOCS_PER_GROUP">Giới hạn tài liệu mỗi Nhóm</label>
+                <input type="number" id="MAX_DOCS_PER_GROUP" name="MAX_DOCS_PER_GROUP" min="1" required>
+                <span class="description" id="desc_MAX_DOCS_PER_GROUP">Đang tải...</span>
+            </div>
+
+            <div class="settings-form-group">
+                <label for="MAX_REPORTS_AUTO_HIDE">Giới hạn Báo cáo tự động ẩn</label>
+                <input type="number" id="MAX_REPORTS_AUTO_HIDE" name="MAX_REPORTS_AUTO_HIDE" min="1" required>
+                <span class="description" id="desc_MAX_REPORTS_AUTO_HIDE">Đang tải...</span>
+            </div>
+
+            <div class="settings-form-group">
+                <label for="MAX_UPLOAD_SIZE_MB">Dung lượng Tài liệu tải lên (MB)</label>
+                <input type="number" id="MAX_UPLOAD_SIZE_MB" name="MAX_UPLOAD_SIZE_MB" min="1" required>
+                <span class="description" id="desc_MAX_UPLOAD_SIZE_MB">Đang tải...</span>
+            </div>
+
+            <div class="settings-form-group">
+                <label for="MAX_AVATAR_SIZE_MB">Dung lượng Ảnh đại diện / Minh chứng (MB)</label>
+                <input type="number" id="MAX_AVATAR_SIZE_MB" name="MAX_AVATAR_SIZE_MB" min="1" required>
+                <span class="description" id="desc_MAX_AVATAR_SIZE_MB">Đang tải...</span>
+            </div>
+
+            <div class="settings-form-group">
+                <label for="MAX_AVATAR_CHANGES">Số lần đổi Avatar tối đa</label>
+                <input type="number" id="MAX_AVATAR_CHANGES" name="MAX_AVATAR_CHANGES" min="1" required>
+                <span class="description" id="desc_MAX_AVATAR_CHANGES">Đang tải...</span>
+            </div>
+
+            <div class="settings-form-group">
+                <label for="AVATAR_LIMIT_RESET_HOURS">Thời gian Reset số lần đổi Avatar (Giờ)</label>
+                <input type="number" step="0.1" id="AVATAR_LIMIT_RESET_HOURS" name="AVATAR_LIMIT_RESET_HOURS" min="0.1" required>
+                <span class="description" id="desc_AVATAR_LIMIT_RESET_HOURS">Đang tải...</span>
+            </div>
+
+            <button type="submit" class="btn-save" id="btnSave" disabled><i class="fa-solid fa-save" style="margin-right: 5px"></i> Lưu cấu hình</button>
+        </form>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module" src="../../main/admin/adminSettings.js"></script>
+</body>
+</html>

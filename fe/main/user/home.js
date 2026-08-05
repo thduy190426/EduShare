@@ -402,35 +402,79 @@ function renderRecommendedGroups(groups) {
     groups.forEach(group => {
         const card = document.createElement('div');
         card.className = 'group-card';
+        const groupIconHtml = group.AnhBia 
+            ? `<img src="${getAssetUrl(group.AnhBia)}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="${escapeHTML(group.TenNhom)}">` 
+            : '<i class="fa-solid fa-users"></i>';
+
+        const joinBtnHtml = group.HasRequested 
+            ? `<button class="btn-outline-primary btn-cancel-join" type="button" data-group-cancel="${group.MaNhom}" style="flex:1; color:var(--danger, #ef4444); border-color:var(--danger, #ef4444);"><i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu</button>`
+            : `<button class="btn-outline-primary btn-join-group" type="button" data-group-join="${group.MaNhom}" style="flex:1;"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
+
         card.innerHTML = `
             <div class="group-header">
-                <div class="group-icon"><i class="fa-solid fa-users"></i></div>
+                <div class="group-icon" style="padding:0; overflow:hidden;">${groupIconHtml}</div>
                 <div class="group-members"><i class="fa-solid fa-user-group"></i> ${group.SoLuongThanhVien || 1}</div>
             </div>
             <div class="group-info">
-                <h3 class="group-title">${escapeHTML(group.TenNhom)}</h3>
-                <div class="group-subject">${escapeHTML(group.TenMonHoc) || 'Chung'}</div>
+                <h3 class="group-title">${group.IsPrivate ? '<i class="fa-solid fa-lock" style="font-size: 0.8em; color: #64748b; margin-right: 8px;"></i>' : ''}${escapeHTML(group.TenNhom)}</h3>
+                <span class="group-subject">${escapeHTML(group.TenMonHoc) || 'Chung'}</span>
                 <p class="group-desc">${escapeHTML(group.MoTa) || 'Không có mô tả.'}</p>
             </div>
-            <div class="group-actions">
-                <button class="btn-outline-primary" type="button" data-group-detail="${group.MaNhom}">
-                    <i class="fa-solid fa-circle-info"></i> Chi tiết
+            <div class="group-footer">
+                <button class="btn-outline-primary" style="flex:1;" type="button" data-group-detail="${group.MaNhom}">
+                    <i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chi tiết
                 </button>
-                <button class="btn-outline-primary btn-join-group" type="button" data-group-join="${group.MaNhom}">
-                    <i class="fa-solid fa-user-plus"></i> Tham gia
-                </button>
+                ${joinBtnHtml}
             </div>
         `;
 
         card.querySelector('[data-group-detail]').addEventListener('click', () => {
             window.location.href = `../group/groupDetails.html?id=${group.MaNhom}`;
         });
-        card.querySelector('[data-group-join]').addEventListener('click', (event) => {
-            joinRecommendedGroup(group.MaNhom, event.currentTarget);
-        });
+        const joinBtn = card.querySelector('[data-group-join]');
+        if (joinBtn) {
+            joinBtn.addEventListener('click', (event) => {
+                joinRecommendedGroup(group.MaNhom, event.currentTarget);
+            });
+        }
+        
+        const cancelBtn = card.querySelector('[data-group-cancel]');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', (event) => {
+                cancelJoinRecommendedGroup(group.MaNhom, event.currentTarget);
+            });
+        }
 
         grid.appendChild(card);
     });
+}
+
+async function cancelJoinRecommendedGroup(maNhom, button) {
+    const token = getToken();
+    if (!token) return;
+
+    const originalHtml = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang huỷ...';
+
+    try {
+        const response = await fetch(`${API_URL}/groups/${maNhom}/cancel-join`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) throw new Error(data.message || 'Không thể huỷ yêu cầu.');
+
+        fetchRecommendedGroups();
+    } catch (error) {
+        console.error('Lỗi khi huỷ yêu cầu tham gia:', error);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({ icon: 'error', title: 'Lỗi', text: error.message });
+        }
+        button.disabled = false;
+        button.innerHTML = originalHtml;
+    }
 }
 
 async function joinRecommendedGroup(maNhom, button) {
@@ -454,7 +498,7 @@ async function joinRecommendedGroup(maNhom, button) {
         if (!response.ok) throw new Error(data.message || 'Không thể tham gia nhóm.');
 
         if (typeof Swal !== 'undefined') {
-            Swal.fire({ icon: 'success', title: 'Thành công', text: 'Tham gia nhóm thành công!' });
+            Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã gửi yêu cầu tham gia nhóm' });
         }
         fetchRecommendedGroups();
     } catch (error) {

@@ -441,7 +441,6 @@ router.delete('/profile', authMiddleware, async (req, res) => {
 });
 
 
-const AVATAR_MAX_SIZE = 5 * 1024 * 1024;
 const AVATAR_ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
 function uploadAvatarToCloudinary(buffer, maND) {
@@ -468,11 +467,18 @@ function uploadAvatarToCloudinary(buffer, maND) {
 }
 
 function parseAvatarRequest(req) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         let avatarFile = null;
         let totalSize = 0;
         let hasAvatarField = false;
         let settled = false;
+
+        let maxSize = 5 * 1024 * 1024;
+        try {
+            const pool = req.app.locals.pool;
+            const [rows] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "MAX_AVATAR_SIZE_MB"');
+            if (rows.length > 0) maxSize = parseFloat(rows[0].GiaTri) * 1024 * 1024;
+        } catch (e) { console.error('Lỗi lấy cấu hình avatar size', e); }
 
         const fail = (error) => {
             if (settled) return;
@@ -484,7 +490,7 @@ function parseAvatarRequest(req) {
             headers: req.headers,
             limits: {
                 files: 1,
-                fileSize: AVATAR_MAX_SIZE,
+                fileSize: maxSize,
             },
         });
 
@@ -541,23 +547,33 @@ function parseAvatarRequest(req) {
 }
 
 const avatarUpdateLimits = new Map();
-const MAX_AVATAR_CHANGES = 5;
-const AVATAR_LIMIT_RESET_TIME = 60 * 60 * 1000;
 
-function checkAvatarRateLimit(maND) {
+async function checkAvatarRateLimit(req) {
+    const maND = req.user.MaND;
+    const pool = req.app.locals.pool;
+    let maxChanges = 5;
+    let resetTimeMs = 60 * 60 * 1000;
+    try {
+        const [rows] = await pool.execute('SELECT TenCauHinh, GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh IN ("MAX_AVATAR_CHANGES", "AVATAR_LIMIT_RESET_HOURS")');
+        rows.forEach(r => {
+            if (r.TenCauHinh === 'MAX_AVATAR_CHANGES') maxChanges = parseInt(r.GiaTri);
+            if (r.TenCauHinh === 'AVATAR_LIMIT_RESET_HOURS') resetTimeMs = parseFloat(r.GiaTri) * 60 * 60 * 1000;
+        });
+    } catch(e) { console.error(e); }
+
     const now = Date.now();
     if (!avatarUpdateLimits.has(maND)) {
-        avatarUpdateLimits.set(maND, { count: 1, resetAt: now + AVATAR_LIMIT_RESET_TIME });
+        avatarUpdateLimits.set(maND, { count: 1, resetAt: now + resetTimeMs });
         return true;
     }
 
     const limitData = avatarUpdateLimits.get(maND);
     if (now > limitData.resetAt) {
-        avatarUpdateLimits.set(maND, { count: 1, resetAt: now + AVATAR_LIMIT_RESET_TIME });
+        avatarUpdateLimits.set(maND, { count: 1, resetAt: now + resetTimeMs });
         return true;
     }
 
-    if (limitData.count >= MAX_AVATAR_CHANGES) {
+    if (limitData.count >= maxChanges) {
         return false;
     }
 
@@ -566,8 +582,9 @@ function checkAvatarRateLimit(maND) {
 }
 
 router.post('/profile/avatar', authMiddleware, async (req, res) => {
-    if (!checkAvatarRateLimit(req.user.MaND)) {
-        return res.status(429).json({ message: 'Bạn đã thay đổi ảnh đại diện quá nhiều lần. Vui lòng thử lại sau 1 giờ.' });
+    const isAllowed = await checkAvatarRateLimit(req);
+    if (!isAllowed) {
+        return res.status(429).json({ message: 'Bạn đã thay đổi ảnh đại diện quá nhiều lần. Vui lòng thử lại sau.' });
     }
     const hasCloudinaryConfig = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
     if (!hasCloudinaryConfig) {
@@ -589,8 +606,9 @@ router.post('/profile/avatar', authMiddleware, async (req, res) => {
 });
 
 router.delete('/profile/avatar', authMiddleware, async (req, res) => {
-    if (!checkAvatarRateLimit(req.user.MaND)) {
-        return res.status(429).json({ message: 'Bạn đã xoá ảnh đại diện quá nhiều lần. Vui lòng thử lại sau 1 giờ.' });
+    const isAllowed = await checkAvatarRateLimit(req);
+    if (!isAllowed) {
+        return res.status(429).json({ message: 'Bạn đã thao tác quá nhiều lần. Vui lòng thử lại sau.' });
     }
     try {
         const pool = req.app.locals.pool;
@@ -973,22 +991,40 @@ router.get('/upgrade-status', authMiddleware, async (req, res) => {
     }
 });
 
-const uploadImage = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => cb(null, os.tmpdir()),
-        filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-    }),
-    limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new Error('Chỉ cho phép tải lên hình ảnh.'));
-        }
-    }
-});
+const dynamicUploadImage = async (req, res, next) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "MAX_AVATAR_SIZE_MB"');
+        const limitMB = rows.length > 0 ? parseFloat(rows[0].GiaTri) : 5;
+        
+        const uploadImage = multer({
+            storage: multer.memoryStorage(),
+            limits: { fileSize: limitMB * 1024 * 1024 },
+            fileFilter: (req, file, cb) => {
+                if (file.mimetype.startsWith('image/')) {
+                    cb(null, true);
+                } else {
+                    cb(new Error('Chỉ cho phép tải lên hình ảnh.'));
+                }
+            }
+        }).single('image');
 
-router.post('/upload-image', authMiddleware, uploadImage.single('image'), async (req, res) => {
+        uploadImage(req, res, function (err) {
+            if (err) {
+                if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({ message: `Dung lượng ảnh vượt quá giới hạn cho phép (${limitMB}MB).` });
+                }
+                return res.status(400).json({ message: err.message });
+            }
+            next();
+        });
+    } catch (e) {
+        console.error('Lỗi Dynamic Upload Image:', e);
+        return res.status(500).json({ message: 'Lỗi cấu hình máy chủ.' });
+    }
+};
+
+router.post('/upload-image', authMiddleware, dynamicUploadImage, async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Không tìm thấy file hình ảnh.' });
     }
