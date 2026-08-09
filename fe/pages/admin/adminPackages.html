@@ -1,0 +1,119 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Gói Nạp — EduShare Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminUserManagement.css">
+  <link rel="stylesheet" href="../../css/admin/adminPromos.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <main class="content-area">
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h1 class="page-title">Quản lý Gói Nạp EduCoin</h1>
+        <button id="btn-show-create-modal" class="btn-custom btn-custom-submit"><i class="fa-solid fa-plus"></i> Tạo gói mới</button>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="10%"><i class="fa-solid fa-barcode" style="margin-right: 6px;"></i> Mã gói</th>
+              <th width="20%"><i class="fa-solid fa-tag" style="margin-right: 6px;"></i> Tên gói</th>
+              <th width="15%"><i class="fa-solid fa-money-bill-wave" style="margin-right: 6px;"></i> Giá (VNĐ)</th>
+              <th width="15%"><i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Số Xu</th>
+              <th width="10%"><i class="fa-solid fa-sort" style="margin-right: 6px;"></i> Khuyến mại</th>
+              <th width="15%"><i class="fa-solid fa-toggle-on" style="margin-right: 6px;"></i> Trạng thái</th>
+              <th style="white-space: nowrap;"><i class="fa-solid fa-gears" style="margin-right: 6px;"></i> Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="packages-table-body">
+            
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-container" id="packages-pagination"></div>
+    </main>
+  </div>
+
+  <div id="package-custom-modal" class="promo-modal-overlay">
+    <div class="promo-modal-content">
+      <div class="promo-modal-header">
+        <h3 id="package-modal-title"><i class="fa-solid fa-box-open"></i> Tạo Gói Nạp Mới</h3>
+        <button id="btn-close-modal-x" class="promo-modal-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      
+      <div class="form-group">
+        <label><i class="fa-solid fa-barcode"></i> Mã Gói</label>
+        <input type="text" id="input-magoi" class="form-input-custom" placeholder="VD: G10K, G20K..." required>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fa-solid fa-tag"></i> Tên Gói</label>
+        <input type="text" id="input-tengoi" class="form-input-custom" placeholder="VD: Gói Cơ Bản 10K" required>
+      </div>
+
+      <div class="form-group" style="display: flex; gap: 15px;">
+        <div style="flex: 1;">
+          <label><i class="fa-solid fa-money-bill-wave"></i> Giá Tiền (VNĐ)</label>
+          <input type="number" id="input-sotien" class="form-input-custom" min="1000" placeholder="10000" required>
+        </div>
+        <div style="flex: 1;">
+          <label><i class="fa-solid fa-coins"></i> Số Xu Nhận Được</label>
+          <input type="number" id="input-soxu" class="form-input-custom" min="1" placeholder="100" required>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: flex; gap: 15px;">
+        <div style="flex: 1;">
+          <label><i class="fa-solid fa-percent"></i> Khuyến Mại Thêm (%)</label>
+          <input type="number" id="input-khuyenmai" class="form-input-custom" min="0" value="0">
+        </div>
+        <div style="flex: 1;">
+          <label><i class="fa-solid fa-sort"></i> Thứ tự hiển thị</label>
+          <input type="number" id="input-thutu" class="form-input-custom" min="0" value="0">
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 20px;">
+        <button id="btn-cancel-custom" class="btn-custom btn-custom-cancel">
+          <i class="fa-solid fa-times"></i> Hủy
+        </button>
+        <button id="btn-submit-custom" class="btn-custom btn-custom-submit">
+          <i class="fa-solid fa-check"></i> Lưu gói nạp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../../main/admin/adminPackages.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+</body>
+</html>
+

@@ -1,6 +1,7 @@
 import { API_URL } from './config.js';
 import { decodeJWT, getAssetUrl, getToken, getRefreshToken, getAvatar, clearAuthSession, showToast, getTimeBasedGreeting } from './utils.js';
 import { getSocket } from './socketClient.js';
+import './chatWidget.js';
 
 const SIDEBAR_ITEMS = [
     { label: 'Trang chủ', icon: 'fa-house', href: '../user/userHome.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -9,7 +10,7 @@ const SIDEBAR_ITEMS = [
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien'], group: 'user' },
-    { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], group: 'admin' },
     { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin', 'GiaoVien'], badge: 'pendingDocs', group: 'admin' },
@@ -20,6 +21,8 @@ const SIDEBAR_ITEMS = [
     { label: 'Quản lý nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
     { label: 'Báo cáo', icon: 'fa-flag', href: '../admin/adminViolationReports.html', roles: ['Admin'], badge: 'pendingReports', group: 'admin' },
     { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], group: 'admin' },
+    { label: 'Gói nạp', icon: 'fa-box-open', href: '../admin/adminPackages.html', roles: ['Admin'], group: 'admin' },
+    { label: 'Nhật ký (Logs)', icon: 'fa-clipboard-list', href: '../admin/adminAuditLogs.html', roles: ['Admin'], group: 'admin' },
     { label: 'Cấu hình hệ thống', icon: 'fa-gear', href: '../admin/adminSettings.html', roles: ['Admin'], group: 'admin' }
 ];
 
@@ -175,49 +178,7 @@ async function renderSidebar() {
             }
         });
     }
-    const updateSidebarBadge = (id, count) => {
-        const badgeEl = document.getElementById(id);
-        if (!badgeEl) return;
-        const menuItem = badgeEl.closest('.menu-item');
-        if (count > 0) {
-            badgeEl.textContent = count > 99 ? '99+' : count;
-            badgeEl.style.display = 'flex';
-            if (menuItem) menuItem.classList.add('has-unread');
-        } else {
-            badgeEl.textContent = '0';
-            badgeEl.style.display = 'none';
-            if (menuItem) menuItem.classList.remove('has-unread');
-        }
-    };
-    if (userRole === 'Admin') {
-        try {
-            const res = await fetch(`${API_URL}/admin/stats/overview`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                updateSidebarBadge('badge-pendingDocs', data.pendingDocs || 0);
-                updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
-                updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
-                updateSidebarBadge('badge-pendingTeachers', data.pendingTeachers || 0);
-                updateSidebarBadge('badge-pendingSubjects', data.pendingSubjects || 0);
-            }
-        } catch (e) {
-            console.error('Lỗi load Admin badges:', e);
-        }
-    } else if (userRole === 'GiaoVien') {
-        try {
-            const res = await fetch(`${API_URL}/admin/documents/counts`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const counts = await res.json();
-                updateSidebarBadge('badge-pendingDocs', counts.ChoDuyet || 0);
-            }
-        } catch (e) {
-            console.error('Lỗi load teacher moderation badge:', e);
-        }
-    }
+    await refreshSidebarBadges();
 
     try {
         const res = await fetch(`${API_URL}/notifications/unread-count`, {
@@ -441,3 +402,57 @@ document.addEventListener('DOMContentLoaded', () => {
     setupNotificationNavigation();
     setupRealtimeNotifications();
 });
+
+window.refreshSidebarBadges = async function() {
+    const token = getToken();
+    if (!token) return;
+
+    const decoded = decodeJWT(token);
+    if (!decoded || !decoded.VaiTro) return;
+    const userRole = decoded.VaiTro;
+
+    const updateSidebarBadge = (id, count) => {
+        const badgeEl = document.getElementById(id);
+        if (!badgeEl) return;
+        const menuItem = badgeEl.closest('.menu-item');
+        if (count > 0) {
+            badgeEl.textContent = count > 99 ? '99+' : count;
+            badgeEl.style.display = 'flex';
+            if (menuItem) menuItem.classList.add('has-unread');
+        } else {
+            badgeEl.textContent = '0';
+            badgeEl.style.display = 'none';
+            if (menuItem) menuItem.classList.remove('has-unread');
+        }
+    };
+
+    if (userRole === 'Admin') {
+        try {
+            const res = await fetch(`${API_URL}/admin/stats/overview`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                updateSidebarBadge('badge-pendingDocs', data.pendingDocs || 0);
+                updateSidebarBadge('badge-pendingReports', data.pendingReports || 0);
+                updateSidebarBadge('badge-pendingPayments', data.pendingPayments || 0);
+                updateSidebarBadge('badge-pendingTeachers', data.pendingTeachers || 0);
+                updateSidebarBadge('badge-pendingSubjects', data.pendingSubjects || 0);
+            }
+        } catch (e) {
+            console.error('Lỗi load Admin badges:', e);
+        }
+    } else if (userRole === 'GiaoVien') {
+        try {
+            const res = await fetch(`${API_URL}/admin/documents/counts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const counts = await res.json();
+                updateSidebarBadge('badge-pendingDocs', counts.ChoDuyet || 0);
+            }
+        } catch (e) {
+            console.error('Lỗi load teacher moderation badge:', e);
+        }
+    }
+};

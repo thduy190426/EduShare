@@ -234,6 +234,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     
+async function generatePdfThumbnail(file) {
+    if (file.type !== 'application/pdf' && file.name.split('.').pop().toLowerCase() !== 'pdf') return null;
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.0 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        
+        return new Promise(resolve => {
+            canvas.toBlob(blob => {
+                if (blob) {
+                    const thumbFile = new File([blob], file.name.replace('.pdf', '_thumb.webp'), { type: 'image/webp' });
+                    resolve(thumbFile);
+                } else {
+                    resolve(null);
+                }
+            }, 'image/webp', 0.8);
+        });
+    } catch(e) {
+        console.error('Error generating PDF thumbnail:', e);
+        return null;
+    }
+}
+
     uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -316,13 +345,34 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!sigRes.ok) throw new Error('Không thể tạo chữ ký bảo mật.');
             const sigData = await sigRes.json();
 
-            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên Cloud...';
             const cloudForm = new FormData();
             cloudForm.append('file', file);
             cloudForm.append('api_key', sigData.apiKey);
             cloudForm.append('timestamp', sigData.timestamp);
             cloudForm.append('signature', sigData.signature);
             cloudForm.append('folder', sigData.folder);
+
+            let thumbnailUrl = null;
+            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo ảnh bìa...';
+            const thumbnailFile = await generatePdfThumbnail(file);
+            if (thumbnailFile) {
+                const thumbCloudForm = new FormData();
+                thumbCloudForm.append('file', thumbnailFile);
+                thumbCloudForm.append('api_key', sigData.apiKey);
+                thumbCloudForm.append('timestamp', sigData.timestamp);
+                thumbCloudForm.append('signature', sigData.signature);
+                thumbCloudForm.append('folder', sigData.folder);
+
+                try {
+                    const thumbCloudData = await fetch(`https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`, {
+                        method: 'POST',
+                        body: thumbCloudForm
+                    }).then(res => res.json());
+                    thumbnailUrl = thumbCloudData.secure_url;
+                } catch(e) { console.error('Lỗi upload thumbnail:', e); }
+            }
+
+            btnUpload.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải lên Cloud...';
 
             const uploadProgressContainer = document.getElementById('uploadProgressContainer');
             const uploadProgressBar = document.getElementById('uploadProgressBar');
@@ -369,6 +419,9 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('publicId', cloudData.public_id);
             formData.append('mimeType', file.type);
             formData.append('fileName', file.name);
+            if (thumbnailUrl) {
+                formData.append('thumbnailUrl', thumbnailUrl);
+            }
 
             const response = await fetch(`${API_URL}/documents/upload`, {
                 method: 'POST',

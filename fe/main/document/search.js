@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderDocumentSkeleton } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, stripHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderDocumentSkeleton } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('searchInput');
@@ -417,22 +417,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-                    let previewTarget = null;
-                    if (doc.PreviewURL) {
-                        previewTarget = doc.PreviewURL;
-                    } else if (loaiFile === 'pdf' && doc.FileURL) {
-                        previewTarget = doc.FileURL;
-                    }
+                    
+                    if (doc.ThumbnailURL) {
+                        const thumbUrlFull = getAssetUrl(doc.ThumbnailURL);
+                        thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
+                        thumbClass = '';
+                    } else {
+                        let previewTarget = null;
+                        if (doc.PreviewURL) {
+                            previewTarget = doc.PreviewURL;
+                        } else if (loaiFile === 'pdf' && doc.FileURL) {
+                            previewTarget = doc.FileURL;
+                        }
 
-                    if (previewTarget) {
-                        thumbHtml = `
-                            <iframe
-                                src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
-                                style="position: absolute; top: 0; left: 0; width: calc(100% + 20px); height: calc(100% + 20px); max-width: none; border: none; pointer-events: none; opacity: 0.9; overflow: hidden;"
-                                loading="lazy"
-                                scrolling="no"
-                            ></iframe>
-                        `;
+                        if (previewTarget) {
+                            thumbHtml = `
+                                <iframe
+                                    src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
+                                    style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;"
+                                    scrolling="no"
+                                    tabindex="-1"
+                                    loading="lazy">
+                                </iframe>`;
+                            thumbClass = '';
+                        }
                     }
 
                     let dateStr = 'Không rõ';
@@ -458,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="doc-meta-item" style="font-size: 12px; color: var(--text-secondary);"><i class="fa-solid fa-calendar"></i> ${dateStr}</span>
                             </div>
                             <h3 class="doc-title">${escapeHTML(doc.TenTL)}</h3>
-                            <div class="doc-desc">${escapeHTML(doc.MoTa || 'Không có mô tả')}</div>
+                            <div class="doc-desc">${escapeHTML(stripHTML(doc.MoTa) || 'Không có mô tả')}</div>
                             <div class="doc-footer">
                                 <div class="doc-author js-author-link" data-user-id="${doc.MaND || ''}" title="Xem hồ sơ người đăng">
                                     ${avatarHtml}

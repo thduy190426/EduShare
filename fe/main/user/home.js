@@ -348,6 +348,12 @@ async function fetchUserProfileForHero() {
                 heroCoinEl.textContent = Number(profile.SoDuXu || 0).toLocaleString();
             }
             
+            const decoded = decodeJWT(token);
+            const subtitleEl = document.querySelector('.hero-subtitle');
+            if (subtitleEl && decoded && decoded.VaiTro === 'GiaoVien') {
+                subtitleEl.style.display = 'none';
+            }
+            
             if (heroBanner) {
                 heroBanner.style.display = 'flex';
             }
@@ -692,17 +698,24 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
         }
 
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        let previewTarget = null;
-        if (doc.PreviewURL) {
-            previewTarget = doc.PreviewURL;
-        } else if (loaiFile === 'pdf' && doc.FileURL) {
-            previewTarget = doc.FileURL;
-        }
-
-        if (previewTarget) {
-            const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+        
+        if (doc.ThumbnailURL) {
+            const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
+            thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
             thumbClass = '';
+        } else {
+            let previewTarget = null;
+            if (doc.PreviewURL) {
+                previewTarget = doc.PreviewURL;
+            } else if (loaiFile === 'pdf' && doc.FileURL) {
+                previewTarget = doc.FileURL;
+            }
+
+            if (previewTarget) {
+                const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
+                thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+                thumbClass = '';
+            }
         }
 
         let dateStr = 'Không rõ';

@@ -4,17 +4,17 @@ const { authMiddleware, adminMiddleware } = require('./middlewares/auth');
 const { paymentLimiter } = require('./middlewares/rateLimit');
 
 
-const PACKAGES = [
-    { id: 'G10K', price: 10000, coins: 100 },
-    { id: 'G20K', price: 20000, coins: 200 },
-    { id: 'G50K', price: 50000, coins: 550 },
-    { id: 'G100K', price: 100000, coins: 1150 },
-    { id: 'G200K', price: 200000, coins: 2400 },
-    { id: 'G500K', price: 500000, coins: 6250 }
-];
 
-router.get('/packages', (req, res) => {
-    res.status(200).json({ packages: PACKAGES });
+
+router.get('/packages', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT MaGoi AS id, SoTien AS price, SoXu AS coins, KhuyenMai, TenGoi FROM GOI_NAP_XU WHERE TrangThai = "HoatDong" ORDER BY ThuTu ASC, SoTien ASC');
+        res.status(200).json({ packages: rows });
+    } catch (err) {
+        console.error('Lỗi khi lấy gói nạp:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
 });
 
 router.post('/promos/validate', authMiddleware, async (req, res) => {
@@ -47,18 +47,18 @@ router.post('/promos/validate', authMiddleware, async (req, res) => {
 
 router.post('/create', authMiddleware, paymentLimiter, async (req, res) => {
     const { packageId, promoCode } = req.body;
-    const pkg = PACKAGES.find(p => p.id === packageId);
-    
-    if (!pkg) {
-        return res.status(400).json({ message: 'Gói nạp không hợp lệ.' });
-    }
-
-    const amount = pkg.price;
-    let coins = pkg.coins;
     const userId = req.user.MaND;
 
     try {
         const pool = req.app.locals.pool;
+        
+        const [pkgRows] = await pool.execute('SELECT SoTien, SoXu FROM GOI_NAP_XU WHERE MaGoi = ? AND TrangThai = "HoatDong"', [packageId]);
+        if (pkgRows.length === 0) {
+            return res.status(400).json({ message: 'Gói nạp không hợp lệ hoặc đã bị ẩn.' });
+        }
+        
+        const amount = pkgRows[0].SoTien;
+        let coins = pkgRows[0].SoXu;
         
         let maPromo = null;
         if (promoCode) {

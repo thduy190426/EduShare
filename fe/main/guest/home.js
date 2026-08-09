@@ -92,13 +92,13 @@ async function fetchFeaturedDocuments() {
 
     try {
         const response = await fetch(`${API_URL}/documents/search?trang=1&limit=6&sapXep=NoiBat`);
-        if (!response.ok) throw new Error('Khong the tai tai lieu noi bat.');
+        if (!response.ok) throw new Error('Không thể tải tài liệu nổi bật.');
 
         const data = await response.json();
         renderFeaturedDocuments(data.documents || []);
     } catch (error) {
-        console.error('Loi khi tai tai lieu noi bat:', error);
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Khong the tai du lieu tai lieu luc nay.</p>';
+        console.error('Lỗi khi tải tài liệu nổi bật:', error);
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Không thể tải dữ liệu tài liệu lúc này.</p>';
     }
 }
 
@@ -108,7 +108,7 @@ function renderFeaturedDocuments(documents) {
 
     const topDocuments = documents.slice(0, 6);
     if (topDocuments.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chua co tai lieu nao tren he thong.</p>';
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chưa có tài liệu nào trên hệ thống.</p>';
         return;
     }
 
@@ -133,17 +133,24 @@ function renderFeaturedDocuments(documents) {
         }
 
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        let previewTarget = null;
-        if (doc.PreviewURL) {
-            previewTarget = doc.PreviewURL;
-        } else if (fileType === 'pdf' && doc.FileURL) {
-            previewTarget = doc.FileURL;
-        }
-
-        if (previewTarget) {
-            const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+        
+        if (doc.ThumbnailURL) {
+            const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
+            thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
             thumbClass = '';
+        } else {
+            let previewTarget = null;
+            if (doc.PreviewURL) {
+                previewTarget = doc.PreviewURL;
+            } else if (fileType === 'pdf' && doc.FileURL) {
+                previewTarget = doc.FileURL;
+            }
+
+            if (previewTarget) {
+                const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
+                thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+                thumbClass = '';
+            }
         }
 
         const authorInitial = doc.TenNguoiDang ? doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase() : '?';

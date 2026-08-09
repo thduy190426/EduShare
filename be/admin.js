@@ -413,7 +413,7 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
             }
         }
 
-        const [docRows] = await conn.execute('SELECT MaTL, FileURL, AnhBia FROM TAILIEU WHERE MaND_NguoiDang = ?', [maND]);
+        const [docRows] = await conn.execute('SELECT MaTL, FileURL, PreviewURL, ThumbnailURL FROM TAILIEU WHERE MaND_NguoiDang = ?', [maND]);
         const documentIds = docRows.map(row => row.MaTL);
 
         if (documentIds.length > 0) {
@@ -423,7 +423,6 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
             await conn.execute(`DELETE FROM BOOKMARK WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM DANHGIA WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM BAOCAOVIPHAM WHERE MaTL IN (${placeholders})`, documentIds);
-            await conn.execute(`DELETE FROM THONGBAO WHERE MaTL IN (${placeholders})`, documentIds);
             await conn.execute(`DELETE FROM TAILIEU_NHOM WHERE MaTL IN (${placeholders})`, documentIds);
             if (await tableExists('LICH_SU_TAI')) {
                 await conn.execute(`DELETE FROM LICH_SU_TAI WHERE MaTL IN (${placeholders})`, documentIds);
@@ -464,7 +463,8 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
 
         if (documentIds.length > 0) {
             const placeholders = documentIds.map(() => '?').join(',');
-            await conn.execute(`UPDATE TAILIEU SET IsDeleted = TRUE WHERE MaTL IN (${placeholders})`, documentIds);
+            await conn.execute(`DELETE FROM TAILIEU_DAMUA WHERE MaTL IN (${placeholders})`, documentIds);
+            await conn.execute(`DELETE FROM TAILIEU WHERE MaTL IN (${placeholders})`, documentIds);
 
             try {
                 for (const doc of docRows) {
@@ -472,8 +472,8 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
                         const filePath = path.join(__dirname, 'public', doc.FileURL);
                         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
                     }
-                    if (doc.AnhBia && !doc.AnhBia.includes('default-cover.png')) {
-                        const coverPath = path.join(__dirname, 'public', doc.AnhBia);
+                    if (doc.PreviewURL) {
+                        const coverPath = path.join(__dirname, 'public', doc.PreviewURL);
                         if (fs.existsSync(coverPath)) fs.unlinkSync(coverPath);
                     }
                 }
@@ -666,12 +666,46 @@ router.put('/users/:maND/role', adminMiddleware, async (req, res) => {
     }
 });
 
+router.get('/reports/counts', adminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute(`
+            SELECT TrangThai, COUNT(*) as count 
+            FROM BAOCAOVIPHAM 
+            GROUP BY TrangThai
+        `);
+        
+        const counts = { ChoXuLy: 0, DaXuLy: 0, TuChoi: 0 };
+        rows.forEach(row => {
+            if (counts[row.TrangThai] !== undefined) {
+                counts[row.TrangThai] = row.count;
+            }
+        });
+        
+        res.status(200).json(counts);
+    } catch (error) {
+        console.error('Lỗi API /reports/counts:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 router.get('/reports', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         
-        const countSql = `SELECT COUNT(*) as total FROM BAOCAOVIPHAM`;
-        const [countResult] = await pool.execute(countSql);
+        let statusFilter = req.query.status;
+        let whereClause = '';
+        let params = [];
+        let countParams = [];
+
+        if (statusFilter && ['ChoXuLy', 'DaXuLy', 'TuChoi'].includes(statusFilter)) {
+            whereClause = 'WHERE B.TrangThai = ?';
+            params.push(statusFilter);
+            countParams.push(statusFilter);
+        }
+
+        const countSql = `SELECT COUNT(*) as total FROM BAOCAOVIPHAM B ${whereClause}`;
+        const [countResult] = await pool.execute(countSql, countParams);
         const totalRecords = countResult[0].total;
         
         const page = parseInt(req.query.page) || 1;
@@ -691,14 +725,17 @@ router.get('/reports', adminMiddleware, async (req, res) => {
         else if (sortBy === 'NgayBaoCao') sortClause = `ORDER BY B.NgayBaoCao ${sortOrder}`;
         else if (sortBy === 'TrangThai') sortClause = `ORDER BY B.TrangThai ${sortOrder}`;
 
+        params.push(limit.toString(), offset.toString());
+
         const [rows] = await pool.execute(`
             SELECT B.*, T.TenTL, T.FileURL, T.TrangThaiKiemDuyet, N.HoTen AS NguoiBaoCao, N.AvatarURL AS AvatarNguoiBaoCao
             FROM BAOCAOVIPHAM B
             JOIN TAILIEU T ON B.MaTL = T.MaTL
             JOIN NGUOIDUNG N ON B.MaND = N.MaND
+            ${whereClause}
             ${sortClause}
             LIMIT ? OFFSET ?
-        `, [limit.toString(), offset.toString()]);
+        `, params);
         
         res.status(200).json({ 
             data: rows,
@@ -725,7 +762,7 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
         await conn.beginTransaction();
 
         const [bcRows] = await conn.execute(`
-            SELECT B.MaTL, B.MaND AS NguoiBaoCao, T.MaND_NguoiDang, T.TenTL, T.LaTaiLieuDocQuyen, T.GiaXu, T.FileURL, T.AnhBia 
+            SELECT B.MaTL, B.MaND AS NguoiBaoCao, T.MaND_NguoiDang, T.TenTL, T.LaTaiLieuDocQuyen, T.GiaXu, T.FileURL, T.PreviewURL, T.ThumbnailURL 
             FROM BAOCAOVIPHAM B 
             JOIN TAILIEU T ON B.MaTL = T.MaTL 
             WHERE B.MaBC = ?
@@ -785,8 +822,8 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
                         const filePath = path.join(__dirname, 'public', doc.FileURL);
                         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
                     }
-                    if (doc.AnhBia && !doc.AnhBia.includes('default-cover.png')) {
-                        const coverPath = path.join(__dirname, 'public', doc.AnhBia);
+                    if (doc.PreviewURL) {
+                        const coverPath = path.join(__dirname, 'public', doc.PreviewURL);
                         if (fs.existsSync(coverPath)) fs.unlinkSync(coverPath);
                     }
                 } catch (e) {
@@ -846,7 +883,7 @@ router.put('/reports/bulk-review', adminMiddleware, async (req, res) => {
 
         for (const maBC of reportIds) {
             const [bcRows] = await conn.execute(`
-                SELECT B.MaTL, B.MaND AS NguoiBaoCao, T.MaND_NguoiDang, T.TenTL, T.LaTaiLieuDocQuyen, T.GiaXu, T.FileURL, T.AnhBia 
+                SELECT B.MaTL, B.MaND AS NguoiBaoCao, T.MaND_NguoiDang, T.TenTL, T.LaTaiLieuDocQuyen, T.GiaXu, T.FileURL, T.PreviewURL, T.ThumbnailURL
                 FROM BAOCAOVIPHAM B 
                 JOIN TAILIEU T ON B.MaTL = T.MaTL 
                 WHERE B.MaBC = ?
@@ -899,8 +936,8 @@ router.put('/reports/bulk-review', adminMiddleware, async (req, res) => {
                         const filePath = path.join(__dirname, 'public', doc.FileURL);
                         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
                     }
-                    if (doc.AnhBia && !doc.AnhBia.includes('default-cover.png')) {
-                        const coverPath = path.join(__dirname, 'public', doc.AnhBia);
+                    if (doc.PreviewURL) {
+                        const coverPath = path.join(__dirname, 'public', doc.PreviewURL);
                         if (fs.existsSync(coverPath)) fs.unlinkSync(coverPath);
                     }
                 } catch (e) {
@@ -1066,6 +1103,10 @@ router.delete('/subjects/:id', adminMiddleware, async (req, res) => {
     const id = req.params.id;
     try {
         const pool = req.app.locals.pool;
+        
+        // Remove foreign key references in DEXUAT_MONHOC
+        await pool.execute('UPDATE DEXUAT_MONHOC SET MaMonHocDaTao = NULL WHERE MaMonHocDaTao = ?', [id]);
+
         const [result] = await pool.execute('DELETE FROM MONHOC WHERE MaMonHoc = ?', [id]);
         
         if (result.affectedRows === 0) {
@@ -1205,6 +1246,7 @@ router.get('/subject-suggestions', adminMiddleware, async (req, res) => {
                 DX.NgayDuyet,
                 ND.HoTen AS TenNguoiDeXuat,
                 ND.Email AS EmailNguoiDeXuat,
+                ND.AvatarURL AS AvatarURL,
                 AD.HoTen AS TenNguoiDuyet
             FROM DEXUAT_MONHOC DX
             JOIN NGUOIDUNG ND ON DX.MaND_DeXuat = ND.MaND
@@ -1447,13 +1489,15 @@ router.get('/teacher-requests', adminMiddleware, async (req, res) => {
                    N.MaND, N.HoTen, N.Email, N.AvatarURL
             FROM YEU_CAU_GIAO_VIEN Y
             JOIN NGUOIDUNG N ON Y.MaND = N.MaND
+            WHERE Y.TrangThai = ?
             ORDER BY Y.NgayTao DESC
             LIMIT ? OFFSET ?
         `;
-        const [rows] = await pool.execute(sql, [limit.toString(), offset.toString()]);
+        const [rows] = await pool.execute(sql, [status, limit.toString(), offset.toString()]);
         
         res.status(200).json({ 
             data: rows,
+            counts: countObj,
             pagination: { currentPage: page, limit, totalPages, totalRecords }
         });
     } catch (error) {
@@ -1495,13 +1539,13 @@ router.put('/teacher-requests/:id/review', adminMiddleware, async (req, res) => 
                 await connection.execute('UPDATE NGUOIDUNG SET VaiTro = "GiaoVien" WHERE MaND = ?', [reqRows[0].MaND]);
                 
                 await connection.execute(
-                    'INSERT INTO THONGBAO (MaND, TieuDe, NoiDung, LoaiThongBao) VALUES (?, ?, ?, ?)',
-                    [reqRows[0].MaND, 'Xác thực Giáo viên thành công', 'Yêu cầu nâng cấp tài khoản Giáo viên của bạn đã được phê duyệt.', 'HeThong']
+                    'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
+                    [reqRows[0].MaND, 'Yêu cầu nâng cấp tài khoản Giáo viên của bạn đã được phê duyệt.', 'HeThong']
                 );
             } else if (trangThai === 'TuChoi') {
                 await connection.execute(
-                    'INSERT INTO THONGBAO (MaND, TieuDe, NoiDung, LoaiThongBao) VALUES (?, ?, ?, ?)',
-                    [reqRows[0].MaND, 'Từ chối yêu cầu Giáo viên', `Yêu cầu của bạn bị từ chối. Lý do: ${lyDoTuChoi || 'Không hợp lệ.'}`, 'HeThong']
+                    'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
+                    [reqRows[0].MaND, `Yêu cầu nâng cấp tài khoản Giáo viên của bạn bị từ chối. Lý do: ${lyDoTuChoi || 'Không hợp lệ.'}`, 'HeThong']
                 );
             }
 
@@ -1653,6 +1697,177 @@ router.get('/export/revenue', adminMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Lỗi xuất báo cáo doanh thu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+// ==========================================
+// QUẢN LÝ GÓI NẠP (PACKAGES)
+// ==========================================
+
+router.get('/packages', adminMiddleware, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        const pool = req.app.locals.pool;
+        
+        const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM GOI_NAP_XU');
+        const totalRecords = countResult[0].total;
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        const [rows] = await pool.execute(`
+            SELECT * FROM GOI_NAP_XU 
+            ORDER BY ThuTu ASC, SoTien ASC 
+            LIMIT ? OFFSET ?
+        `, [limit.toString(), offset.toString()]);
+        
+        res.status(200).json({ 
+            data: rows,
+            pagination: { currentPage: page, limit, totalPages, totalRecords }
+        });
+    } catch (error) {
+        console.error('Lỗi lấy danh sách gói nạp:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/packages', adminMiddleware, async (req, res) => {
+    const { MaGoi, TenGoi, SoTien, SoXu, KhuyenMai, TrangThai, ThuTu } = req.body;
+    if (!MaGoi || !TenGoi || !SoTien || !SoXu) {
+        return res.status(400).json({ message: 'Vui lòng điền đủ các thông tin bắt buộc.' });
+    }
+    
+    try {
+        const pool = req.app.locals.pool;
+        // Kiểm tra mã gói
+        const [check] = await pool.execute('SELECT MaGoi FROM GOI_NAP_XU WHERE MaGoi = ?', [MaGoi]);
+        if (check.length > 0) {
+            return res.status(400).json({ message: 'Mã gói nạp này đã tồn tại.' });
+        }
+        
+        await pool.execute(
+            'INSERT INTO GOI_NAP_XU (MaGoi, TenGoi, SoTien, SoXu, KhuyenMai, TrangThai, ThuTu) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [MaGoi, TenGoi, SoTien, SoXu, KhuyenMai || 0, TrangThai || 'HoatDong', ThuTu || 0]
+        );
+        res.status(201).json({ message: 'Thêm gói nạp thành công.' });
+    } catch (error) {
+        console.error('Lỗi thêm gói nạp:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/packages/:id', adminMiddleware, async (req, res) => {
+    const maGoi = req.params.id;
+    const { TenGoi, SoTien, SoXu, KhuyenMai, TrangThai, ThuTu } = req.body;
+    
+    try {
+        const pool = req.app.locals.pool;
+        await pool.execute(
+            'UPDATE GOI_NAP_XU SET TenGoi = ?, SoTien = ?, SoXu = ?, KhuyenMai = ?, TrangThai = ?, ThuTu = ? WHERE MaGoi = ?',
+            [TenGoi, SoTien, SoXu, KhuyenMai || 0, TrangThai, ThuTu || 0, maGoi]
+        );
+        res.status(200).json({ message: 'Cập nhật gói nạp thành công.' });
+    } catch (error) {
+        console.error('Lỗi cập nhật gói nạp:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/packages/:id/toggle', adminMiddleware, async (req, res) => {
+    const maGoi = req.params.id;
+    try {
+        const pool = req.app.locals.pool;
+        
+        const [rows] = await pool.execute('SELECT TrangThai FROM GOI_NAP_XU WHERE MaGoi = ?', [maGoi]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy gói nạp.' });
+        }
+        
+        const currentStatus = rows[0].TrangThai;
+        const newStatus = currentStatus === 'HoatDong' ? 'TamAn' : 'HoatDong';
+        
+        await pool.execute('UPDATE GOI_NAP_XU SET TrangThai = ? WHERE MaGoi = ?', [newStatus, maGoi]);
+        res.status(200).json({ message: 'Đã cập nhật trạng thái gói nạp.', newStatus });
+    } catch (error) {
+        console.error('Lỗi cập nhật trạng thái gói nạp:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/packages/:id', adminMiddleware, async (req, res) => {
+    const maGoi = req.params.id;
+    try {
+        const pool = req.app.locals.pool;
+        // Không xóa cứng, chỉ đổi trạng thái thành TamAn để không lỗi khóa ngoại (nếu có sau này)
+        await pool.execute('UPDATE GOI_NAP_XU SET TrangThai = "TamAn" WHERE MaGoi = ?', [maGoi]);
+        res.status(200).json({ message: 'Đã ẩn gói nạp.' });
+    } catch (error) {
+        console.error('Lỗi xóa gói nạp:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+router.get('/audit-logs', adminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        
+        let page = parseInt(req.query.page) || 1;
+        let limit = parseInt(req.query.limit) || 20;
+        let offset = (page - 1) * limit;
+
+        const action = req.query.action || '';
+        const date = req.query.date || '';
+        const search = req.query.search || '';
+
+        let conditions = [];
+        let params = [];
+
+        if (action) {
+            conditions.push(`A.HanhDong LIKE ?`);
+            params.push(`%${action}%`);
+        }
+
+        if (date) {
+            conditions.push(`DATE(A.ThoiGian) = ?`);
+            params.push(date);
+        }
+
+        if (search) {
+            conditions.push(`(N.HoTen LIKE ? OR N.Email LIKE ? OR A.ChiTiet LIKE ?)`);
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+
+        let whereClause = '';
+        if (conditions.length > 0) {
+            whereClause = 'WHERE ' + conditions.join(' AND ');
+        }
+
+        const countSql = `
+            SELECT COUNT(*) as total 
+            FROM AUDIT_LOG A 
+            LEFT JOIN NGUOIDUNG N ON A.MaND_ThucHien = N.MaND 
+            ${whereClause}
+        `;
+        const [countResult] = await pool.execute(countSql, params);
+        const totalRecords = countResult[0].total;
+        const totalPages = Math.ceil(totalRecords / limit);
+
+        const dataSql = `
+            SELECT A.*, N.HoTen as AdminName, N.Email as AdminEmail
+            FROM AUDIT_LOG A 
+            LEFT JOIN NGUOIDUNG N ON A.MaND_ThucHien = N.MaND 
+            ${whereClause} 
+            ORDER BY A.ThoiGian DESC 
+            LIMIT ? OFFSET ?
+        `;
+        const [rows] = await pool.execute(dataSql, [...params, limit.toString(), offset.toString()]);
+
+        res.status(200).json({
+            data: rows,
+            pagination: { currentPage: page, limit, totalPages, totalRecords }
+        });
+    } catch (error) {
+        console.error('Lỗi khi lấy audit logs:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi lấy dữ liệu audit logs.' });
     }
 });
 

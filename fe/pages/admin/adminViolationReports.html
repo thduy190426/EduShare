@@ -43,7 +43,11 @@
       </div>
 
       <div class="tabs-container">
-        <div class="tab-item active"><i class="fa-solid fa-flag" style="margin-right: 6px;"></i>Tất cả báo cáo</div>
+        <div class="tab-item active" data-status="ChoXuLy">
+          <i class="fa-solid fa-hourglass-half" style="margin-right: 6px;"></i> Chờ xử lý <span class="tab-count" id="pending-count-tab">0</span>
+        </div>
+        <div class="tab-item" data-status="DaXuLy"><i class="fa-solid fa-circle-check" style="margin-right: 6px;"></i> Đã xử lý <span class="tab-count" id="approved-count-tab">0</span></div>
+        <div class="tab-item" data-status="TuChoi"><i class="fa-solid fa-circle-xmark" style="margin-right: 6px;"></i> Từ chối <span class="tab-count" id="rejected-count-tab">0</span></div>
       </div>
 
       <div class="bulk-actions-toolbar" id="bulk-actions-toolbar" style="display: none; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); align-items: center; justify-content: space-between;">

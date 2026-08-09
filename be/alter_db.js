@@ -195,6 +195,20 @@ async function run() {
         `);
         
         await addColumnIfMissing('TAILIEU', 'TextSEO', 'TEXT');
+
+        await createTableIfMissing('AUDIT_LOG', `
+            CREATE TABLE AUDIT_LOG (
+                MaLog INT AUTO_INCREMENT PRIMARY KEY,
+                MaND_ThucHien INT NOT NULL,
+                MaND_BiTacDong INT DEFAULT NULL,
+                HanhDong VARCHAR(100) NOT NULL,
+                ChiTiet TEXT NOT NULL,
+                IPAddress VARCHAR(45) DEFAULT NULL,
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (MaND_ThucHien) REFERENCES NGUOIDUNG(MaND),
+                FOREIGN KEY (MaND_BiTacDong) REFERENCES NGUOIDUNG(MaND)
+            )
+        `);
     } finally {
         await pool.end();
     }

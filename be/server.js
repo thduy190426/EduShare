@@ -128,7 +128,7 @@ const requestLogger = (req, res, next) => {
 
 const app = express();
 const server = http.createServer(app);
-const io = initSocket(server);
+const io = initSocket(server, app);
 app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
@@ -193,6 +193,7 @@ const routes = [
     ['/api/subjects', require('./subjects')],
     ['/api/payment', require('./payment')],
     ['/api/settings', require('./settings')],
+    ['/api/chat', require('./chat')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);

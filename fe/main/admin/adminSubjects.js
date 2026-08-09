@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { getToken, showToast, renderPagination } from '../shared/utils.js';
+import { getToken, showToast, renderPagination, getAssetUrl } from '../shared/utils.js';
 
 const token = getToken();
 let currentPage = 1;
@@ -193,13 +193,26 @@ function renderSubjectSuggestions(suggestions) {
             dateStr = `${h}:${min}:${s} | ${d}/${m}/${y}`;
         }
         const tr = document.createElement('tr');
+        
+        const userName = item.TenNguoiDeXuat || '';
+        const initial = userName.trim().split(' ').pop().charAt(0).toUpperCase();
+        let avatarHtml = `<div class="user-initial">${escapeHTML(initial)}</div>`;
+        if (item.AvatarURL && item.AvatarURL !== 'null') {
+            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${escapeHTML(getAssetUrl(item.AvatarURL))}" alt="${escapeHTML(userName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.parentElement.style.background='#EFF6FF'; this.parentElement.style.color='#2563EB'; this.parentElement.innerHTML='${escapeHTML(initial)}';" /></div>`;
+        }
+
         tr.innerHTML = `
             <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td style="font-weight: 600;">${escapeHTML(item.TenMonHoc)}</td>
             <td><span style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHTML(item.CapHoc || 'Khác')}</span></td>
             <td>
-                <div style="font-weight: 600;">${escapeHTML(item.TenNguoiDeXuat || '')}</div>
-                <div style="font-size: 12px; color: #6B7280;">${escapeHTML(item.EmailNguoiDeXuat || '')}</div>
+                <div class="user-cell">
+                    ${avatarHtml}
+                    <div>
+                        <div style="font-weight: 600;">${escapeHTML(userName)}</div>
+                        <div style="font-size: 12px; color: #6B7280;">${escapeHTML(item.EmailNguoiDeXuat || '')}</div>
+                    </div>
+                </div>
             </td>
             <td>
                 <div style="max-height: 48px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; color: #6B7280;">
@@ -209,16 +222,23 @@ function renderSubjectSuggestions(suggestions) {
             <td><span style="font-size: 13px; color: #6B7280;">${dateStr}</span></td>
             <td>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="btn-action" style="background: #ECFDF5; color: #059669; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="approveSubjectSuggestion(${item.MaDeXuat})" title="Duyệt">
+                    <button class="btn-action btn-approve" data-id="${item.MaDeXuat}" style="background: #ECFDF5; color: #059669; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Duyệt">
                         <i class="fa-solid fa-check"></i>
                     </button>
-                    <button class="btn-action" style="background: #FEF2F2; color: #EF4444; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="rejectSubjectSuggestion(${item.MaDeXuat})" title="Từ chối">
+                    <button class="btn-action btn-reject" data-id="${item.MaDeXuat}" style="background: #FEF2F2; color: #EF4444; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Từ chối">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.btn-approve').forEach(btn => {
+        btn.addEventListener('click', (e) => window.approveSubjectSuggestion(e.currentTarget.dataset.id));
+    });
+    document.querySelectorAll('.btn-reject').forEach(btn => {
+        btn.addEventListener('click', (e) => window.rejectSubjectSuggestion(e.currentTarget.dataset.id));
     });
 }
 
@@ -326,13 +346,13 @@ function renderSubjects(subjects) {
             <td><span style="font-size: 13px; color: #6B7280;">${dateStr}</span></td>
             <td>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                    <button class="btn-action" style="background: ${sub.TrangThai === 'TamAn' ? '#F3F4F6' : '#FFFBEB'}; color: ${sub.TrangThai === 'TamAn' ? '#6B7280' : '#D97706'}; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="toggleSubjectStatus(${sub.MaMonHoc}, '${sub.TrangThai}')" title="${sub.TrangThai === 'TamAn' ? 'Hiện môn học' : 'Ẩn môn học'}">
+                    <button class="btn-action btn-toggle-subject" data-id="${sub.MaMonHoc}" data-status="${sub.TrangThai}" style="background: ${sub.TrangThai === 'TamAn' ? '#F3F4F6' : '#FFFBEB'}; color: ${sub.TrangThai === 'TamAn' ? '#6B7280' : '#D97706'}; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="${sub.TrangThai === 'TamAn' ? 'Hiện môn học' : 'Ẩn môn học'}">
                         <i class="fa-solid ${sub.TrangThai === 'TamAn' ? 'fa-eye' : 'fa-eye-slash'}"></i>
                     </button>
-                    <button class="btn-action" style="background: #EEF2FF; color: #4F46E5; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="updateSubject(${sub.MaMonHoc})" title="Sửa">
+                    <button class="btn-action btn-edit-subject" data-id="${sub.MaMonHoc}" style="background: #EEF2FF; color: #4F46E5; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Sửa">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
-                    <button class="btn-action" style="background: #FEF2F2; color: #EF4444; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="deleteSubject(${sub.MaMonHoc})" title="Xóa">
+                    <button class="btn-action btn-delete-subject" data-id="${sub.MaMonHoc}" style="background: #FEF2F2; color: #EF4444; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Xóa">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -340,6 +360,16 @@ function renderSubjects(subjects) {
         `;
 
         tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.btn-toggle-subject').forEach(btn => {
+        btn.addEventListener('click', (e) => window.toggleSubjectStatus(e.currentTarget.dataset.id, e.currentTarget.dataset.status));
+    });
+    document.querySelectorAll('.btn-edit-subject').forEach(btn => {
+        btn.addEventListener('click', (e) => window.updateSubject(Number(e.currentTarget.dataset.id)));
+    });
+    document.querySelectorAll('.btn-delete-subject').forEach(btn => {
+        btn.addEventListener('click', (e) => window.deleteSubject(e.currentTarget.dataset.id));
     });
 }
 

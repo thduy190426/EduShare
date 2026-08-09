@@ -183,10 +183,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            if (!vaiTro) {
-                Toast.fire({ icon: 'warning', title: 'Vai trò tài khoản không hợp lệ.' });
-                return;
-            }
 
             const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
             if (!recaptchaToken) {

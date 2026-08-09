@@ -43,7 +43,7 @@ function renderCurrentUserAvatar(profile) {
 
     if (profile.AvatarURL) {
         setAvatarForCurrentSession(profile.AvatarURL);
-        const avatarHtml = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" referrerpolicy="no-referrer">`;
+        const avatarHtml = `<img src="${getAssetUrl(profile.AvatarURL)}" draggable="false" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" referrerpolicy="no-referrer">`;
         headerAvatar.innerHTML = avatarHtml;
         navAvatar.innerHTML = avatarHtml;
         headerAvatar.style.background = 'transparent';
@@ -1206,6 +1206,16 @@ function setupEventListeners() {
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', processDeleteAccount);
     
     const inputDeletePw = document.getElementById('input-delete-pw');
+    const toggleDeletePw = document.getElementById('toggle-delete-pw');
+    
+    if (toggleDeletePw && inputDeletePw) {
+        toggleDeletePw.addEventListener('click', function () {
+            const type = inputDeletePw.getAttribute('type') === 'password' ? 'text' : 'password';
+            inputDeletePw.setAttribute('type', type);
+            this.className = type === 'password' ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        });
+    }
+
     if (inputDeletePw) inputDeletePw.addEventListener('input', checkDeleteAccountPassword);
 
     const inputDeleteOtp = document.getElementById('input-delete-otp');

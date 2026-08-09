@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nhật ký hoạt động (Audit Logs) — EduShare Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminAuditLogs.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 448 512'%3E%3Cpath fill='%232563eb' d='M96 0C43 0 0 43 0 96V416c0 53 43 96 96 96H384h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V384c17.7 0 32-14.3 32-32V32c0-17.7-14.3-32-32-32H384 96zm0 384H352v64H96c-17.7 0-32-14.3-32-32s14.3-32 32-32zm32-240c0-8.8 7.2-16 16-16H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16zm16 48H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H144c-8.8 0-16-7.2-16-16s7.2-16 16-16z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+</head>
+<body>
+  
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge" style="font-size: 10px; background: #4f46e5; color: white; padding: 2px 6px; border-radius: 4px; vertical-align: top; margin-left: 4px; font-weight: bold;">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+      </button>
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">?</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <main class="content-area">
+      <div class="page-header">
+        <h1 class="page-title">Nhật ký hoạt động (Audit Logs)</h1>
+        <p style="color: #64748b; margin-top: 8px; font-size: 15px;">Truy vết và giám sát tất cả các thao tác nhạy cảm trên hệ thống.</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-wrapper">
+          <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+          <input type="text" id="input-search" placeholder="Tìm theo tên Admin, email hoặc chi tiết log...">
+        </div>
+        <input type="date" id="filter-date" class="filter-date" title="Lọc theo ngày">
+        <select class="filter-select" id="filter-action">
+          <option value="">Tất cả hành động</option>
+          <option value="APPROVE">Phê duyệt (Approve)</option>
+          <option value="DELETE">Xóa/Khóa (Delete)</option>
+          <option value="REJECT">Từ chối (Reject)</option>
+          <option value="UPDATE">Cập nhật (Update)</option>
+          <option value="SYSTEM">Hệ thống (System)</option>
+        </select>
+        <button class="btn-clear-filter" id="btn-clear-filter" type="button">
+          <i class="fa-solid fa-rotate-left"></i> Xóa bộ lọc
+        </button>
+      </div>
+
+      <div class="table-card">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th width="5%" style="text-align: center;">STT</th>
+              <th width="20%"><i class="fa-solid fa-user-shield" style="margin-right: 6px;"></i> Quản trị viên</th>
+              <th width="15%"><i class="fa-solid fa-tag" style="margin-right: 6px;"></i> Hành động</th>
+              <th width="30%"><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i> Chi tiết</th>
+              <th width="15%"><i class="fa-solid fa-network-wired" style="margin-right: 6px;"></i> Địa chỉ IP</th>
+              <th width="15%"><i class="fa-solid fa-clock" style="margin-right: 6px;"></i> Thời gian</th>
+            </tr>
+          </thead>
+          <tbody id="log-table-body">
+            <!-- Data will be rendered here by JS -->
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="pagination-container" id="log-pagination" style="display: flex; justify-content: center; margin-top: 20px;">
+        <button class="page-btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn" disabled><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="../../main/admin/adminAuditLogs.js"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+</body>
+</html>

@@ -160,7 +160,7 @@ function renderUsers(users) {
         }
 
         tr.innerHTML = `
-            <td style="text-align: center;"><input type="checkbox" class="user-checkbox" value="${user.MaND}" style="cursor: pointer; transform: scale(1.2);" onchange="updateSelectedCount()"></td>
+            <td style="text-align: center;"><input type="checkbox" class="user-checkbox" value="${user.MaND}" data-id="${user.MaND}" style="cursor: pointer; transform: scale(1.2);"></td>
             <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
             <td>
                 <div class="user-cell">
@@ -173,7 +173,7 @@ function renderUsers(users) {
             <td><span class="role-badge ${roleBadgeClass}">${roleName}</span></td>
             <td class="email-cell" data-full="${escapeHTML(userEmail)}" data-masked="${escapeHTML(maskedEmail)}">
                 <span class="email-text">${escapeHTML(maskedEmail)}</span>
-                <button title="Hiện/ẩn Email" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); margin-left: 6px;" onclick="toggleEmail(this)">
+                <button class="btn-toggle-email" title="Hiện/ẩn Email" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); margin-left: 6px;">
                     <i class="fa-solid fa-eye"></i>
                 </button>
             </td>
@@ -181,15 +181,15 @@ function renderUsers(users) {
             <td><span class="${statusClass}"><span class="status-dot"></span>${statusText}</span></td>
             <td>
               <div class="action-cell">
-                <select class="role-select" onchange="changeRole(${user.MaND}, this.value)">
+                <select class="role-select" data-id="${user.MaND}">
                     <option value="SinhVien" ${user.VaiTro === 'SinhVien' ? 'selected' : ''}>Sinh viên</option>
                     <option value="GiaoVien" ${user.VaiTro === 'GiaoVien' ? 'selected' : ''}>Giáo viên</option>
                     <option value="Admin" ${user.VaiTro === 'Admin' ? 'selected' : ''}>Admin</option>
                 </select>
-                <button class="btn-action ${isActive ? 'btn-lock' : 'btn-unlock'}" onclick="toggleStatus(${user.MaND}, '${isActive ? 'BiKhoa' : 'HoatDong'}')">
+                <button class="btn-action ${isActive ? 'btn-lock' : 'btn-unlock'} btn-toggle-status" data-id="${user.MaND}" data-status="${isActive ? 'BiKhoa' : 'HoatDong'}">
                     ${isActive ? '<i class="fa-solid fa-lock-open"></i>' : '<i class="fa-solid fa-lock"></i>'}
                 </button>
-                <button class="btn-action btn-delete" onclick="deleteUser(${user.MaND}, '${escapeHTML(userName)}')">
+                <button class="btn-action btn-delete" data-id="${user.MaND}" data-name="${escapeHTML(userName)}">
                     <i class="fa-solid fa-trash"></i>
                 </button>
               </div>
@@ -197,6 +197,22 @@ function renderUsers(users) {
         `;
 
         tbody.appendChild(tr);
+    });
+
+    document.querySelectorAll('.user-checkbox').forEach(cb => {
+        cb.addEventListener('change', window.updateSelectedCount);
+    });
+    document.querySelectorAll('.btn-toggle-email').forEach(btn => {
+        btn.addEventListener('click', (e) => window.toggleEmail(e.currentTarget));
+    });
+    document.querySelectorAll('.role-select').forEach(select => {
+        select.addEventListener('change', (e) => window.changeRole(e.currentTarget.dataset.id, e.currentTarget.value));
+    });
+    document.querySelectorAll('.btn-toggle-status').forEach(btn => {
+        btn.addEventListener('click', (e) => window.toggleStatus(e.currentTarget.dataset.id, e.currentTarget.dataset.status));
+    });
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', (e) => window.deleteUser(e.currentTarget.dataset.id, e.currentTarget.dataset.name));
     });
 }
 

@@ -94,6 +94,13 @@ export const escapeHTML = (str) => {
     });
 };
 
+export const stripHTML = (html) => {
+    if (!html) return '';
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+};
+
 export const formatRatingSummary = (average, count) => {
     const ratingCount = Number(count || 0);
     const ratingAverage = Number.parseFloat(average || 0).toFixed(1);
@@ -114,6 +121,10 @@ export const showToast = (icon, title) => {
             }
         });
         Toast.fire({ icon, title });
+    }
+
+    if (icon === 'success' && typeof window.refreshSidebarBadges === 'function') {
+        window.refreshSidebarBadges();
     }
 };
 

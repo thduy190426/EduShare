@@ -281,9 +281,6 @@ CREATE TABLE IF NOT EXISTS PROMO_CODE (
     NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==============================================
--- 3. Báº¢NG Má»šI CHO REFRESH TOKEN
--- ==============================================
 CREATE TABLE IF NOT EXISTS REFRESH_TOKENS (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     MaND INT NOT NULL,
@@ -294,30 +291,33 @@ CREATE TABLE IF NOT EXISTS REFRESH_TOKENS (
     FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE
 );
 
--- ==============================================
--- 4. Táº O INDEX Äá»‚ Tá»I Æ¯U HÃ“A HIá»†U SUáº¤T TRUY Váº¤N
--- ==============================================
+CREATE TABLE IF NOT EXISTS TINNHAN (
+    MaTN INT AUTO_INCREMENT PRIMARY KEY,
+    NguoiGui INT NOT NULL,
+    NguoiNhan INT NOT NULL,
+    NoiDung TEXT NOT NULL,
+    DaDoc BOOLEAN DEFAULT FALSE,
+    NgayGui DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (NguoiGui) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE,
+    FOREIGN KEY (NguoiNhan) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE
+);
+CREATE INDEX idx_tinnhan_nguoigui ON TINNHAN(NguoiGui);
+CREATE INDEX idx_tinnhan_nguoinhan ON TINNHAN(NguoiNhan);
 
--- Index cho báº£ng TAILIEU
 CREATE INDEX idx_tailieu_trangthai ON TAILIEU(TrangThaiKiemDuyet);
 CREATE INDEX idx_tailieu_ngaydang ON TAILIEU(NgayDang);
 CREATE INDEX idx_tailieu_mamonhoc ON TAILIEU(MaMonHoc);
 CREATE INDEX idx_tailieu_nguoidang ON TAILIEU(MaND_NguoiDang);
 CREATE FULLTEXT INDEX idx_tailieu_fulltext ON TAILIEU(TenTL, MoTa);
 
--- Index cho báº£ng NGUOIDUNG
 CREATE INDEX idx_nguoidung_trangthai ON NGUOIDUNG(TrangThai);
 CREATE INDEX idx_nguoidung_vaitro ON NGUOIDUNG(VaiTro);
 CREATE INDEX idx_nguoidung_email ON NGUOIDUNG(Email);
 
--- Index cho báº£ng BAOCAOVIPHAM
 CREATE INDEX idx_baocaovipham_trangthai ON BAOCAOVIPHAM(TrangThai);
 CREATE INDEX idx_baocaovipham_ngaybaocao ON BAOCAOVIPHAM(NgayBaoCao);
 
--- Index cho báº£ng GIAODICH_NAPXU
 CREATE INDEX idx_giaodich_napxu_trangthai ON GIAODICH_NAPXU(TrangThai);
 CREATE INDEX idx_giaodich_napxu_ngaytao ON GIAODICH_NAPXU(NgayTao);
 
--- Index cho báº£ng NHOM
 CREATE INDEX idx_nhom_ngaytao ON NHOM(NgayTao);
-

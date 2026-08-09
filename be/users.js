@@ -130,7 +130,8 @@ async function deleteUserAndRelatedData(conn, maND) {
 
     if (documentIds.length > 0) {
         const placeholders = documentIds.map(() => '?').join(',');
-        await conn.execute(`UPDATE TAILIEU SET IsDeleted = TRUE WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM TAILIEU_DAMUA WHERE MaTL IN (${placeholders})`, documentIds);
+        await conn.execute(`DELETE FROM TAILIEU WHERE MaTL IN (${placeholders})`, documentIds);
     }
 
     return conn.execute('DELETE FROM NGUOIDUNG WHERE MaND = ?', [maND]);
@@ -735,13 +736,19 @@ router.get('/:maND/profile', authMiddleware, async (req, res) => {
 
 
         const [followRows] = await pool.execute(
-            'SELECT * FROM THEODOI WHERE MaND_TheoDoi = ? AND MaND_DuocTheoDoi = ?',
+            'SELECT 1 FROM THEODOI WHERE MaND_TheoDoi = ? AND MaND_DuocTheoDoi = ?',
             [maND_HienTai, maND_Khac]
+        );
+
+        const [followerRows] = await pool.execute(
+            'SELECT 1 FROM THEODOI WHERE MaND_TheoDoi = ? AND MaND_DuocTheoDoi = ?',
+            [maND_Khac, maND_HienTai]
         );
 
         res.status(200).json({
             profile: userRows[0],
-            isFollowing: followRows.length > 0
+            isFollowing: followRows.length > 0,
+            isFollower: followerRows.length > 0
         });
     } catch (error) {
         console.error('Lỗi lấy profile khác:', error);
@@ -1061,7 +1068,7 @@ router.get('/:maND/downloaded-documents', authMiddleware, async (req, res) => {
 
         const [rows] = await pool.execute(`
             SELECT 
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile, 
                 TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
                 TL.LaTaiLieuDocQuyen, TL.GiaXu,
                 COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc, ND.HoTen AS NguoiDang, ND.AvatarURL,
@@ -1096,7 +1103,7 @@ router.get('/:maND/rated-documents', authMiddleware, async (req, res) => {
 
         const [rows] = await pool.execute(`
             SELECT 
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile, 
                 TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
                 TL.LaTaiLieuDocQuyen, TL.GiaXu,
                 COALESCE(MH.TenMonHoc, 'Không xác định') AS TenMonHoc, ND.HoTen AS NguoiDang, ND.AvatarURL,

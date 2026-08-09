@@ -6,6 +6,7 @@ let currentPage = 1;
 const limit = 10;
 let currentSortBy = 'NgayBaoCao';
 let currentOrder = 'DESC';
+let currentStatus = 'ChoXuLy';
 
 async function readErrorMessage(res, fallback) {
     const contentType = res.headers.get('content-type') || '';
@@ -23,6 +24,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    const tabItems = document.querySelectorAll('.tab-item');
+    tabItems.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabItems.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            currentStatus = tab.getAttribute('data-status');
+            currentPage = 1;
+            fetchReports();
+        });
+    });
+
+    fetchCounts();
     fetchReports();
 
     const sortHeaders = document.querySelectorAll('th.sortable');
@@ -116,9 +129,31 @@ function updateBulkToolbar() {
     }
 }
 
+async function fetchCounts() {
+    try {
+        const response = await fetch(`${API_URL}/admin/reports/counts`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const counts = await response.json();
+            const pendingCountTab = document.getElementById("pending-count-tab");
+            const approvedCountTab = document.getElementById("approved-count-tab");
+            const rejectedCountTab = document.getElementById("rejected-count-tab");
+            
+            if (pendingCountTab) pendingCountTab.textContent = counts.ChoXuLy || 0;
+            if (approvedCountTab) approvedCountTab.textContent = counts.DaXuLy || 0;
+            if (rejectedCountTab) rejectedCountTab.textContent = counts.TuChoi || 0;
+        }
+    } catch (error) {
+        console.error("Lỗi khi tải số lượng báo cáo:", error);
+    }
+}
+
 async function fetchReports() {
     try {
-        const res = await fetch(`${API_URL}/admin/reports?page=${currentPage}&limit=${limit}&sortBy=${currentSortBy}&order=${currentOrder}`, {
+        const res = await fetch(`${API_URL}/admin/reports?page=${currentPage}&limit=${limit}&sortBy=${currentSortBy}&order=${currentOrder}&status=${currentStatus}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
@@ -161,8 +196,8 @@ function renderReports(reports) {
         const dateStrFormatted = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
         
         const initial = report.NguoiBaoCao ? report.NguoiBaoCao.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
-        const avatarHtml = report.AvatarNguoiBaoCao
-            ? `<img src="${getAssetUrl(report.AvatarNguoiBaoCao)}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">`
+        const avatarHtml = report.AvatarNguoiBaoCao && report.AvatarNguoiBaoCao !== 'null'
+            ? `<img src="${getAssetUrl(report.AvatarNguoiBaoCao)}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<div style=\\'width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;\\'>${initial}</div>';">`
             : `<div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${initial}</div>`;
         
         let statusBadge = '';
@@ -253,6 +288,7 @@ window.reviewReport = async (maBC, quyetDinh) => {
         if (res.ok) {
             showToast('success', 'Xử lý báo cáo thành công!');
             fetchReports();
+            fetchCounts();
         } else {
             const message = await readErrorMessage(res, 'Không thể xử lý báo cáo.');
             showToast('error', message);
@@ -275,6 +311,7 @@ window.deleteReport = async (maBC) => {
         if (res.ok) {
             showToast('success', 'Đã xóa báo cáo thành công!');
             fetchReports();
+            fetchCounts();
         } else {
             const message = await readErrorMessage(res, 'Không thể xóa báo cáo.');
             showToast('error', message);
@@ -300,6 +337,7 @@ async function reviewBulkReports(reportIds, quyetDinh) {
             showToast("success", "Xử lý báo cáo hàng loạt thành công.");
             document.getElementById("selectAllReports").checked = false;
             fetchReports();
+            fetchCounts();
         } else {
             const message = await readErrorMessage(res, "Có lỗi xảy ra khi xử lý.");
             showToast("error", message);
@@ -325,6 +363,7 @@ async function deleteBulkReports(reportIds) {
             showToast("success", "Đã xóa hàng loạt báo cáo thành công.");
             document.getElementById("selectAllReports").checked = false;
             fetchReports();
+            fetchCounts();
         } else {
             const message = await readErrorMessage(res, "Có lỗi xảy ra khi xóa.");
             showToast("error", message);

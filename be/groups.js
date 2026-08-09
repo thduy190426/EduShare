@@ -176,8 +176,12 @@ router.get('/recommended', authMiddleware, async (req, res) => {
             ORDER BY DiemGoiY DESC, SoLuongThanhVien DESC, N.NgayTao DESC
             LIMIT ${limit}
         `, [maND, maND, maND, maND, maND]);
+        let returnedGroups = rows;
+        if (rows.length > 0 && rows[0].DiemGoiY > 0) {
+            returnedGroups = rows.filter(r => r.DiemGoiY > 0);
+        }
 
-        res.status(200).json({ groups: rows });
+        res.status(200).json({ groups: returnedGroups });
     } catch (error) {
         console.error('Lỗi API /groups/recommended:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -508,9 +512,22 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
         if (!isGroupAdmin) {
             countQuery += " AND TN.TrangThai = 'Hien'";
         }
+        function buildBooleanSearchQuery(keyword) {
+            if (!keyword) return '';
+            const validWords = keyword.split(' ').map(w => w.trim()).filter(w => w.length > 2);
+            if (validWords.length === 0) return '';
+            return validWords.map(w => `+${w}*`).join(' ');
+        }
+
         if (searchQuery) {
-            countQuery += " AND (LOWER(T.TenTL) LIKE ? OR LOWER(T.MoTa) LIKE ?)";
-            countParams.push(`%${searchQuery}%`, `%${searchQuery}%`);
+            const booleanQuery = buildBooleanSearchQuery(searchQuery);
+            if (booleanQuery) {
+                countQuery += " AND MATCH(T.TenTL, T.MoTa) AGAINST(? IN BOOLEAN MODE)";
+                countParams.push(booleanQuery);
+            } else {
+                countQuery += " AND (LOWER(T.TenTL) LIKE ? OR LOWER(T.MoTa) LIKE ?)";
+                countParams.push(`%${searchQuery}%`, `%${searchQuery}%`);
+            }
         }
 
         const [[{ totalCount }]] = await pool.execute(countQuery, countParams);
@@ -532,8 +549,14 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
         }
         
         if (searchQuery) {
-            query += " AND (LOWER(T.TenTL) LIKE ? OR LOWER(T.MoTa) LIKE ?)";
-            params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+            const booleanQuery = buildBooleanSearchQuery(searchQuery);
+            if (booleanQuery) {
+                query += " AND MATCH(T.TenTL, T.MoTa) AGAINST(? IN BOOLEAN MODE)";
+                params.push(booleanQuery);
+            } else {
+                query += " AND (LOWER(T.TenTL) LIKE ? OR LOWER(T.MoTa) LIKE ?)";
+                params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+            }
         }
 
         query += ` ORDER BY TN.NgayChiaSe DESC LIMIT ${limit} OFFSET ${offset}`;

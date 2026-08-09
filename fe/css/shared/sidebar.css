@@ -70,13 +70,14 @@
 
 @media (max-width: 768px) {
   :root { --sidebar-width: 0px; }
-  .sidebar { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: 65px; display: flex; flex-direction: row; padding: 0 16px; border-right: none; border-top: 1px solid var(--border); z-index: 100; justify-content: space-between; align-items: center; background: var(--white); overflow: visible; }
-  .menu-group { display: flex; margin: 0; align-items: center; width: 100%; justify-content: space-around; }
+  .sidebar { position: fixed; top: auto; bottom: 0; left: 0; width: 100%; height: 65px; display: flex; flex-direction: row; padding: 0 8px; border-right: none; border-top: 1px solid var(--border); z-index: 100; justify-content: flex-start; align-items: center; background: var(--white); overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; -ms-overflow-style: none; scrollbar-width: none; gap: 8px; }
+  .sidebar::-webkit-scrollbar { display: none; }
+  .menu-group { display: flex; flex-direction: row; margin: 0; align-items: center; width: max-content; justify-content: flex-start; gap: 4px; }
   .menu-label { display: none; }
-  .menu-item { margin: 0; padding: 8px; border-radius: 8px; flex-direction: column; gap: 4px; justify-content: center; flex: 1; }
-  .menu-item .menu-icon { font-size: 18px; }
-  .menu-item span:not(.menu-icon):not(.badge) { display: block; font-size: 10px; font-weight: 500; }
-  .badge { right: 50%; transform: translateX(16px); top: 2px; }
+  .menu-item { margin: 0; padding: 6px; border-radius: 8px; flex-direction: column; gap: 4px; justify-content: center; align-items: center; flex: 0 0 72px; }
+  .menu-item .menu-icon { font-size: 18px; width: auto; }
+  .menu-item span:not(.menu-icon):not(.badge) { display: block; font-size: 10px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .badge { right: 8px; transform: none; top: 4px; }
 }
 
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }

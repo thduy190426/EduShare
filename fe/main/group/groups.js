@@ -1806,17 +1806,23 @@ async function fetchGroupDocuments() {
             }
 
             let thumbHtml = `<i class="fa-solid ${iconClass}"></i>`;
-            let previewTarget = null;
-            if (doc.PreviewURL) {
-                previewTarget = doc.PreviewURL;
-            } else if (doc.LoaiFile && doc.LoaiFile.toLowerCase() === 'pdf' && doc.FileURL) {
-                previewTarget = doc.FileURL;
-            }
-
-            if (previewTarget) {
-                const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-                thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=Fit" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+            if (doc.ThumbnailURL) {
+                const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
+                thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
                 thumbClass = '';
+            } else {
+                let previewTarget = null;
+                if (doc.PreviewURL) {
+                    previewTarget = doc.PreviewURL;
+                } else if (doc.LoaiFile && doc.LoaiFile.toLowerCase() === 'pdf' && doc.FileURL) {
+                    previewTarget = doc.FileURL;
+                }
+
+                if (previewTarget) {
+                    const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
+                    thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+                    thumbClass = '';
+                }
             }
 
             let postDateStr = 'Không rõ';
@@ -2345,24 +2351,33 @@ function createGroupDocCard(doc) {
     const premiumBadge = doc.GiaXu > 0 ? `<div class="badge-premium" style="position: absolute; top: 12px; left: 12px; z-index: 10; background: #FEF3C7; color: #B45309; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #FDE68A;"><i class="fa-solid fa-crown" style="color: #F59E0B; margin-right: 4px;"></i> PREMIUM (${doc.GiaXu || 0} Xu)</div>` : '';
     
     let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-    let previewTarget = null;
-    if (doc.PreviewURL) {
-        previewTarget = doc.PreviewURL;
-    } else if (loaiFile === 'pdf' && doc.FileURL) {
-        previewTarget = doc.FileURL;
-    }
+    if (doc.ThumbnailURL) {
+        const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
+        thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
+        thumbClass = '';
+    } else {
+        let previewTarget = null;
+        if (doc.PreviewURL) {
+            previewTarget = doc.PreviewURL;
+        } else if (loaiFile === 'pdf' && doc.FileURL) {
+            previewTarget = doc.FileURL;
+        }
 
-    if (previewTarget) {
-        thumbHtml = `
-            <iframe
-                src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
-                title="Preview"
-                style="width: 100%; height: 100%; border: none; object-fit: cover; pointer-events: none;"
-                scrolling="no">
-            </iframe>
-        `;
-    } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(loaiFile) && doc.FileURL) {
-        thumbHtml = `<img src="${getAssetUrl(doc.FileURL)}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">`;
+        if (previewTarget) {
+            thumbHtml = `
+                <iframe
+                    src="${getAssetUrl(previewTarget)}#toolbar=0&navpanes=0&scrollbar=0&view=FitH"
+                    title="Preview"
+                    style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;"
+                    scrolling="no"
+                    tabindex="-1"
+                    loading="lazy">
+                </iframe>
+            `;
+            thumbClass = '';
+        } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(loaiFile) && doc.FileURL) {
+            thumbHtml = `<img src="${getAssetUrl(doc.FileURL)}" style="width: 100%; height: 100%; object-fit: cover;" alt="Preview">`;
+        }
     }
 
     const bookmarkActive = bookmarkedDocs.has(doc.MaTL);

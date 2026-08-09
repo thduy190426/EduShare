@@ -303,7 +303,7 @@ function downloadFile(url, destPath) {
         const file = fs.createWriteStream(destPath);
         https.get(url, (response) => {
             if (response.statusCode !== 200) {
-                return reject(new Error('Khong the tai file ve may chu'));
+                return reject(new Error('Không thể tải file về máy chủ'));
             }
             response.pipe(file);
             file.on('finish', () => file.close(resolve));
@@ -314,13 +314,13 @@ function downloadFile(url, destPath) {
 }
 
 router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationMiddleware(['tenTL', 'moTa']), async (req, res) => {
-    const { cloudinaryUrl, publicId, mimeType, fileName } = req.body;
+    const { cloudinaryUrl, publicId, mimeType, fileName, thumbnailUrl } = req.body;
     
     if (!cloudinaryUrl) {
         return res.status(400).json({ message: 'Lỗi: Không tìm thấy đường dẫn file từ Cloudinary.' });
     }
 
-    const tempFilePath = path.join(os.tmpdir(), `temp_${Date.now()}_${publicId.replace(/\//g, '_')}`);
+    const tempFilePath = path.join(os.tmpdir(), `temp_${Date.now()}_${publicId.replace(/\\//g, '_')}`);
     
     try {
         await downloadFile(cloudinaryUrl, tempFilePath);
@@ -377,6 +377,7 @@ router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationM
 
         const fileURL = cloudinaryUrl;
         let previewURL = null;
+        let finalThumbnailUrl = thumbnailUrl || null;
         let textSEO = await extractTextFromFile(tempFilePath, mimeType);
 
         if (laTaiLieuDocQuyen && isPdf) {
@@ -395,9 +396,9 @@ router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationM
         fs.unlinkSync(tempFilePath);
 
         await pool.execute(
-            `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash, TextSEO) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?, ?, ?)`,
-            [tenTL, moTa || null, fileURL, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu, fileHash, textSEO || null]
+            `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, ThumbnailURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash, TextSEO) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?, ?, ?)`,
+            [tenTL, moTa || null, fileURL, finalThumbnailUrl, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu, fileHash, textSEO || null]
         );
 
         await notifyActiveAdmins(
@@ -427,7 +428,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
 
         const selectClause = `
             SELECT 
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile, 
                 TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
                 TL.LaTaiLieuDocQuyen, TL.GiaXu,
                 ND.HoTen AS TenNguoiDang, ND.AvatarURL,
@@ -526,7 +527,7 @@ router.get('/search', async (req, res) => {
 
         let selectClause = `
             SELECT 
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile, 
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile, 
                 TL.SoLuotTai, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.MaND_NguoiDang,
                 TL.LaTaiLieuDocQuyen, TL.GiaXu,
                 ND.HoTen AS TenNguoiDang, ND.AvatarURL,
@@ -546,12 +547,18 @@ router.get('/search', async (req, res) => {
 
         const booleanSearchQuery = buildBooleanSearchQuery(tuKhoa);
 
-        if (booleanSearchQuery) {
-
-            selectClause += `, MATCH(TL.TenTL, TL.MoTa) AGAINST(? IN BOOLEAN MODE) AS score`;
-            whereClause += ` AND MATCH(TL.TenTL, TL.MoTa) AGAINST(? IN BOOLEAN MODE)`;
-            params.push(booleanSearchQuery, booleanSearchQuery);
-            countParams.push(booleanSearchQuery);
+        if (tuKhoa) {
+            if (booleanSearchQuery) {
+                selectClause += `, MATCH(TL.TenTL, TL.MoTa) AGAINST(? IN BOOLEAN MODE) AS score`;
+                whereClause += ` AND MATCH(TL.TenTL, TL.MoTa) AGAINST(? IN BOOLEAN MODE)`;
+                params.push(booleanSearchQuery, booleanSearchQuery);
+                countParams.push(booleanSearchQuery);
+            } else {
+                selectClause += `, 0 AS score`;
+                whereClause += ` AND (TL.TenTL LIKE ? OR TL.MoTa LIKE ?)`;
+                params.push(`%${tuKhoa}%`, `%${tuKhoa}%`);
+                countParams.push(`%${tuKhoa}%`, `%${tuKhoa}%`);
+            }
         } else {
             selectClause += `, 0 AS score`;
         }
@@ -657,7 +664,7 @@ router.get('/:maTL/related', async (req, res) => {
         const currentDoc = currentRows[0];
         const [relatedDocs] = await pool.execute(`
             SELECT
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile,
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile,
                 TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                 TL.MaND_NguoiDang, ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 COALESCE(MH.TenMonHoc, 'Khong xac dinh') AS TenMonHoc,
@@ -671,7 +678,7 @@ router.get('/:maTL/related', async (req, res) => {
               AND TL.MaTL <> ?
               AND (TL.MaMonHoc <=> ? OR TL.LoaiFile = ?)
             GROUP BY
-                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.LoaiFile,
+                TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile,
                 TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
                 TL.MaND_NguoiDang, ND.HoTen, ND.AvatarURL, MH.TenMonHoc
             ORDER BY

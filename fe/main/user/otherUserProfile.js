@@ -4,6 +4,7 @@ import { formatRatingSummary, getToken, getAssetUrl, decodeJWT, getAvatar } from
 const token = getToken();
 let currentUserId = null; 
 let isFollowing = false;
+let isFollower = false;
 
 function buildEducationText(profile) {
     const fields = [
@@ -92,6 +93,7 @@ async function fetchUserProfile() {
 
         const profile = data.profile;
         isFollowing = data.isFollowing;
+        isFollower = data.isFollower;
 
         document.getElementById('header-name').textContent = profile.HoTen;
         
@@ -118,7 +120,7 @@ async function fetchUserProfile() {
 
         const avatarEl = document.getElementById('header-avatar');
         if (profile.AvatarURL) {
-            avatarEl.innerHTML = `<img src="${getAssetUrl(profile.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            avatarEl.innerHTML = `<img src="${getAssetUrl(profile.AvatarURL)}" draggable="false" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
             avatarEl.style.background = 'transparent';
             avatarEl.style.color = 'transparent';
             avatarEl.style.border = 'none';
@@ -235,17 +237,23 @@ function renderDocuments(docs, emptyMessage) {
         }
 
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        let previewTarget = null;
-        if (doc.PreviewURL) {
-            previewTarget = doc.PreviewURL;
-        } else if (loaiFile === 'pdf' && doc.FileURL) {
-            previewTarget = doc.FileURL;
-        }
-
-        if (previewTarget) {
-            const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
-            thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+        if (doc.ThumbnailURL) {
+            const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
+            thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
             thumbClass = '';
+        } else {
+            let previewTarget = null;
+            if (doc.PreviewURL) {
+                previewTarget = doc.PreviewURL;
+            } else if (loaiFile === 'pdf' && doc.FileURL) {
+                previewTarget = doc.FileURL;
+            }
+
+            if (previewTarget) {
+                const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
+                thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
+                thumbClass = '';
+            }
         }
 
         let dateStr = 'Không rõ';
@@ -308,9 +316,10 @@ function updateFollowButtonUI() {
         btn.style.color = '#374151';
         btn.style.border = '1px solid #D1D5DB';
     } else {
-        btn.innerHTML = '<i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i> Theo dõi';
-        btn.style.backgroundColor = 'var(--primary)'; 
-        btn.style.color = 'white';
+        const text = isFollower ? 'Theo dõi lại' : 'Theo dõi';
+        btn.innerHTML = `<i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i> ${text}`;
+        btn.style.backgroundColor = 'var(--primary)';
+        btn.style.color = 'var(--white)';
         btn.style.border = 'none';
     }
 }

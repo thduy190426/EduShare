@@ -66,6 +66,7 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 
 - **Xác thực đa kênh**: 
   - Đăng nhập/Đăng ký qua Email (kèm OTP) hoặc Google OAuth2. Đăng xuất an toàn hỗ trợ Refresh Tokens.
+  - Cơ chế **Ghi nhớ đăng nhập (Remember Me)** linh hoạt bằng LocalStorage/SessionStorage.
   - Tùy chọn cài đặt **Xác thực 2 yếu tố (2FA)** bằng Google Authenticator bảo vệ tài sản (Xu).
 - **Quản lý tài liệu**: Đăng tải tài liệu Free hoặc Premium. Hệ thống tự động tạo mã băm chống re-upload, quét virus và trích xuất text phục vụ SEO.
 - **Nâng cấp Giảng viên**: Gửi yêu cầu kèm minh chứng URL để Admin xét duyệt quyền Giảng viên (Đăng tài liệu chính thức).
@@ -78,9 +79,12 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
   - Theo dõi người dùng khác (Follow/Unfollow) và Đánh dấu lưu tài liệu (Bookmark).
 - **Cộng đồng nhóm (Groups)**:
   - Tạo nhóm học tập (Công khai / Riêng tư). Tùy chỉnh ảnh bìa nhóm, giới thiệu nhóm.
-  - Quản lý thành viên (Mời, duyệt yêu cầu, thăng quyền phó nhóm/quản trị).
+  - Quản lý thành viên: Duyệt yêu cầu tham gia, thăng quyền phó nhóm/quản trị, hoặc mời/đuổi thành viên khỏi nhóm.
   - Tab Thảo luận: Đăng bài, bình luận, ghim bài. Tích hợp chức năng **Gắn thẻ (@Mention)** để nhắc tên thành viên nhanh chóng.
   - Tab Tài liệu: Chia sẻ tài liệu nội bộ nhóm an toàn (Tích hợp Auto-Moderation bảo vệ không gian nhóm).
+- **Hệ thống Trò chuyện (Real-time Chat)**:
+  - Khung Chat Widget nổi bật, luôn hiển thị, hỗ trợ chat 1-1 với bạn bè/giảng viên mọi lúc mọi nơi.
+  - Hỗ trợ gửi tin nhắn văn bản, đính kèm **hình ảnh** và đặc biệt hỗ trợ gửi **Tin nhắn thoại (Voice Notes)** thu âm trực tiếp từ trình duyệt.
 
 ### Quản trị viên (Admin)
 
@@ -88,6 +92,7 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 - **Kiểm duyệt nội dung**: 
   - Duyệt/Từ chối tài liệu, xử lý báo cáo vi phạm với **Auto-Moderation** (tự động ẩn tài liệu nếu quá 5 report). Hoàn tiền tự động cho người mua nếu tài liệu bị gỡ (Xóa mềm - Soft Delete).
   - Xét duyệt yêu cầu Nâng cấp Giảng viên, Giao dịch nạp xu.
+- **Cấu hình hệ thống động**: Tùy chỉnh các tham số cốt lõi từ giao diện web như: tỷ giá nạp Xu - VNĐ, giới hạn số tài liệu/nhóm, số report để tự động ẩn tài liệu, bật/tắt đăng ký, duyệt nhóm,...
 - **Quản lý người dùng**: Khóa/Mở khóa tài khoản, phân quyền với an toàn dữ liệu tuyệt đối (Anti Race-condition).
 - **Mã khuyến mãi (Promo Code)**: Tạo, chỉnh sửa và quản lý Promo Code để tặng Xu cho người dùng.
 - **Kiểm soát Hệ thống Nâng cao**:
@@ -119,6 +124,7 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ và hoà
 - **`userProfile.html`**: Hồ sơ cá nhân (Cập nhật thông tin, đổi Avatar, yêu cầu cấp quyền Giảng viên).
 - **`otherUserProfile.html`**: Xem hồ sơ công khai của các tác giả/người dùng khác.
 - **`buyCoins.html`**: Giao diện nạp EduCoin thông qua các cổng thanh toán/ngân hàng.
+- **`payment-success.html` / `payment-failed.html`**: Các trang điều hướng (Callback) xử lý và hiển thị kết quả giao dịch thanh toán.
 - **`transactionHistory.html`**: Xem chi tiết lịch sử giao dịch (nạp xu, mua bán tài liệu).
 - **`notifications.html`**: Trung tâm quản lý và theo dõi thông báo từ hệ thống.
 
@@ -139,8 +145,11 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ và hoà
 - **`adminViolationReports.html`**: Xử lý các báo cáo vi phạm tài liệu (Tích hợp tính năng Auto-moderation).
 - **`adminGroups.html`**: Quản trị hoạt động của tất cả các nhóm trên nền tảng.
 - **`adminPayments.html` / `adminPromos.html`**: Kiểm soát giao dịch nạp rút, phát hành mã khuyến mãi.
+- **`adminPackages.html`**: Quản lý các gói nạp EduCoin (Tạo, sửa, xóa, thiết lập khuyến mãi % cho từng gói).
 - **`adminTeacherRequests.html`**: Xét duyệt hồ sơ xin cấp quyền Giảng viên (Teacher Requests).
 - **`adminSubjects.html`**: Quản lý, cấu trúc danh mục môn học hệ thống.
+- **`adminAuditLogs.html`**: Giao diện hiển thị Nhật ký hoạt động (Audit Logs), truy vết toàn bộ thao tác hệ thống của Admin với bộ lọc và phân trang nâng cao.
+- **`adminSettings.html`**: Cấu hình hệ thống động (tỷ giá quy đổi, giới hạn đăng tải, bật/tắt các tính năng cốt lõi).
 
 ---
 
@@ -212,6 +221,10 @@ GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
 # VirusTotal
 VIRUSTOTAL_API_KEY=your_api_key_here
+
+# Nodemailer (Gửi Email OTP)
+NODEMAILER_USER=your_email@gmail.com
+NODEMAILER_PASS=your_app_password
 ```
 
 > **Lưu ý**: Không commit file `.env` lên Git. Hãy thêm `.env` vào `.gitignore`.

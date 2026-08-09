@@ -172,9 +172,9 @@
         </form>
       </div>
 
-      <div class="form-card" id="change-password-section">
-        <div class="collapsible-header" id="btn-toggle-pwd">
-          <h2 class="card-title" style="margin: 0;">Đổi mật khẩu</h2>
+      <div class="form-card" id="change-password-section" style="border-left: 4px solid var(--primary);">
+        <div class="collapsible-header" id="btn-toggle-pwd" style="cursor: pointer;">
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-lock" style="color: var(--primary); margin-right: 5px;"></i> Đổi mật khẩu</h2>
           <span class="toggle-status"
             style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
             <span class="toggle-text">Mở rộng</span>
@@ -421,8 +421,11 @@
           <label class="form-label"
             style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i
               class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
-          <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
-            autocomplete="current-password" style="width: 100%; box-sizing: border-box;">
+          <div style="position: relative;">
+            <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
+              autocomplete="current-password" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+            <i class="fa-solid fa-eye-slash" id="toggle-delete-pw" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary);"></i>
+          </div>
         </div>
         
         <label class="form-label"
