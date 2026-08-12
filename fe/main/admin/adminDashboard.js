@@ -1,7 +1,6 @@
 import { API_URL } from '../shared/config.js';
 import { getToken, getAssetUrl } from '../shared/utils.js';
 
-
 const token = getToken();
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,16 +17,16 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 btnExportRev.disabled = true;
                 btnExportRev.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang tải...';
-                
+
                 const response = await fetch(`${API_URL}/admin/export/revenue`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 if (!response.ok) {
                     const data = await response.json();
                     throw new Error(data.message || 'Lỗi khi tải báo cáo');
                 }
-                
+
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -63,7 +62,7 @@ async function fetchStats() {
 
         const data = await res.json();
         const dataAdv = await resAdv.json();
-        
+
         document.getElementById('stat-users').textContent = Number(data.users || 0).toLocaleString();
         document.getElementById('stat-documents').textContent = Number(data.documents || 0).toLocaleString();
         document.getElementById('stat-downloads').textContent = Number(data.downloads || 0).toLocaleString();
@@ -159,12 +158,12 @@ function drawChart(data) {
 
 function drawAdvancedCharts(data) {
     const months = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
-    
+
     const ctxRevenue = document.getElementById('revenueChart');
     if (ctxRevenue && data.revenueByMonth) {
         const revData = new Array(12).fill(0);
         data.revenueByMonth.forEach(item => { revData[item.month - 1] = item.revenue; });
-        
+
         new Chart(ctxRevenue, {
             type: 'line',
             data: {
@@ -187,7 +186,7 @@ function drawAdvancedCharts(data) {
     if (ctxGrowth && data.userGrowth) {
         const growthData = new Array(12).fill(0);
         data.userGrowth.forEach(item => { growthData[item.month - 1] = item.newUsers; });
-        
+
         new Chart(ctxGrowth, {
             type: 'bar',
             data: {
@@ -230,7 +229,6 @@ function drawAdvancedCharts(data) {
     }
 }
 
-
 function renderRankings(data) {
     const topDepositorsList = document.getElementById('topDepositorsList');
     if (topDepositorsList && data.topDepositors) {
@@ -238,7 +236,7 @@ function renderRankings(data) {
         data.topDepositors.forEach((user, index) => {
             const li = document.createElement('li');
             li.className = 'ranking-item';
-            
+
             let medalClass = 'other';
             let medalText = `#${index + 1}`;
             if (index === 0) { medalClass = 'top-1'; medalText = '<i class="fa-solid fa-trophy"></i>'; }
@@ -266,7 +264,7 @@ function renderRankings(data) {
         data.topContributors.forEach((user, index) => {
             const li = document.createElement('li');
             li.className = 'ranking-item';
-            
+
             let medalClass = 'other';
             let medalText = `#${index + 1}`;
             if (index === 0) { medalClass = 'top-1'; medalText = '<i class="fa-solid fa-trophy"></i>'; }

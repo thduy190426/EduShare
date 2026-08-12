@@ -1,6 +1,5 @@
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting, renderDocumentSkeleton, renderGroupSkeleton } from '../shared/utils.js';
-
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
     fetchUserProfileForHero();
@@ -12,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchLatestDocuments();
     fetchRecommendedGroups();
     setupSearch();
-
     const btnCustomize = document.getElementById('btn-customize-subjects');
     if (btnCustomize) {
         btnCustomize.addEventListener('click', (e) => {
@@ -21,47 +19,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
 let mySubjects = [];
 let selectedSubjectId = '';
-
 function setupSearch() {
     const searchInput = document.querySelector('.nav-search input');
     const searchIcon = document.querySelector('.nav-search .search-icon');
-
     if (!searchInput || !searchIcon) return;
-
     const performSearch = () => {
         const query = searchInput.value.trim();
         if (query) {
             window.location.href = `../document/searchResults.html?q=${encodeURIComponent(query)}`;
         }
     };
-
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             performSearch();
         }
     });
-
     searchIcon.addEventListener('click', performSearch);
     searchIcon.style.cursor = 'pointer';
 }
-
 async function fetchMySubjects() {
     const token = getToken();
     const grid = document.getElementById('mySubjectGrid');
     if (!token || !grid) return;
-
     grid.innerHTML = renderInlineState('fa-spinner fa-spin', 'Đang tải môn học của bạn...');
-
     try {
         const response = await fetch(`${API_URL}/subjects/my`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Không thể tải môn học của bạn.');
-
         mySubjects = data.subjects || [];
         renderSubjectChips();
         renderMySubjectCards();
@@ -70,18 +58,15 @@ async function fetchMySubjects() {
         grid.innerHTML = renderInlineState('fa-triangle-exclamation', 'Không thể tải môn học của bạn lúc này.');
     }
 }
-
 function renderSubjectChips() {
     const chips = document.getElementById('homeSubjectChips');
     if (!chips) return;
-
     chips.innerHTML = '';
     chips.appendChild(createSubjectChip('', 'Tất cả'));
     mySubjects.forEach(subject => {
         chips.appendChild(createSubjectChip(String(subject.MaMonHoc), subject.TenMonHoc));
     });
 }
-
 function createSubjectChip(subjectId, label) {
     const button = document.createElement('button');
     button.className = `chip ${selectedSubjectId === subjectId ? 'active' : ''}`;
@@ -96,11 +81,9 @@ function createSubjectChip(subjectId, label) {
     });
     return button;
 }
-
 function renderMySubjectCards() {
     const grid = document.getElementById('mySubjectGrid');
     if (!grid) return;
-
     if (mySubjects.length === 0) {
         grid.innerHTML = `
             <div class="home-empty-state my-subject-empty">
@@ -110,7 +93,6 @@ function renderMySubjectCards() {
         `;
         return;
     }
-
     grid.innerHTML = '';
     mySubjects.forEach(subject => {
         const card = document.createElement('div');
@@ -136,7 +118,6 @@ function renderMySubjectCards() {
                 <span class="stat-group"><i class="fa-solid fa-user-group"></i> ${Number(subject.SoNhom || 0)} nhóm</span>
             </div>
         `;
-
         card.querySelector('[data-view-subject]').addEventListener('click', () => {
             window.location.href = `../document/searchResults.html?maMonHoc=${subject.MaMonHoc}`;
         });
@@ -144,7 +125,6 @@ function renderMySubjectCards() {
         grid.appendChild(card);
     });
 }
-
 function renderInlineState(icon, text) {
     return `
         <div class="home-empty-state my-subject-empty">
@@ -153,27 +133,23 @@ function renderInlineState(icon, text) {
         </div>
     `;
 }
-
 async function openSubjectPicker() {
     const token = getToken();
     if (!token) {
         window.location.href = '../auth/login.html';
         return;
     }
-
     try {
         const response = await fetch(`${API_URL}/subjects/available`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Không thể tải danh sách môn học.');
-
         const subjects = data.subjects || [];
         if (subjects.length === 0) {
             Swal.fire({ icon: 'info', title: 'Đã đầy đủ', text: 'Bạn đã thêm tất cả môn học đang có.' });
             return;
         }
-
         const options = subjects.map(subject => `
             <div class="subject-picker-item" data-subject-id="${subject.MaMonHoc}">
                 <span>
@@ -183,32 +159,25 @@ async function openSubjectPicker() {
                 <div class="item-icon"><i class="fa-solid fa-plus"></i></div>
             </div>
         `).join('');
-
         const modalOverlay = document.getElementById('addSubjectModal');
         const modalBody = document.getElementById('subjectModalBody');
         const btnClose = document.getElementById('btnCloseSubjectModal');
-
         if (!modalOverlay || !modalBody) return;
-
         modalBody.innerHTML = `<div class="subject-picker-list">${options}</div>`;
         modalOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';
-
         const closeModal = () => {
             modalOverlay.classList.remove('active');
             document.body.style.overflow = '';
         };
-        
         if (btnClose) {
             btnClose.onclick = closeModal;
         }
-        
         modalOverlay.onclick = (e) => {
             if (e.target === modalOverlay) {
                 closeModal();
             }
         };
-
         const items = modalBody.querySelectorAll('.subject-picker-item');
         items.forEach(item => {
             item.addEventListener('click', async () => {
@@ -219,13 +188,11 @@ async function openSubjectPicker() {
                 }
             });
         });
-
     } catch (error) {
         console.error('Lỗi khi mở danh sách môn học:', error);
         Swal.fire({ icon: 'error', title: 'Lỗi', text: error.message });
     }
 }
-
 async function followSubject(subjectId) {
     const token = getToken();
     try {
@@ -235,14 +202,12 @@ async function followSubject(subjectId) {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.message || 'Không thể thêm môn học.');
-
         await fetchMySubjects();
         Swal.fire({ icon: 'success', title: 'Đã thêm môn học', timer: 1200, showConfirmButton: false });
     } catch (error) {
         Swal.fire({ icon: 'error', title: 'Lỗi', text: error.message });
     }
 }
-
 async function removeSubject(subject) {
     const token = getToken();
     const result = await Swal.fire({
@@ -254,9 +219,7 @@ async function removeSubject(subject) {
         cancelButtonText: 'Hủy',
         confirmButtonColor: 'var(--danger)'
     });
-
     if (!result.isConfirmed) return;
-
     try {
         const response = await fetch(`${API_URL}/subjects/${subject.MaMonHoc}/follow`, {
             method: 'DELETE',
@@ -264,7 +227,6 @@ async function removeSubject(subject) {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.message || 'Không thể bỏ môn học.');
-
         if (selectedSubjectId === String(subject.MaMonHoc)) selectedSubjectId = '';
         await fetchMySubjects();
         fetchTrendingDocuments();
@@ -273,7 +235,6 @@ async function removeSubject(subject) {
         Swal.fire({ icon: 'error', title: 'Lỗi', text: error.message });
     }
 }
-
 function loadUserProfileNav() {
     const token = getToken();
     if (!token) {
@@ -283,11 +244,9 @@ function loadUserProfileNav() {
     try {
         const payload = decodeJWT(token);
         if (!payload) return;
-        
         const userNameEl = document.getElementById('navUserName');
         const userRoleEl = document.getElementById('navUserRole');
         const avatarEl = document.getElementById('navAvatar');
-        
         if (userNameEl) userNameEl.textContent = payload.HoTen || 'Người dùng';
         if (userRoleEl) {
             let roleStr = 'Sinh viên';
@@ -315,25 +274,20 @@ function loadUserProfileNav() {
         console.error('Lỗi giải mã token:', e);
     }
 }
-
 async function fetchUserProfileForHero() {
     const token = getToken();
     if (!token) return;
-
     try {
         const response = await fetch(`${API_URL}/users/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
         if (response.ok) {
             const data = await response.json();
             const profile = data.profile;
-            
             const heroNameEl = document.getElementById('heroUserName');
             const heroTitleEl = document.querySelector('.hero-title');
             const heroCoinEl = document.getElementById('heroUserCoin');
             const heroBanner = document.getElementById('homeHeroBanner');
-            
             if (heroTitleEl && profile.HoTen) {
                 const nameParts = profile.HoTen.trim().split(' ');
                 const shortName = nameParts[nameParts.length - 1];
@@ -343,17 +297,14 @@ async function fetchUserProfileForHero() {
                 const nameParts = profile.HoTen.trim().split(' ');
                 heroNameEl.textContent = nameParts[nameParts.length - 1];
             }
-            
             if (heroCoinEl) {
                 heroCoinEl.textContent = Number(profile.SoDuXu || 0).toLocaleString();
             }
-            
             const decoded = decodeJWT(token);
             const subtitleEl = document.querySelector('.hero-subtitle');
             if (subtitleEl && decoded && decoded.VaiTro === 'GiaoVien') {
                 subtitleEl.style.display = 'none';
             }
-            
             if (heroBanner) {
                 heroBanner.style.display = 'flex';
             }
@@ -362,22 +313,18 @@ async function fetchUserProfileForHero() {
         console.error('Lỗi lấy thông tin profile cho Hero Banner:', error);
     }
 }
-
 async function fetchRecommendedGroups() {
     const token = getToken();
     const grid = document.getElementById('homeGroupGrid');
     if (!grid) return;
     if (!token) return;
-
     grid.innerHTML = renderGroupSkeleton(3);
-
     try {
         const response = await fetch(`${API_URL}/groups/recommended?limit=3`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Không thể tải nhóm học tập.');
-
         renderRecommendedGroups(data.groups || []);
     } catch (error) {
         console.error('Lỗi khi tải nhóm học tập gợi ý:', error);
@@ -389,11 +336,9 @@ async function fetchRecommendedGroups() {
         `;
     }
 }
-
 function renderRecommendedGroups(groups) {
     const grid = document.getElementById('homeGroupGrid');
     if (!grid) return;
-
     if (groups.length === 0) {
         grid.innerHTML = `
             <div class="home-empty-state">
@@ -403,7 +348,6 @@ function renderRecommendedGroups(groups) {
         `;
         return;
     }
-
     grid.innerHTML = '';
     groups.forEach(group => {
         const card = document.createElement('div');
@@ -411,11 +355,9 @@ function renderRecommendedGroups(groups) {
         const groupIconHtml = group.AnhBia 
             ? `<img src="${getAssetUrl(group.AnhBia)}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="${escapeHTML(group.TenNhom)}">` 
             : '<i class="fa-solid fa-users"></i>';
-
         const joinBtnHtml = group.HasRequested 
             ? `<button class="btn-outline-primary btn-cancel-join" type="button" data-group-cancel="${group.MaNhom}" style="flex:1; color:var(--danger, #ef4444); border-color:var(--danger, #ef4444);"><i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu</button>`
             : `<button class="btn-outline-primary btn-join-group" type="button" data-group-join="${group.MaNhom}" style="flex:1;"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
-
         card.innerHTML = `
             <div class="group-header">
                 <div class="group-icon" style="padding:0; overflow:hidden;">${groupIconHtml}</div>
@@ -433,7 +375,6 @@ function renderRecommendedGroups(groups) {
                 ${joinBtnHtml}
             </div>
         `;
-
         card.querySelector('[data-group-detail]').addEventListener('click', () => {
             window.location.href = `../group/groupDetails.html?id=${group.MaNhom}`;
         });
@@ -443,35 +384,28 @@ function renderRecommendedGroups(groups) {
                 joinRecommendedGroup(group.MaNhom, event.currentTarget);
             });
         }
-        
         const cancelBtn = card.querySelector('[data-group-cancel]');
         if (cancelBtn) {
             cancelBtn.addEventListener('click', (event) => {
                 cancelJoinRecommendedGroup(group.MaNhom, event.currentTarget);
             });
         }
-
         grid.appendChild(card);
     });
 }
-
 async function cancelJoinRecommendedGroup(maNhom, button) {
     const token = getToken();
     if (!token) return;
-
     const originalHtml = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang huỷ...';
-
     try {
         const response = await fetch(`${API_URL}/groups/${maNhom}/cancel-join`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json().catch(() => ({}));
-
         if (!response.ok) throw new Error(data.message || 'Không thể huỷ yêu cầu.');
-
         fetchRecommendedGroups();
     } catch (error) {
         console.error('Lỗi khi huỷ yêu cầu tham gia:', error);
@@ -482,27 +416,22 @@ async function cancelJoinRecommendedGroup(maNhom, button) {
         button.innerHTML = originalHtml;
     }
 }
-
 async function joinRecommendedGroup(maNhom, button) {
     const token = getToken();
     if (!token) {
         window.location.href = '../auth/login.html';
         return;
     }
-
     const originalHtml = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
-
     try {
         const response = await fetch(`${API_URL}/groups/${maNhom}/join`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json().catch(() => ({}));
-
         if (!response.ok) throw new Error(data.message || 'Không thể tham gia nhóm.');
-
         if (typeof Swal !== 'undefined') {
             Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã gửi yêu cầu tham gia nhóm' });
         }
@@ -516,7 +445,6 @@ async function joinRecommendedGroup(maNhom, button) {
         button.innerHTML = originalHtml;
     }
 }
-
 async function fetchRecommendedDocuments() {
     try {
         const token = getToken();
@@ -526,13 +454,10 @@ async function fetchRecommendedDocuments() {
             document.getElementById('recommendedDocGrid').style.display = 'none';
             return;
         }
-
         const grid = document.getElementById('recommendedDocGrid');
         if (grid) grid.innerHTML = renderDocumentSkeleton(4);
-
         const response = await fetch(`${API_URL}/documents/recommended`, { headers });
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu gợi ý');
-        
         const data = await response.json();
         if (!data.documents || data.documents.length === 0) {
             grid.innerHTML = '<p style="text-align:center;width:100%;color:#6b7280;">Chưa có gợi ý nào cho bạn lúc này.</p>';
@@ -544,22 +469,17 @@ async function fetchRecommendedDocuments() {
         document.getElementById('recommendedDocGrid').innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải dữ liệu gợi ý.</p>';
     }
 }
-
 async function fetchFollowingFeed() {
     try {
         const token = getToken();
         if(!token) return;
-
         const response = await fetch(`${API_URL}/documents/feed`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
         });
-        
         if (!response.ok) return;
-        
         const data = await response.json();
         const header = document.getElementById('feedSectionHeader');
         const grid = document.getElementById('feedDocGrid');
-        
         if (data.documents && data.documents.length > 0) {
             if (header) header.style.display = 'flex';
             if (grid) grid.style.display = 'grid';
@@ -569,29 +489,23 @@ async function fetchFollowingFeed() {
         console.error('Lỗi tải bảng tin:', error);
     }
 }
-
 async function fetchTopContributors() {
     try {
         const response = await fetch(`${API_URL}/users/top-contributors`);
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu leaderboard');
-        
         const contributors = await response.json();
         const list = document.getElementById('leaderboardList');
-        
         if (!contributors || contributors.length === 0) {
             list.innerHTML = '<p style="text-align:center;width:100%;color:rgba(255,255,255,0.7);">Chưa có đóng góp nào trong tháng này.</p>';
             return;
         }
-
         let html = '';
         contributors.forEach((user, index) => {
             let rankClass = '';
             if (index === 0) rankClass = 'rank-1';
             else if (index === 1) rankClass = 'rank-2';
             else if (index === 2) rankClass = 'rank-3';
-
             const profileUrl = getUserProfileUrl(user.MaND);
-            
             let avatarHtml;
             const initial = escapeHTML(user.HoTen).trim().split(' ').pop().charAt(0).toUpperCase();
             if (user.AvatarURL && user.AvatarURL !== 'null') {
@@ -600,7 +514,6 @@ async function fetchTopContributors() {
             } else {
                 avatarHtml = `<div class="lb-avatar text-avatar">${initial}</div>`;
             }
-
             html += `
                 <div class="leaderboard-item">
                     <div class="lb-rank ${rankClass}">${index + 1}</div>
@@ -616,7 +529,6 @@ async function fetchTopContributors() {
                 </div>
             `;
         });
-        
         list.innerHTML = html;
     } catch (error) {
         console.error('Lỗi tải leaderboard:', error);
@@ -624,7 +536,6 @@ async function fetchTopContributors() {
         if (list) list.innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải bảng xếp hạng.</p>';
     }
 }
-
 async function fetchTrendingDocuments() {
     try {
         const params = new URLSearchParams({ sapXep: 'NoiBat', limit: '4' });
@@ -633,7 +544,6 @@ async function fetchTrendingDocuments() {
         if (grid) grid.innerHTML = renderDocumentSkeleton(4);
         const response = await fetch(`${API_URL}/documents/search?${params.toString()}`);
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu');
-
         const data = await response.json();
         renderHomeDocuments(data.documents, 'trendingDocGrid');
     } catch (error) {
@@ -644,7 +554,6 @@ async function fetchTrendingDocuments() {
         }
     }
 }
-
 async function fetchLatestDocuments() {
     try {
         const params = new URLSearchParams({ trang: '1', limit: '4' });
@@ -653,7 +562,6 @@ async function fetchLatestDocuments() {
         if (grid) grid.innerHTML = renderDocumentSkeleton(4);
         const response = await fetch(`${API_URL}/documents/search?${params.toString()}`);
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu');
-
         const data = await response.json();
         renderHomeDocuments(data.documents, 'homeDocGrid');
     } catch (error) {
@@ -664,41 +572,30 @@ async function fetchLatestDocuments() {
         }
     }
 }
-
 function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
     const grid = document.getElementById(containerId);
     if (!grid) return;
-
     grid.innerHTML = '';
-    
-    
     const top4 = documents.slice(0, 4);
-
     if (top4.length === 0) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chưa có tài liệu nào trên hệ thống.</p>';
         return;
     }
-
     top4.forEach(doc => {
         const card = document.createElement('div');
         card.className = 'doc-card';
-
         let icon = 'fa-file';
         let thumbClass = '';
         let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
-
         if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; thumbClass = 'thumb-pdf'; }
         else if (loaiFile === 'pptx' || loaiFile === 'ppt') { icon = 'fa-chart-column'; thumbClass = 'thumb-pptx'; }
         else if (loaiFile === 'docx' || loaiFile === 'doc') { icon = 'fa-pen-to-square'; thumbClass = 'thumb-docx'; }
-
         const userInitial = doc.TenNguoiDang ? doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         let avatarHtml = `<div class="avatar-sm">${userInitial}</div>`;
         if (doc.AvatarURL) {
             avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img loading="lazy" src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
         }
-
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        
         if (doc.ThumbnailURL) {
             const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
             thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
@@ -710,20 +607,17 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
             } else if (loaiFile === 'pdf' && doc.FileURL) {
                 previewTarget = doc.FileURL;
             }
-
             if (previewTarget) {
                 const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
                 thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
                 thumbClass = '';
             }
         }
-
         let dateStr = 'Không rõ';
         if (doc.NgayDang) {
             const dateObj = new Date(doc.NgayDang);
             dateStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
         }
-
         card.innerHTML = `
             <div class="doc-thumb ${thumbClass}">
                 ${thumbHtml}
@@ -751,13 +645,10 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
                 </div>
             </div>
         `;
-        
-        
         card.style.cursor = 'pointer';
         card.onclick = () => {
             window.location.href = `../document/documentDetails.html?id=${doc.MaTL}`;
         };
-
         const authorEl = card.querySelector('.js-author-link');
         if (authorEl && authorEl.dataset.userId) {
             authorEl.style.cursor = 'pointer';
@@ -766,7 +657,6 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
                 window.location.href = getUserProfileUrl(authorEl.dataset.userId);
             });
         }
-
         grid.appendChild(card);
     });
 }

@@ -36,9 +36,9 @@ describe('Cron Jobs', () => {
     it('Nên không làm gì nếu không có top users', async () => {
         initCronJobs(mockPool);
         const rewardJob = cron.schedule.mock.calls[0][1];
-        
+
         await rewardJob();
-        
+
         expect(mockPool.execute).toHaveBeenCalledWith(expect.stringContaining('SELECT'));
         expect(mockConnection.beginTransaction).not.toHaveBeenCalled();
     });
@@ -50,15 +50,15 @@ describe('Cron Jobs', () => {
 
         initCronJobs(mockPool);
         const rewardJob = cron.schedule.mock.calls[0][1];
-        
+
         await rewardJob();
-        
+
         expect(mockConnection.beginTransaction).toHaveBeenCalled();
         expect(mockConnection.execute).toHaveBeenCalledTimes(6); 
         expect(mockConnection.commit).toHaveBeenCalled();
         expect(mockConnection.release).toHaveBeenCalled();
     });
-    
+
     it('Nên rollback nếu có lỗi trong quá trình phát thưởng', async () => {
         mockPool.execute.mockResolvedValue([
             [{ MaND: 1 }]
@@ -67,22 +67,22 @@ describe('Cron Jobs', () => {
 
         initCronJobs(mockPool);
         const rewardJob = cron.schedule.mock.calls[0][1];
-        
+
         await rewardJob();
-        
+
         expect(mockConnection.beginTransaction).toHaveBeenCalled();
         expect(mockConnection.rollback).toHaveBeenCalled();
         expect(mockConnection.release).toHaveBeenCalled();
     });
-    
+
     it('Nên xóa token hết hạn thành công', async () => {
         mockPool.execute.mockResolvedValue([{ affectedRows: 5 }]);
 
         initCronJobs(mockPool);
         const cleanupJob = cron.schedule.mock.calls[1][1];
-        
+
         await cleanupJob();
-        
+
         expect(mockPool.execute).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM REFRESH_TOKENS'));
     });
 });

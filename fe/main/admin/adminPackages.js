@@ -31,7 +31,7 @@ async function fetchPackages() {
             const data = await res.json();
             packages = data.data || [];
             renderPackages();
-            
+
             if (data.pagination) {
                 renderPagination('packages-pagination', data.pagination.totalPages, currentPage, (page) => {
                     currentPage = page;
@@ -58,18 +58,18 @@ function renderPackages() {
         const isActive = pkg.TrangThai === 'HoatDong';
         return `
             <tr>
-                <td style="font-weight: 600; color: var(--text-secondary);">${escapeHTML(pkg.MaGoi)}</td>
-                <td style="font-weight: bold; color: var(--primary);">${escapeHTML(pkg.TenGoi)}</td>
-                <td style="font-weight: 600;">${formatCurrency(pkg.SoTien)}</td>
-                <td style="color: #f59e0b; font-weight: bold;">${pkg.SoXu} Xu</td>
-                <td>${pkg.KhuyenMai > 0 ? `<span style="color:#10b981;">+${pkg.KhuyenMai}%</span>` : '-'}</td>
-                <td>
+                <td style="font-weight: 600; color: var(--text-secondary);" data-label="Mã gói">${escapeHTML(pkg.MaGoi)}</td>
+                <td style="font-weight: bold; color: var(--primary);" data-label="Tên gói">${escapeHTML(pkg.TenGoi)}</td>
+                <td style="font-weight: 600;" data-label="Giá (VND)">${formatCurrency(pkg.SoTien)}</td>
+                <td style="color: #f59e0b; font-weight: bold;" data-label="Xu nhận được">${pkg.SoXu} Xu</td>
+                <td data-label="Khuyến mãi">${pkg.KhuyenMai > 0 ? `<span style="color:#10b981;">+${pkg.KhuyenMai}%</span>` : '-'}</td>
+                <td data-label="Trạng thái">
                     <span class="status-badge ${isActive ? 'active' : 'inactive'}" style="display: inline-flex; align-items: center; color: ${isActive ? '#16a34a' : '#ea580c'}; font-size: 13px; font-weight: 500;">
                         <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background-color: ${isActive ? '#16a34a' : '#ea580c'}; margin-right: 6px;"></span>
                         ${isActive ? 'Hiển thị' : 'Đang ẩn'}
                     </span>
                 </td>
-                <td>
+                <td data-label="Hành động">
                     <button class="btn-action btn-edit" data-id="${pkg.MaGoi}" title="Sửa" style="background: none; border: none; cursor: pointer; color: #3b82f6; font-size: 16px; margin-right: 10px;">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>
@@ -128,7 +128,7 @@ function setupCreateModal() {
         };
 
         inputMaGoi.value = pkg.MaGoi;
-        inputMaGoi.disabled = true; // Không cho sửa mã gói
+        inputMaGoi.disabled = true; 
         inputTenGoi.value = pkg.TenGoi;
         inputSoTien.value = pkg.SoTien;
         inputSoXu.value = pkg.SoXu;

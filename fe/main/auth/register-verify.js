@@ -2,7 +2,7 @@ import { API_URL } from '../shared/config.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const registerDataStr = sessionStorage.getItem('registerData');
-    
+
     if (!registerDataStr) {
         window.location.href = 'register.html';
         return;
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (verifyForm) {
         verifyForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const otp = otpInput.value.trim();
             if (!otp || otp.length !== 6) {
                 Toast.fire({ icon: 'warning', title: 'Vui lòng nhập đủ 6 số OTP.' });
@@ -88,9 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (!response.ok) {
                     btnVerifyOTP.disabled = false;
                     btnVerifyOTP.innerHTML = originalText;
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnResendOtp) {
         btnResendOtp.addEventListener('click', async (e) => {
             e.preventDefault();
-            
+
             if (btnResendOtp.classList.contains('disabled')) return;
 
             btnResendOtp.classList.add('disabled');
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnResendOtp.innerHTML = originalText;
                 } else {
                     Toast.fire({ icon: 'success', title: 'Mã OTP mới đã được gửi' });
-                    
+
                     let secondsLeft = 60;
                     const timerInterval = setInterval(() => {
                         btnResendOtp.innerHTML = `Gửi lại sau ${secondsLeft}s`;

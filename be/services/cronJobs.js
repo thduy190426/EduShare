@@ -18,7 +18,7 @@ function initCronJobs(pool) {
                 ORDER BY TotalDocuments DESC, TotalDownloads DESC
                 LIMIT 4
             `;
-            
+
             const [topUsers] = await pool.execute(sql);
             if (topUsers.length === 0) {
                 console.log('Không có thành viên nào thỏa điều kiện để phát thưởng.');
@@ -26,7 +26,7 @@ function initCronJobs(pool) {
             }
 
             const rewards = [500, 300, 200, 100];
-            
+
             const connection = await pool.getConnection();
             await connection.beginTransaction();
 
@@ -34,20 +34,20 @@ function initCronJobs(pool) {
                 for (let i = 0; i < topUsers.length; i++) {
                     const user = topUsers[i];
                     const xuThuong = rewards[i];
-                    
+
                     await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [xuThuong, user.MaND]);
-                    
+
                     await connection.execute(
                         "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', ?, ?)",
                         [user.MaND, xuThuong, `Thưởng Top ${i + 1} Bảng Vàng tháng trước`]
                     );
-                    
+
                     await connection.execute(
                         "INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, 'HeThong')",
                         [user.MaND, `Chúc mừng! Bạn đã đạt Top ${i + 1} Bảng Vàng đóng góp tháng trước và nhận được ${xuThuong} Xu từ EduShare!`]
                     );
                 }
-                
+
                 await connection.commit();
                 console.log(`Đã phát thưởng thành công cho ${topUsers.length} thành viên Top Bảng Vàng!`);
             } catch (txErr) {

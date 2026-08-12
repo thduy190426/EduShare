@@ -10,7 +10,7 @@ const getBlacklist = () => {
 
 const containsSpam = (text) => {
     if (!text || typeof text !== 'string') return false;
-    
+
     const lowerText = text.toLowerCase();
     const blacklist = getBlacklist();
 
@@ -19,7 +19,7 @@ const containsSpam = (text) => {
             return true;
         }
     }
-    
+
     return false;
 };
 

@@ -1,7 +1,7 @@
 import { API_URL } from '../shared/config.js';
 import { getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
 
-let maxUploadSizeMB = 20; // Default fallback
+let maxUploadSizeMB = 20; 
 
 async function fetchUploadSettings() {
     try {
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tenTLInput = document.getElementById('tenTL');
     const btnUpload = uploadForm.querySelector('button[type="submit"]');
     const subjectLevelInfo = createSubjectLevelInfo(subjectSelect);
-    
+
     let moTaEditor;
     if (typeof Quill !== 'undefined') {
         moTaEditor = new Quill('#moTa-editor', {
@@ -61,11 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
             btnUpload.style.cursor = 'not-allowed';
         }
     }
-    
+
     if (uploadZone) {
         uploadZone.style.display = 'flex';
     }
-    
+
     checkUploadConditions();
     tenTLInput.addEventListener('input', checkUploadConditions);
     subjectSelect.addEventListener('change', () => {
@@ -118,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupSubjectSuggestionUI(subjectSelect, token);
     }
 
-    
     if (uploadZone) {
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -150,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fileUpload.addEventListener('change', function () {
         const file = this.files[0];
         if (file) {
-            
+
             if (file.size > maxUploadSizeMB * 1024 * 1024) {
                 Swal.fire(`Dung lượng file vượt quá giới hạn ${maxUploadSizeMB}MB.`);
                 this.value = ''; 
@@ -184,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            
             if (previewName) previewName.textContent = file.name;
             const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
             if (previewSize) previewSize.textContent = `Kích thước: ${sizeInMB} MB`;
@@ -233,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    
 async function generatePdfThumbnail(file) {
     if (file.type !== 'application/pdf' && file.name.split('.').pop().toLowerCase() !== 'pdf') return null;
     try {
@@ -246,7 +243,7 @@ async function generatePdfThumbnail(file) {
         canvas.width = viewport.width;
         canvas.height = viewport.height;
         await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        
+
         return new Promise(resolve => {
             canvas.toBlob(blob => {
                 if (blob) {
@@ -268,7 +265,7 @@ async function generatePdfThumbnail(file) {
 
         const tenTL = document.getElementById('tenTL').value.trim();
         const maMonHoc = subjectSelect.value;
-        
+
         let moTa = '';
         if (moTaEditor) {
             const moTaText = moTaEditor.getText().trim();
@@ -276,7 +273,7 @@ async function generatePdfThumbnail(file) {
                 moTa = moTaEditor.root.innerHTML;
             }
         }
-        
+
         const file = fileUpload.files[0];
 
         if (!maMonHoc) {
@@ -306,7 +303,6 @@ async function generatePdfThumbnail(file) {
             }
         }
 
-        
         const token = getToken();
         if (!token) {
             Swal.fire('Bạn chưa đăng nhập. Vui lòng đăng nhập lại.');
@@ -314,7 +310,6 @@ async function generatePdfThumbnail(file) {
             return;
         }
 
-        
         const formData = new FormData();
         formData.append('tenTL', tenTL);
         formData.append('maMonHoc', maMonHoc);
@@ -378,7 +373,7 @@ async function generatePdfThumbnail(file) {
             const uploadProgressBar = document.getElementById('uploadProgressBar');
             const uploadProgressPercent = document.getElementById('uploadProgressPercent');
             const uploadProgressText = document.getElementById('uploadProgressText');
-            
+
             if (uploadProgressContainer) {
                 uploadProgressContainer.style.display = 'block';
                 uploadProgressBar.style.width = '0%';
@@ -389,7 +384,7 @@ async function generatePdfThumbnail(file) {
             const cloudData = await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`);
-                
+
                 xhr.upload.onprogress = (event) => {
                     if (event.lengthComputable && uploadProgressContainer) {
                         const percentComplete = Math.round((event.loaded / event.total) * 100);
@@ -397,7 +392,7 @@ async function generatePdfThumbnail(file) {
                         uploadProgressPercent.textContent = percentComplete + '%';
                     }
                 };
-                
+
                 xhr.onload = () => {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         resolve(JSON.parse(xhr.responseText));
@@ -405,7 +400,7 @@ async function generatePdfThumbnail(file) {
                         reject(new Error('Lỗi tải lên máy chủ Cloudinary.'));
                     }
                 };
-                
+
                 xhr.onerror = () => reject(new Error('Lỗi kết nối mạng khi tải lên.'));
                 xhr.send(cloudForm);
             });
@@ -673,7 +668,7 @@ function loadUserProfileNav() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (!payload) return;
         const avatarEl = document.getElementById('navAvatar');
-        
+
         if (avatarEl && payload.HoTen) {
             const savedAvatar = getAvatar();
             if (savedAvatar && savedAvatar !== 'null') {

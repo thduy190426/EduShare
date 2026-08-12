@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDocuments(1);
     });
 
-
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -150,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     const handleFilterChange = () => {
         currentPage = 1;
         hasMore = true;
@@ -177,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
             checkFilterState();
         });
     }
-
 
     if (btnClearFilter) {
         btnClearFilter.addEventListener('click', () => {
@@ -417,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-                    
+
                     if (doc.ThumbnailURL) {
                         const thumbUrlFull = getAssetUrl(doc.ThumbnailURL);
                         thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
@@ -486,13 +483,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         e.preventDefault();
                         e.stopPropagation();
                         if (isBookmarkProcessing) return;
-                        
+
                         const token = getToken();
                         if (!token) {
                             Toast.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để lưu tài liệu' });
                             return;
                         }
-                        
+
                         isBookmarkProcessing = true;
                         const originalHtml = bookmarkBtn.innerHTML;
                         bookmarkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -547,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hasMore = currentPage < totalPages;
         isInitialLoaded = true;
-        
+
         if (!hasMore && scrollEndMessage && (documents.length > 0 || isAppend)) {
             scrollEndMessage.style.display = 'block';
         } else if (scrollEndMessage) {

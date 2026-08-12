@@ -30,11 +30,11 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .get('/api/notifications')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(200);
             expect(response.body.notifications[0].NoiDung).toBe('Test');
         });
-        
+
         it('Nên báo lỗi 500 nếu db lỗi', async () => {
             const token = generateTestToken({ MaND: 1 });
             mockPoolExecute(app, (query) => {
@@ -45,7 +45,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .get('/api/notifications')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(500);
         });
     });
@@ -64,7 +64,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .get('/api/notifications/unread-count')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(200);
             expect(response.body.count).toBe(5);
         });
@@ -84,7 +84,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .put('/api/notifications/read-all')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(200);
             expect(response.body.message).toBe('Đã đánh dấu tất cả là đã đọc.');
         });
@@ -104,7 +104,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .put('/api/notifications/999/read')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(404);
         });
 
@@ -121,7 +121,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .put('/api/notifications/1/read')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(200);
             expect(response.body.message).toBe('Đã đánh dấu đọc.');
         });
@@ -141,7 +141,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .delete('/api/notifications/all')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(200);
             expect(response.body.message).toBe('Đã xoá tất cả thông báo.');
         });
@@ -161,7 +161,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .delete('/api/notifications/999')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(404);
         });
 
@@ -178,7 +178,7 @@ describe('Notifications API', () => {
             const response = await request(app)
                 .delete('/api/notifications/1')
                 .set('Authorization', `Bearer ${token}`);
-            
+
             expect(response.status).toBe(200);
             expect(response.body.message).toBe('Đã xóa thông báo.');
         });

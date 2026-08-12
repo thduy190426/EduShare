@@ -17,16 +17,16 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 btnExport.disabled = true;
                 btnExport.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang xuất...';
-                
+
                 const response = await fetch(`${API_URL}/payment/export/history`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                
+
                 if (!response.ok) {
                     const data = await response.json();
                     throw new Error(data.message || 'Lỗi khi tải báo cáo');
                 }
-                
+
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -82,12 +82,12 @@ async function fetchTransactions() {
         const response = await fetch(`${API_URL}/payment/transactions?status=${currentStatus}&page=${currentPage}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (!response.ok) throw new Error("Failed to fetch transactions");
-        
+
         const data = await response.json();
         renderTransactions(data.data || []);
-        
+
         if (data.pagination) {
             renderPagination('payment-pagination', data.pagination.totalPages, currentPage, (page) => {
                 currentPage = page;
@@ -111,10 +111,10 @@ function renderTransactions(transactions) {
 
     transactions.forEach((tx, index) => {
         const tr = document.createElement("tr");
-        
+
         const d = new Date(tx.NgayTao);
         const date = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} | ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-        
+
         let statusHtml = '';
         if (tx.TrangThai === 'ChoDuyet') statusHtml = `<div style="display:inline-flex;align-items:center;gap:6px;color:#f59e0b;font-weight:500;"><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div>Chờ duyệt</div>`;
         if (tx.TrangThai === 'DaDuyet') statusHtml = `<div style="display:inline-flex;align-items:center;gap:6px;color:#10b981;font-weight:500;"><div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>Đã duyệt</div>`;
@@ -139,8 +139,8 @@ function renderTransactions(transactions) {
         }
 
         tr.innerHTML = `
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
-            <td>
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1}</td>
+            <td data-label="Người nạp">
                 <div style="display:flex;align-items:center;gap:12px;">
                     ${avatarHtml}
                     <div>
@@ -148,13 +148,13 @@ function renderTransactions(transactions) {
                     </div>
                 </div>
             </td>
-            <td>
+            <td data-label="Số tiền / Xu">
                 <div style="color:#ef4444; font-weight:600;"><i class="fa-solid fa-money-bill-wave" style="margin-right:6px;"></i> ${tx.SoTien.toLocaleString('vi-VN')} đ</div>
                 <div style="color:#f59e0b; font-size:13px; font-weight:600;"><i class="fa-solid fa-coins" style="margin-right:9px;"></i> ${tx.SoXu.toLocaleString('vi-VN')} Xu</div>
             </td>
-            <td>${date}</td>
-            <td>${statusHtml}</td>
-            <td style="text-align: right;">${actionHtml}</td>
+            <td data-label="Ngày tạo">${date}</td>
+            <td data-label="Trạng thái">${statusHtml}</td>
+            <td style="text-align: right;" data-label="Thao tác">${actionHtml}</td>
         `;
 
         if (tx.TrangThai === 'ChoDuyet') {
@@ -186,7 +186,7 @@ async function handleApprove(id) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         const data = await response.json();
         if (response.ok) {
             showToast("success", "Đã duyệt giao dịch thành công.");
@@ -219,7 +219,7 @@ async function handleReject(id) {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         const data = await response.json();
         if (response.ok) {
             showToast("success", "Đã từ chối giao dịch.");
@@ -253,7 +253,7 @@ async function handleDelete(id) {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         const data = await response.json();
         if (response.ok) {
             showToast("success", "Đã xóa giao dịch.");

@@ -17,7 +17,7 @@ async function scanFileVirus(fileHash) {
         if (response.status === 200) {
             const data = await response.json();
             const stats = data?.data?.attributes?.last_analysis_stats;
-            
+
             if (stats && stats.malicious > 0) {
                 console.error(`[VirusScanner] Phát hiện mã độc! SHA-256: ${fileHash} — Cảnh báo từ ${stats.malicious} trình diệt virus.`);
                 return { 

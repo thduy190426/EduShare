@@ -1,29 +1,23 @@
 import { API_URL } from '../shared/config.js';
 import { escapeHTML, formatRatingSummary, getAssetUrl, renderDocumentSkeleton } from '../shared/utils.js';
-
 document.addEventListener('DOMContentLoaded', () => {
     fetchFeaturedDocuments();
     fetchSubjects();
     fetchStats();
 });
-
 async function fetchStats() {
     try {
         const response = await fetch(`${API_URL}/documents/stats/platform`);
         if (!response.ok) return;
-
         const data = await response.json();
-        
         const docElem = document.getElementById('stat-documents');
         const userElem = document.getElementById('stat-users');
         const dlElem = document.getElementById('stat-downloads');
-
         const formatNum = (num) => {
             if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M+';
             if (num > 1000) return Math.floor(num / 1000) + '.000+';
             return num + '+';
         };
-
         if (docElem) docElem.textContent = formatNum(data.documents);
         if (userElem) userElem.textContent = formatNum(data.users);
         if (dlElem) dlElem.textContent = formatNum(data.downloads);
@@ -31,15 +25,12 @@ async function fetchStats() {
         console.error('Lỗi khi tải thống kê:', error);
     }
 }
-
 async function fetchSubjects() {
     const grid = document.getElementById('homeSubjectGrid');
     if (!grid) return;
-
     try {
         const response = await fetch(`${API_URL}/documents/subjects/popular`);
         if (!response.ok) throw new Error('Không thể tải danh sách môn học.');
-
         const data = await response.json();
         renderSubjects(data.subjects || []);
     } catch (error) {
@@ -47,53 +38,40 @@ async function fetchSubjects() {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Không thể tải dữ liệu môn học lúc này.</p>';
     }
 }
-
 function renderSubjects(subjects) {
     const grid = document.getElementById('homeSubjectGrid');
     if (!grid) return;
-
     if (subjects.length === 0) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chưa có môn học nào trên hệ thống.</p>';
         return;
     }
-
     grid.innerHTML = '';
-    
     const displaySubjects = subjects;
     const icons = [
         'fa-ruler-combined', 'fa-magnet', 'fa-laptop', 'fa-floppy-disk', 
         'fa-book', 'fa-flask', 'fa-earth-americas', 'fa-bullhorn'
     ];
-
     displaySubjects.forEach((subject, index) => {
         const card = document.createElement('div');
         card.className = 'subject-card';
-        
         const iconClass = icons[index % icons.length];
-
         card.innerHTML = `
             <div class="subject-icon"><i class="fa-solid ${iconClass}"></i></div>
             <div class="subject-name">${escapeHTML(subject.TenMonHoc)}</div>
         `;
-        
         card.addEventListener('click', () => {
             window.location.href = `../document/searchResults.html?maMonHoc=${subject.MaMonHoc}`;
         });
-
         grid.appendChild(card);
     });
 }
-
 async function fetchFeaturedDocuments() {
     const grid = document.getElementById('homeDocGrid');
     if (!grid) return;
-
     grid.innerHTML = renderDocumentSkeleton(6);
-
     try {
         const response = await fetch(`${API_URL}/documents/search?trang=1&limit=6&sapXep=NoiBat`);
         if (!response.ok) throw new Error('Không thể tải tài liệu nổi bật.');
-
         const data = await response.json();
         renderFeaturedDocuments(data.documents || []);
     } catch (error) {
@@ -101,26 +79,21 @@ async function fetchFeaturedDocuments() {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Không thể tải dữ liệu tài liệu lúc này.</p>';
     }
 }
-
 function renderFeaturedDocuments(documents) {
     const grid = document.getElementById('homeDocGrid');
     if (!grid) return;
-
     const topDocuments = documents.slice(0, 6);
     if (topDocuments.length === 0) {
         grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chưa có tài liệu nào trên hệ thống.</p>';
         return;
     }
-
     grid.innerHTML = '';
     topDocuments.forEach((doc) => {
         const card = document.createElement('div');
         card.className = 'doc-card';
-
         let icon = 'fa-file';
         let thumbClass = '';
         const fileType = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
-
         if (fileType === 'pdf') {
             icon = 'fa-file-pdf';
             thumbClass = 'thumb-pdf';
@@ -131,9 +104,7 @@ function renderFeaturedDocuments(documents) {
             icon = 'fa-pen-to-square';
             thumbClass = 'thumb-docx';
         }
-
         let thumbHtml = `<i class="fa-solid ${icon}"></i>`;
-        
         if (doc.ThumbnailURL) {
             const thumbUrlFull = doc.ThumbnailURL.startsWith('http') ? doc.ThumbnailURL : `${API_URL.replace('/api', '')}${doc.ThumbnailURL}`;
             thumbHtml = `<img src="${thumbUrlFull}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border: none; pointer-events: none;" loading="lazy" alt="Preview">`;
@@ -145,26 +116,22 @@ function renderFeaturedDocuments(documents) {
             } else if (fileType === 'pdf' && doc.FileURL) {
                 previewTarget = doc.FileURL;
             }
-
             if (previewTarget) {
                 const fileUrlFull = previewTarget.startsWith('http') ? previewTarget : `${API_URL.replace('/api', '')}${previewTarget}`;
                 thumbHtml = `<iframe src="${fileUrlFull}#toolbar=0&navpanes=0&scrollbar=0&view=FitH" style="position: absolute; top: 0; left: 0; width: calc(100% + 24px); height: calc(100% + 24px); border: none; pointer-events: none;" scrolling="no" tabindex="-1" loading="lazy"></iframe>`;
                 thumbClass = '';
             }
         }
-
         const authorInitial = doc.TenNguoiDang ? doc.TenNguoiDang.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         let avatarHtml = `<div class="avatar-sm">${authorInitial}</div>`;
         if (doc.AvatarURL) {
             avatarHtml = `<div class="avatar-sm" style="background:transparent; color:transparent;"><img loading="lazy" src="${getAssetUrl(doc.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
         }
-
         let dateText = 'Khong ro';
         if (doc.NgayDang) {
             const date = new Date(doc.NgayDang);
             dateText = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
         }
-
         card.innerHTML = `
             <div class="doc-thumb ${thumbClass}">
                 ${thumbHtml}
@@ -190,12 +157,10 @@ function renderFeaturedDocuments(documents) {
                 </div>
             </div>
         `;
-
         card.style.cursor = 'pointer';
         card.addEventListener('click', () => {
             window.location.href = `../document/documentDetails.html?id=${doc.MaTL}`;
         });
-
         grid.appendChild(card);
     });
 }

@@ -31,13 +31,16 @@ function injectChatWidget() {
     const container = document.createElement('div');
     container.id = 'chat-widget-container';
     container.innerHTML = `
+        <style>
+            #chat-widget-panel { opacity: 0; pointer-events: none; transform: translateY(20px); }
+        </style>
         <div id="chat-widget-panel">
             <div class="chat-header">
                 <button class="back-btn" id="chat-back-btn"><i class="fa-solid fa-arrow-left"></i></button>
                 <div class="chat-title" id="chat-header-title">Tin nhắn</div>
                 <button class="close-btn" id="chat-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            
+
             <div id="chat-contacts-view">
                 <div class="search-container">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -154,7 +157,7 @@ function initChatEvents() {
         if (file) {
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const res = await fetch(`${API_URL}/api/chat/upload`, {
                     method: 'POST',
@@ -197,7 +200,7 @@ function initChatEvents() {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     const formData = new FormData();
                     formData.append('file', audioBlob, 'voice.webm');
-                    
+
                     try {
                         const res = await fetch(`${API_URL}/api/chat/upload`, {
                             method: 'POST',
@@ -258,7 +261,7 @@ function renderContacts(contacts) {
     const list = document.getElementById('contacts-list');
     const oldScroll = list.scrollTop;
     list.innerHTML = '';
-    
+
     if (!contacts || contacts.length === 0) {
         list.innerHTML = '<div style="padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 13px;"><i class="fa-regular fa-comments" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i><br>Không có tin nhắn nào.</div>';
         return;
@@ -270,7 +273,7 @@ function renderContacts(contacts) {
         const item = document.createElement('div');
         item.className = 'contact-item';
         item.onclick = () => openConversation(c.PartnerId || c.MaND, c.HoTen, c.AvatarURL);
-        
+
         let avatarHtml = '';
         if (c.AvatarURL) {
             avatarHtml = `<img src="${getAssetUrl(c.AvatarURL)}" class="contact-avatar" onerror="this.src='https://via.placeholder.com/44'">`;
@@ -302,8 +305,7 @@ function renderContacts(contacts) {
     });
 
     list.appendChild(fragment);
-    
-    // Giữ vị trí cuộn khi danh sách được cập nhật lại (ví dụ có tin nhắn mới)
+
     if (oldScroll > 0) {
         list.scrollTop = oldScroll;
     }
@@ -329,7 +331,7 @@ async function openConversation(partnerId, partnerName, partnerAvatar) {
     document.getElementById('chat-contacts-view').style.display = 'none';
     document.getElementById('chat-conversation-view').style.display = 'flex';
     document.getElementById('chat-back-btn').style.display = 'block';
-    
+
     updateHeaderStatus();
     document.getElementById('messages-list').innerHTML = '<div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:13px;"><i class="fa-regular fa-hand-peace" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i><br>Đang tải...</div>';
 
@@ -355,7 +357,7 @@ function updateHeaderStatus() {
         const initial = currentPartnerName ? currentPartnerName.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         avatarHtml = `<div class="chat-header-fallback">${initial}</div>`;
     }
-    
+
     document.getElementById('chat-header-title').innerHTML = `
         <div class="contact-avatar-wrapper">
             ${avatarHtml}
@@ -388,13 +390,12 @@ function renderMessages(messages) {
         const isLast = index === messages.length - 1;
         const msgTime = new Date(m.NgayGui);
 
-        // Date divider if time difference > 1 hour
         if (!lastMsgTime || (msgTime - lastMsgTime) > 60 * 60 * 1000) {
             const div = document.createElement('div');
             div.className = 'date-divider';
             div.textContent = formatDateDivider(m.NgayGui);
             fragment.appendChild(div);
-            lastSenderId = null; // force new wrapper
+            lastSenderId = null; 
         }
         lastMsgTime = msgTime;
 
@@ -402,10 +403,10 @@ function renderMessages(messages) {
             wrapper = document.createElement('div');
             wrapper.className = 'message-wrapper';
             wrapper.style.alignItems = isMe ? 'flex-end' : 'flex-start';
-            
+
             if (!isMe) {
                 wrapper.classList.add('received-group');
-                
+
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'message-sender-name';
                 nameDiv.textContent = currentPartnerName;
@@ -430,7 +431,7 @@ function renderMessages(messages) {
                     wrapper.appendChild(avatarDiv);
                 }
             }
-            
+
             fragment.appendChild(wrapper);
             lastSenderId = m.NguoiGui;
         }
@@ -447,7 +448,7 @@ function renderMessages(messages) {
         msgDiv.className = `message ${isMe ? 'msg-sent' : 'msg-received'}`;
         msgDiv.id = `msg-${m.MaTN}`;
         msgDiv.title = formatTime(m.NgayGui); 
-        
+
         let contentHtml = '';
         let linkHtml = '';
         if (m.DaThuHoi) {
@@ -472,7 +473,7 @@ function renderMessages(messages) {
             if (m.DaChinhSua) {
                 contentHtml += `<span class="msg-edited-label">(Đã chỉnh sửa)</span>`;
             }
-            
+
             const urlRegex = /(https?:\/\/[^\s]+)/g;
             const urls = m.NoiDung.match(urlRegex);
             if (urls && urls.length > 0) {
@@ -483,11 +484,10 @@ function renderMessages(messages) {
         }
         msgDiv.innerHTML = contentHtml + linkHtml;
 
-        // Actions Menu (3 dots)
         if (!m.DaThuHoi) {
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'msg-actions-wrapper';
-            
+
             const safeContent = m.NoiDung.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
 
             let dropdownHtml = `
@@ -503,7 +503,7 @@ function renderMessages(messages) {
                     <button class="dropdown-item" onclick="startReply(${m.MaTN}, '${safeContent}')"><i class="fa-solid fa-reply"></i> Trả lời</button>
                     ${m.LoaiTinNhan === 'text' ? `<button class="dropdown-item" onclick="copyMessage('${safeContent}')"><i class="fa-regular fa-copy"></i> Sao chép</button>` : ''}
             `;
-            
+
             if (isMe) {
                 if (m.LoaiTinNhan === 'text') {
                     dropdownHtml += `<button class="dropdown-item" onclick="startEdit(${m.MaTN}, '${safeContent}')"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>`;
@@ -521,7 +521,6 @@ function renderMessages(messages) {
             msgDiv.appendChild(actionsDiv);
         }
 
-        // Reactions
         if (m.Reactions && m.Reactions !== 'null') {
             try {
                 const reacts = typeof m.Reactions === 'string' ? JSON.parse(m.Reactions) : m.Reactions;
@@ -537,7 +536,6 @@ function renderMessages(messages) {
 
         wrapper.appendChild(msgDiv);
 
-        // Read receipt / Delivery Ticks
         if (isMe && isLast) {
             if (m.DaDoc) {
                 let avatarSrc = currentPartnerAvatar ? getAssetUrl(currentPartnerAvatar) : 'https://via.placeholder.com/32';
@@ -727,10 +725,10 @@ function setupSocket() {
     socket.on('user_status_change', ({ userId, status }) => {
         if (status === 'online') onlineUsers.add(String(userId));
         else onlineUsers.delete(String(userId));
-        
+
         const dot = document.getElementById(`contact-status-${userId}`);
         if (dot) dot.className = `contact-status-dot ${status === 'online' ? 'online' : ''}`;
-        
+
         if (currentPartnerId == userId) {
             updateHeaderStatus();
         }
@@ -767,7 +765,7 @@ function setupSocket() {
     socket.on('message_reacted', () => {
         if (currentPartnerId) openConversation(currentPartnerId, currentPartnerName, currentPartnerAvatar);
     });
-    
+
     socket.on('message_delivered', ({ messageId }) => {
         if (currentPartnerId) openConversation(currentPartnerId, currentPartnerName, currentPartnerAvatar);
     });
@@ -796,10 +794,10 @@ function appendMessage(msg, isMe) {
         wrapper = document.createElement('div');
         wrapper.className = 'message-wrapper';
         wrapper.style.alignItems = isMe ? 'flex-end' : 'flex-start';
-        
+
         if (!isMe) {
             wrapper.classList.add('received-group');
-            
+
             const nameDiv = document.createElement('div');
             nameDiv.className = 'message-sender-name';
             nameDiv.textContent = currentPartnerName;
@@ -824,7 +822,7 @@ function appendMessage(msg, isMe) {
                 wrapper.appendChild(avatarDiv);
             }
         }
-        
+
         list.appendChild(wrapper);
     }
 
@@ -838,13 +836,7 @@ function appendMessage(msg, isMe) {
     } else {
         msgDiv.textContent = msg.NoiDung;
     }
-    
-    // Quick action for appended message to keep it simple (or force reload for full features)
-    // Here we just skip actions for the very last appended one for simplicity, 
-    // or just fetch history which is already handled if we just re-fetch.
-    // Actually, to make it robust, we can just openConversation instead of appendMessage for full consistency,
-    // but appendMessage is smoother. We'll leave it simple.
-    
+
     wrapper.appendChild(msgDiv);
     scrollToBottom();
 }

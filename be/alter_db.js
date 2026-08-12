@@ -115,7 +115,7 @@ async function run() {
                 FOREIGN KEY (MaND_Duyet) REFERENCES NGUOIDUNG(MaND)
             )
         `);
-        
+
         await addColumnIfMissing('GIAODICH_NAPXU', 'MaPromo', 'INT DEFAULT NULL');
         await createTableIfMissing('TAILIEU_DAMUA', `
             CREATE TABLE TAILIEU_DAMUA (
@@ -138,7 +138,7 @@ async function run() {
                 FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND)
             )
         `);
-        
+
         try {
             await pool.execute("ALTER TABLE LICH_SU_XU MODIFY COLUMN LoaiGiaoDich ENUM('NapXu', 'MuaTaiLieu', 'BanTaiLieu', 'TruXuAdmin', 'ThuongXu', 'HoanXu', 'PhatXu') NOT NULL");
             console.log("Updated ENUM for LICH_SU_XU.LoaiGiaoDich");
@@ -158,13 +158,13 @@ async function run() {
                 FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND)
             )
         `);
-        
+
         await addColumnIfMissing('BINHLUAN', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
-        
+
         await addColumnIfMissing('NHOM', 'AnhBia', 'VARCHAR(255) DEFAULT NULL');
-        
+
         await addColumnIfMissing('NHOM', 'IsPrivate', 'BOOLEAN DEFAULT FALSE');
-        
+
         await createTableIfMissing('BAIVIET_NHOM', `
             CREATE TABLE BAIVIET_NHOM (
                 MaBaiViet INT AUTO_INCREMENT PRIMARY KEY,
@@ -177,7 +177,7 @@ async function run() {
                 FOREIGN KEY (MaNhom) REFERENCES NHOM(MaNhom) ON DELETE CASCADE
             )
         `);
-        
+
         await addColumnIfMissing('BAIVIET_NHOM', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
 
         await createTableIfMissing('BINHLUAN_BAIVIET', `
@@ -193,7 +193,7 @@ async function run() {
                 FOREIGN KEY (MaBL_Cha) REFERENCES BINHLUAN_BAIVIET(MaBL) ON DELETE CASCADE
             )
         `);
-        
+
         await addColumnIfMissing('TAILIEU', 'TextSEO', 'TEXT');
 
         await createTableIfMissing('AUDIT_LOG', `

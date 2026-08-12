@@ -351,11 +351,12 @@
     justify-content: flex-start;
   }
   .card {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible; background: transparent; border: none; box-shadow: none;
   }
-  .transaction-table th, .transaction-table td {
-    padding: 12px 10px;
-    white-space: nowrap;
-  }
+  .transaction-table, .transaction-table tbody, .transaction-table tr, .transaction-table td { display: block; width: 100%; }
+  .transaction-table thead { display: none; }
+  .transaction-table tr { margin-bottom: 16px; background: var(--white); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+  .transaction-table td { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; white-space: normal; }
+  .transaction-table td:last-child { border-bottom: none; }
+  .transaction-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-secondary); margin-right: auto; text-align: left; }
 }

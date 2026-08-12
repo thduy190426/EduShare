@@ -285,17 +285,18 @@ body {
   .hero-banner { padding: 40px 20px; }
   .hero-title { font-size: 28px; }
   .content-area { margin-left: 0; padding-bottom: 80px; }
+  .package-card.popular::before { right: -40px; transform: scale(0.8) rotate(45deg); }
 }
 
 .qr-modal-title { font-size: 24px; font-weight: 700; color: #1f2937; margin-bottom: 12px; }
 .qr-modal-desc { font-size: 15px; color: #64748b; margin-bottom: 24px; }
-.qr-image-wrapper { background: #F8FAFC; padding: 20px; border-radius: 12px; margin-bottom: 24px; display: inline-block; border: 1px dashed #CBD5E1; }
-.qr-image { width: 250px; height: 250px; object-fit: contain; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.qr-image-wrapper { background: #F8FAFC; padding: 20px; border-radius: 12px; margin-bottom: 24px; display: inline-block; border: 1px dashed #CBD5E1; max-width: 100%; }
+.qr-image { width: 250px; height: 250px; max-width: 100%; object-fit: contain; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
 .qr-info-box { text-align: left; background: #F1F5F9; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #3B82F6; }
-.qr-info-row { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.qr-info-row { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .qr-info-label { color: #64748b; font-size: 14px; }
 .qr-info-amount { color: #ef4444; font-size: 18px; }
-.qr-info-addinfo { color: #1f2937; font-size: 16px; }
+.qr-info-addinfo { color: #1f2937; font-size: 16px; word-break: break-all; }
 .qr-warning-box { font-size: 13px; color: #D97706; margin-top: 16px; font-weight: 500; text-align: center; background: #FEF3C7; padding: 10px; border-radius: 6px; }
 .btn-close-qr { background: #3b82f6; color: white; border: none; width: 100%; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-close-qr:hover { background: #2563eb; }

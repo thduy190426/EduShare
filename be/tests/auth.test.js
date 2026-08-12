@@ -152,14 +152,14 @@ describe('Auth API - Đăng nhập và Đăng ký', () => {
             const response = await request(app)
                 .post('/api/auth/2fa/login')
                 .send({ tempToken: 'token', totpCode: '' });
-            
+
             expect(response.status).toBe(400);
         });
 
         it('Nên báo lỗi 401 nếu xem setup 2FA mà chưa login', async () => {
             const response = await request(app)
                 .get('/api/auth/2fa/setup');
-            
+
             expect(response.status).toBe(401);
         });
     });

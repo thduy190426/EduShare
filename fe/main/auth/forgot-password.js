@@ -1,24 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
     const API_URL = 'http://localhost:3000/api';
-    
+
     const stepEmail = document.getElementById('step-email');
     const stepOtp = document.getElementById('step-otp');
     const stepReset = document.getElementById('step-reset');
-    
+
     const forgotPasswordForm = document.getElementById('forgotPasswordForm');
     const verifyOtpForm = document.getElementById('verifyOtpForm');
     const resetPasswordForm = document.getElementById('resetPasswordForm');
-    
+
     const emailInput = document.getElementById('resetEmail');
     const otpInput = document.getElementById('otpCode');
     const newPasswordInput = document.getElementById('newPassword');
     const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
-    
+
     const btnSendOTP = document.getElementById('btnSendOTP');
     const btnVerifyOTP = document.getElementById('btnVerifyOTP');
     const btnResetPassword = document.getElementById('btnResetPassword');
     const resendOtpBtn = document.getElementById('resendOtp');
-    
+
     let currentEmail = '';
     let cooldownTimer = null;
     let cooldownSeconds = 60;
@@ -28,11 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
         resendOtpBtn.style.color = 'gray';
         resendOtpBtn.style.textDecoration = 'none';
         resendOtpBtn.textContent = `Gửi lại (${cooldownSeconds}s)`;
-        
+
         cooldownTimer = setInterval(() => {
             cooldownSeconds--;
             resendOtpBtn.textContent = `Gửi lại (${cooldownSeconds}s)`;
-            
+
             if (cooldownSeconds <= 0) {
                 clearInterval(cooldownTimer);
                 resendOtpBtn.style.pointerEvents = 'auto';
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBtnState(); 
 
     const validateOtp = (otp) => /^[0-9]{6}$/.test(otp);
-    
+
     const updateVerifyBtnState = () => {
         if (validateOtp(otpInput.value.trim())) {
             btnVerifyOTP.disabled = false;
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnVerifyOTP.disabled = true;
         }
     };
-    
+
     otpInput.addEventListener('input', updateVerifyBtnState);
     updateVerifyBtnState();
 
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmPass = confirmNewPasswordInput.value.trim();
         return newPass.length >= 6 && newPass === confirmPass;
     };
-    
+
     const updateResetBtnState = () => {
         if (validatePasswords()) {
             btnResetPassword.disabled = false;
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnResetPassword.disabled = true;
         }
     };
-    
+
     newPasswordInput.addEventListener('input', updateResetBtnState);
     confirmNewPasswordInput.addEventListener('input', updateResetBtnState);
     updateResetBtnState();

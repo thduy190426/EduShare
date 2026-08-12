@@ -17,13 +17,13 @@ function setupTabs() {
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
             if (tab.classList.contains("active")) return;
-            
+
             tabs.forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
-            
+
             const tbody = document.getElementById("table-body");
             tbody.style.opacity = "0";
-            
+
             setTimeout(() => {
                 currentStatus = tab.dataset.status;
                 currentPage = 1;
@@ -39,13 +39,13 @@ async function fetchRequests() {
         const response = await fetch(`${API_URL}/admin/teacher-requests?page=${currentPage}&limit=${limit}&status=${currentStatus}`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
-        
+
         if (!response.ok) throw new Error("Failed to fetch requests");
-        
+
         const data = await response.json();
         currentRequests = data.data || [];
         renderRequests(currentRequests);
-        
+
         if (data.counts) {
             document.getElementById('pending-count-tab').textContent = data.counts.ChoDuyet || 0;
             document.getElementById('approved-count-tab').textContent = data.counts.DaDuyet || 0;
@@ -75,10 +75,10 @@ function renderRequests(requests) {
 
     requests.forEach((req, index) => {
         const tr = document.createElement("tr");
-        
+
         const d = new Date(req.NgayTao);
         const date = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")} | ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-        
+
         let statusHtml = "";
         if (req.TrangThai === "ChoDuyet") statusHtml = `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></div><span style="color:#f59e0b; font-weight: 500;">Chờ duyệt</span></div>`;
         if (req.TrangThai === "DaDuyet") statusHtml = `<div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div><span style="color:#10b981; font-weight: 500;">Đã duyệt</span></div>`;
@@ -93,8 +93,8 @@ function renderRequests(requests) {
         }
 
         tr.innerHTML = `
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1 + (currentPage - 1) * limit}</td>
-            <td>
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1 + (currentPage - 1) * limit}</td>
+            <td data-label="Người yêu cầu">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     ${req.AvatarURL && req.AvatarURL !== 'null'
                         ? `<img src="${escapeHTML(getAssetUrl(req.AvatarURL))}" alt="${escapeHTML(req.HoTen)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border);" onerror="this.onerror=null; this.outerHTML='<div style=\\'width:36px;height:36px;border-radius:50%;background:var(--primary-light);color:var(--secondary);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;\\'>${escapeHTML(req.HoTen.trim().split(' ').pop().charAt(0).toUpperCase())}</div>';">`
@@ -106,14 +106,14 @@ function renderRequests(requests) {
                     </div>
                 </div>
             </td>
-            <td>${date}</td>
-            <td>
+            <td data-label="Ngày tạo">${date}</td>
+            <td data-label="Minh chứng">
                 <button class="btn-view-proof" data-url="${req.MinhChungURL}" style="background:var(--primary); color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">
                     <i class="fa-solid fa-eye" style="margin-right: 4px;"></i> Xem ảnh
                 </button>
             </td>
-            <td>${statusHtml}</td>
-            <td style="text-align: right; white-space: nowrap;">${actionHtml}</td>
+            <td data-label="Trạng thái">${statusHtml}</td>
+            <td style="text-align: right; white-space: nowrap;" data-label="Thao tác">${actionHtml}</td>
         `;
 
         const btnView = tr.querySelector(".btn-view-proof");
@@ -137,24 +137,23 @@ function renderRequests(requests) {
 
         tbody.appendChild(tr);
     });
-    
+
     setTimeout(() => {
         tbody.style.opacity = "1";
     }, 50);
 }
 
-
 function setupModals() {
     const rejectModal = document.getElementById("reject-modal-overlay");
-    
+
     document.getElementById("btn-close-modal").addEventListener("click", () => {
         rejectModal.style.display = "none";
     });
-    
+
     document.getElementById("btn-cancel-modal").addEventListener("click", () => {
         rejectModal.style.display = "none";
     });
-    
+
     window.addEventListener("click", (e) => {
         if (e.target === rejectModal) rejectModal.style.display = "none";
     });
@@ -182,7 +181,7 @@ document.getElementById("btn-confirm-reject").addEventListener("click", () => {
 
 async function handleReview(id, status, reason = null) {
     const actionText = status === "DaDuyet" ? "duyệt" : "từ chối";
-    
+
     if (status === "DaDuyet") {
         const confirm = await Swal.fire({
             title: "Xác nhận duyệt",
@@ -205,9 +204,9 @@ async function handleReview(id, status, reason = null) {
             },
             body: JSON.stringify({ trangThai: status, lyDoTuChoi: reason })
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok) {
             showToast("success", `Đã ${actionText} yêu cầu thành công.`);
             fetchRequests(); 

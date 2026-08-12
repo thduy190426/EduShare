@@ -68,7 +68,7 @@ async function loadSettings(token) {
                 document.getElementById('desc_AVATAR_LIMIT_RESET_HOURS').textContent = settings.AVATAR_LIMIT_RESET_HOURS.moTa;
                 initialSettings.AVATAR_LIMIT_RESET_HOURS = settings.AVATAR_LIMIT_RESET_HOURS.giaTri;
             }
-            
+
             validateForm();
         } else {
             console.error('Không thể tải cấu hình');
@@ -80,7 +80,7 @@ async function loadSettings(token) {
 
 function validateForm() {
     const btnSave = document.getElementById('btnSave');
-    
+
     const currentRate = document.getElementById('XU_TO_VND_RATE').value;
     const currentDocs = document.getElementById('MAX_DOCS_PER_GROUP').value;
     const currentReports = document.getElementById('MAX_REPORTS_AUTO_HIDE').value;
@@ -106,7 +106,7 @@ function validateForm() {
 
 function setupForm(token) {
     const form = document.getElementById('settingsForm');
-    
+
     const inputs = form.querySelectorAll('input');
     inputs.forEach(input => {
         input.addEventListener('input', validateForm);
@@ -114,7 +114,7 @@ function setupForm(token) {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const updates = {
             XU_TO_VND_RATE: document.getElementById('XU_TO_VND_RATE').value,
             MAX_DOCS_PER_GROUP: document.getElementById('MAX_DOCS_PER_GROUP').value,
@@ -149,7 +149,7 @@ function setupForm(token) {
                 initialSettings.MAX_AVATAR_SIZE_MB = updates.MAX_AVATAR_SIZE_MB;
                 initialSettings.MAX_AVATAR_CHANGES = updates.MAX_AVATAR_CHANGES;
                 initialSettings.AVATAR_LIMIT_RESET_HOURS = updates.AVATAR_LIMIT_RESET_HOURS;
-                
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Thành công',
@@ -164,10 +164,10 @@ function setupForm(token) {
                     text: data.message || 'Không thể cập nhật cấu hình.'
                 });
             }
-            
+
             btnSave.innerHTML = '<i class="fa-solid fa-save"></i> Lưu cấu hình';
             validateForm();
-            
+
         } catch (error) {
             console.error('Lỗi kết nối:', error);
             Swal.fire({

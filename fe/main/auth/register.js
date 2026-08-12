@@ -50,10 +50,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (schoolRes.ok && majorRes.ok) {
                 const schoolData = await schoolRes.json();
                 const majorData = await majorRes.json();
-                
+
                 const schoolSelect = document.getElementById('registerSchool');
                 const majorSelect = document.getElementById('registerMajor');
-                
+
                 if (schoolSelect) {
                     schoolData.truongHoc.forEach(school => {
                         const option = document.createElement('option');
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         schoolSelect.appendChild(option);
                     });
                 }
-                
+
                 if (majorSelect) {
                     majorData.khoaNganh.forEach(major => {
                         const option = document.createElement('option');
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     fetchSchoolsAndMajors();
 
     const registerForm = document.getElementById('registerForm');
-    
+
     const registerSubmitBtn = registerForm?.querySelector('button[type="submit"]');
     if (registerSubmitBtn) {
         registerSubmitBtn.disabled = true;
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const matKhau = document.getElementById('registerPassword')?.value || '';
         const xacNhanMatKhau = document.getElementById('registerConfirmPassword')?.value || '';
         const agreeTerms = document.getElementById('registerAgreeTerms')?.checked || false;
-        
+
         if (isValidName(hoTen) && isValidEmail(email) && matKhau.length >= 6 && matKhau === xacNhanMatKhau && agreeTerms && window.isCaptchaSolved) {
             registerSubmitBtn.disabled = false;
             registerSubmitBtn.style.opacity = '1';
@@ -145,12 +145,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const hoTen = document.getElementById('registerName').value.trim();
             const email = document.getElementById('registerEmail').value.trim();
             const matKhau = document.getElementById('registerPassword').value;
             const xacNhanMatKhau = document.getElementById('registerConfirmPassword') ? document.getElementById('registerConfirmPassword').value : matKhau;
-            
+
             const truongHoc = document.getElementById('registerSchool')?.value.trim() || '';
             const khoaNganh = document.getElementById('registerMajor')?.value.trim() || '';
 
@@ -182,7 +182,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 Toast.fire({ icon: 'warning', title: 'Mật khẩu xác nhận không khớp.' });
                 return;
             }
-
 
             const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
             if (!recaptchaToken) {
@@ -220,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 } else {
                     Toast.fire({ icon: 'success', title: data.message || 'Mã OTP đã được gửi' });
-                    
+
                     const matKhau = document.getElementById('registerPassword').value;
                     const truongHoc = document.getElementById('registerSchool')?.value.trim() || '';
                     const khoaNganh = document.getElementById('registerMajor')?.value.trim() || '';
@@ -258,13 +257,13 @@ window.handleGoogleLogin = async function(response) {
             body: JSON.stringify({ credential: response.credential })
         });
         const data = await res.json();
-        
+
         if (res.ok) {
-            localStorage.setItem('token', data.token);
+            localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userId', data.user.MaND);
             localStorage.setItem('userRole', data.user.VaiTro);
             localStorage.setItem('userAvatar', data.user.AvatarURL || '');
-            
+
             Swal.fire({
                 title: 'Đăng nhập thành công',
                 text: 'Đang chuyển hướng...',

@@ -108,18 +108,18 @@ function renderTransactions() {
     currentItems.forEach(tx => {
         const dateObj = new Date(tx.NgayTao);
         const dateStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')} | ${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
-        
+
         const typeLabel = typeMapping[tx.LoaiGiaoDich] || tx.LoaiGiaoDich;
-        
+
         let amountClass = tx.SoXuThayDoi >= 0 ? 'positive' : 'negative';
         let amountText = tx.SoXuThayDoi >= 0 ? `+${tx.SoXuThayDoi}` : `${tx.SoXuThayDoi}`;
 
         html += `
             <tr>
-                <td class="tx-date">${dateStr}</td>
-                <td><span class="tx-type ${tx.LoaiGiaoDich}">${typeLabel}</span></td>
-                <td><span class="tx-amount ${amountClass}">${amountText} Xu</span></td>
-                <td class="tx-desc">${escapeHTML(tx.MoTa || '')}</td>
+                <td class="tx-date" data-label="Thời gian">${dateStr}</td>
+                <td data-label="Loại giao dịch"><span class="tx-type ${tx.LoaiGiaoDich}">${typeLabel}</span></td>
+                <td data-label="Số dư thay đổi"><span class="tx-amount ${amountClass}">${amountText} Xu</span></td>
+                <td class="tx-desc" data-label="Mô tả chi tiết">${escapeHTML(tx.MoTa || '')}</td>
             </tr>
         `;
     });
@@ -141,11 +141,11 @@ function renderPagination() {
 
     let html = '';
     html += `<button class="btn-page ${currentPage === 1 ? 'disabled' : ''}" data-page="${currentPage - 1}">Trước</button>`;
-    
+
     for (let i = 1; i <= totalPages; i++) {
         html += `<button class="btn-page ${currentPage === i ? 'active' : ''}" data-page="${i}">${i}</button>`;
     }
-    
+
     html += `<button class="btn-page ${currentPage === totalPages ? 'disabled' : ''}" data-page="${currentPage + 1}">Sau</button>`;
 
     paginationContainer.innerHTML = html;
@@ -180,7 +180,7 @@ function exportToExcel() {
     const data = allTransactions.map(tx => {
         const d = new Date(tx.NgayTao);
         const typeLabel = typeMapping[tx.LoaiGiaoDich] || tx.LoaiGiaoDich;
-        
+
         return {
             "Thời gian": `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
             "Loại giao dịch": typeLabel,
@@ -218,7 +218,7 @@ function exportToPDF() {
                 ${allTransactions.map(tx => {
                     const d = new Date(tx.NgayTao);
                     const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                    
+
                     const typeMapping = {
                         'NapXu': 'Nạp Xu',
                         'MuaTaiLieu': 'Mua Tài Liệu',
@@ -232,7 +232,7 @@ function exportToPDF() {
 
                     const amountStr = tx.SoXuThayDoi > 0 ? `+${tx.SoXuThayDoi}` : `${tx.SoXuThayDoi}`;
                     const amountColor = tx.SoXuThayDoi > 0 ? '#10B981' : '#EF4444';
-                    
+
                     return `
                         <tr>
                             <td style="border: 1px solid #cbd5e1; padding: 10px; color: #334155;">${dateStr}</td>

@@ -1,4 +1,4 @@
-/* fe/css/user/paymentResult.css */
+
 .payment-result-container {
     max-width: 500px;
     margin: 60px auto;
@@ -16,11 +16,11 @@
 }
 
 .success-icon {
-    color: #10B981; /* emerald-500 */
+    color: #10B981; 
 }
 
 .failed-icon {
-    color: #EF4444; /* red-500 */
+    color: #EF4444; 
 }
 
 .result-title {
@@ -38,7 +38,7 @@
 }
 
 .transaction-details {
-    background: #f8fafc; /* slate-50 */
+    background: #f8fafc; 
     border-radius: 12px;
     padding: 24px;
     margin-bottom: 32px;

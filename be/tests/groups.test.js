@@ -16,7 +16,7 @@ describe('Groups API', () => {
 
     it('Nên báo lỗi 400 nếu tạo nhóm thiếu tên', async () => {
         const token = generateTestToken({ MaND: 1 });
-        
+
         mockPoolExecute(app, (query) => {
             if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             return Promise.resolve([[]]);

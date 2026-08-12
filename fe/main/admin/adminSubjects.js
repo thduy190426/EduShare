@@ -46,15 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const nameInput = document.getElementById('input-subject-name');
     const levelInput = document.getElementById('input-subject-level');
     const descInput = document.getElementById('input-subject-desc');
-    
+
     if (nameInput) nameInput.addEventListener('input', validateAddSubjectForm);
     if (levelInput) levelInput.addEventListener('input', validateAddSubjectForm);
     if (descInput) descInput.addEventListener('input', validateAddSubjectForm);
-    
+
     const editNameInput = document.getElementById('edit-subject-name');
     const editLevelInput = document.getElementById('edit-subject-level');
     const editDescInput = document.getElementById('edit-subject-desc');
-    
+
     if (editNameInput) editNameInput.addEventListener('input', window.validateEditSubjectForm);
     if (editLevelInput) editLevelInput.addEventListener('input', window.validateEditSubjectForm);
     if (editDescInput) editDescInput.addEventListener('input', window.validateEditSubjectForm);
@@ -84,7 +84,7 @@ async function fetchSubjects() {
         const data = await res.json();
         window.subjectsData = data.data || [];
         renderSubjects(window.subjectsData);
-        
+
         if (data.pagination) {
             renderPagination('subject-pagination', data.pagination.totalPages, currentPage, (page) => {
                 currentPage = page;
@@ -133,7 +133,7 @@ window.fetchSubjectSuggestions = async () => {
 window.toggleSubjectStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === 'TamAn' ? 'HoatDong' : 'TamAn';
     const actionText = newStatus === 'TamAn' ? 'ẩn' : 'hiện';
-    
+
     const result = await Swal.fire({
         title: `Xác nhận ${actionText}?`,
         text: `Bạn có chắc chắn muốn ${actionText} môn học này? ${newStatus === 'TamAn' ? 'Môn học này sẽ không hiển thị trên trang của người dùng nữa.' : 'Môn học sẽ hiển thị trở lại bình thường.'}`,
@@ -155,9 +155,9 @@ window.toggleSubjectStatus = async (id, currentStatus) => {
             },
             body: JSON.stringify({ trangThai: newStatus })
         });
-        
+
         const data = await res.json();
-        
+
         if (res.ok) {
             showToast('success', data.message || `Đã ${actionText} môn học thành công!`);
             fetchSubjects();
@@ -193,7 +193,7 @@ function renderSubjectSuggestions(suggestions) {
             dateStr = `${h}:${min}:${s} | ${d}/${m}/${y}`;
         }
         const tr = document.createElement('tr');
-        
+
         const userName = item.TenNguoiDeXuat || '';
         const initial = userName.trim().split(' ').pop().charAt(0).toUpperCase();
         let avatarHtml = `<div class="user-initial">${escapeHTML(initial)}</div>`;
@@ -202,10 +202,10 @@ function renderSubjectSuggestions(suggestions) {
         }
 
         tr.innerHTML = `
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
-            <td style="font-weight: 600;">${escapeHTML(item.TenMonHoc)}</td>
-            <td><span style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHTML(item.CapHoc || 'Khác')}</span></td>
-            <td>
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1}</td>
+            <td style="font-weight: 600;" data-label="Tên môn học">${escapeHTML(item.TenMonHoc)}</td>
+            <td data-label="Cấp học"><span style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${escapeHTML(item.CapHoc || 'Khác')}</span></td>
+            <td data-label="Người đề xuất">
                 <div class="user-cell">
                     ${avatarHtml}
                     <div>
@@ -214,13 +214,13 @@ function renderSubjectSuggestions(suggestions) {
                     </div>
                 </div>
             </td>
-            <td>
+            <td data-label="Lý do">
                 <div style="max-height: 48px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; color: #6B7280;">
                     ${escapeHTML(item.LyDo || item.MoTa || 'Không có lý do')}
                 </div>
             </td>
-            <td><span style="font-size: 13px; color: #6B7280;">${dateStr}</span></td>
-            <td>
+            <td data-label="Ngày đề xuất"><span style="font-size: 13px; color: #6B7280;">${dateStr}</span></td>
+            <td data-label="Hành động">
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <button class="btn-action btn-approve" data-id="${item.MaDeXuat}" style="background: #ECFDF5; color: #059669; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Duyệt">
                         <i class="fa-solid fa-check"></i>
@@ -324,7 +324,7 @@ function renderSubjects(subjects) {
 
     subjects.forEach((sub, index) => {
         const tr = document.createElement('tr');
-        
+
         const dateObj = new Date(sub.NgayCapNhat || sub.NgayTao || new Date());
         const d = String(dateObj.getDate()).padStart(2, '0');
         const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -335,16 +335,16 @@ function renderSubjects(subjects) {
         const dateStr = `${h}:${min}:${s} | ${d}/${m}/${y}`;
 
         tr.innerHTML = `
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
-            <td style="font-weight: 600;">
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1}</td>
+            <td style="font-weight: 600;" data-label="Tên môn học">
                 ${escapeHTML(sub.TenMonHoc)}
                 ${sub.TrangThai === 'TamAn' ? '<span style="margin-left: 8px; background: #F3F4F6; color: #6B7280; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 500;"><i class="fa-solid fa-eye-slash" style="margin-right: 4px;"></i>Đang ẩn</span>' : ''}
             </td>
-            <td><span style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${sub.CapHoc || 'Khác'}</span></td>
-            <td><div style="max-height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; color: #6B7280;">${sub.MoTa || 'Không có mô tả'}</div></td>
-            <td><span style="background: #E0E7FF; color: #4338CA; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 12px;">${sub.SoTaiLieu || 0} tài liệu</span></td>
-            <td><span style="font-size: 13px; color: #6B7280;">${dateStr}</span></td>
-            <td>
+            <td data-label="Cấp học"><span style="background: #F3F4F6; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${sub.CapHoc || 'Khác'}</span></td>
+            <td data-label="Mô tả"><div style="max-height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 13px; color: #6B7280;">${sub.MoTa || 'Không có mô tả'}</div></td>
+            <td data-label="Số tài liệu"><span style="background: #E0E7FF; color: #4338CA; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 12px;">${sub.SoTaiLieu || 0} tài liệu</span></td>
+            <td data-label="Ngày cập nhật"><span style="font-size: 13px; color: #6B7280;">${dateStr}</span></td>
+            <td data-label="Hành động">
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <button class="btn-action btn-toggle-subject" data-id="${sub.MaMonHoc}" data-status="${sub.TrangThai}" style="background: ${sub.TrangThai === 'TamAn' ? '#F3F4F6' : '#FFFBEB'}; color: ${sub.TrangThai === 'TamAn' ? '#6B7280' : '#D97706'}; width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="${sub.TrangThai === 'TamAn' ? 'Hiện môn học' : 'Ẩn môn học'}">
                         <i class="fa-solid ${sub.TrangThai === 'TamAn' ? 'fa-eye' : 'fa-eye-slash'}"></i>
@@ -377,7 +377,7 @@ window.addSubject = async () => {
     const nameInput = document.getElementById('input-subject-name');
     const levelInput = document.getElementById('input-subject-level');
     const descInput = document.getElementById('input-subject-desc');
-    
+
     const tenMonHoc = nameInput.value.trim();
     const capHoc = levelInput.value.trim();
     const moTa = descInput.value.trim();
@@ -396,7 +396,7 @@ window.addSubject = async () => {
             },
             body: JSON.stringify({ tenMonHoc, capHoc, moTa })
         });
-        
+
         if (res.ok) {
             showToast('success', 'Thêm môn học thành công!');
             nameInput.value = '';
@@ -431,7 +431,7 @@ window.updateSubject = (id) => {
     modal.classList.remove('closing');
     modal.querySelector('.modal-container').classList.remove('closing');
     modal.style.display = 'flex';
-    
+
     window.validateEditSubjectForm();
 };
 
@@ -459,7 +459,7 @@ window.validateEditSubjectForm = () => {
         const nameVal = nameInput.value.trim();
         const levelVal = levelInput.value.trim();
         const descVal = descInput.value.trim();
-        
+
         const hasChanged = nameVal !== currentEditSubjectData.TenMonHoc || 
                            levelVal !== (currentEditSubjectData.CapHoc || '') ||
                            descVal !== (currentEditSubjectData.MoTa || '');
@@ -474,7 +474,7 @@ window.validateEditSubjectForm = () => {
 
 window.submitEditSubject = async () => {
     if (!currentEditSubjectId) return;
-    
+
     const nameInput = document.getElementById('edit-subject-name');
     const levelInput = document.getElementById('edit-subject-level');
     const descInput = document.getElementById('edit-subject-desc');
@@ -497,7 +497,7 @@ window.submitEditSubject = async () => {
             },
             body: JSON.stringify({ tenMonHoc, capHoc, moTa })
         });
-        
+
         if (res.ok) {
             showToast('success', 'Cập nhật môn học thành công!');
             fetchSubjects();
@@ -521,7 +521,7 @@ window.deleteSubject = async (id) => {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         if (res.ok) {
             showToast('success', 'Đã xóa môn học!');
             fetchSubjects();

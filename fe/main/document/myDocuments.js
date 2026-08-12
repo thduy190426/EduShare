@@ -10,7 +10,7 @@ let subjects = [];
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
     setupTabs();
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('tab') === 'bookmarks') {
         const bookmarkTab = document.querySelector('.tab-item[data-tab="bookmarks"]');
@@ -30,7 +30,7 @@ function loadUserProfileNav() {
         const payload = decodeJWT(token);
         if (!payload) return;
         const avatarEl = document.getElementById('navAvatar');
-        
+
         if (avatarEl && payload.HoTen) {
             const savedAvatar = getAvatar();
             if (savedAvatar && savedAvatar !== 'null') {
@@ -76,7 +76,7 @@ async function fetchAllData() {
 
     try {
         const headers = { 'Authorization': `Bearer ${token}` };
-        
+
         const [uploadRes, bookmarkRes, downloadRes, subjectRes] = await Promise.all([
             fetch(`${API_URL}/users/my-documents`, { headers }),
             fetch(`${API_URL}/users/bookmarks`, { headers }),
@@ -89,7 +89,7 @@ async function fetchAllData() {
             uploadedDocs = upData.documents || [];
             document.getElementById('count-uploaded').textContent = uploadedDocs.length;
         }
-        
+
         if (bookmarkRes.ok) {
             const bkData = await bookmarkRes.json();
             bookmarkedDocs = bkData.documents || [];
@@ -105,7 +105,7 @@ async function fetchAllData() {
         if (subjectRes.ok) {
             const subjectData = await subjectRes.json();
             subjects = subjectData.subjects || [];
-            
+
             const subjectFilter = document.getElementById('filter-subject');
             if (subjectFilter) {
                 subjects.forEach(sub => {
@@ -142,18 +142,18 @@ function renderTable() {
 
     docsToRender = docsToRender.filter(doc => {
         let pass = true;
-        
+
         if (statusFilter !== 'all' && doc.TrangThaiKiemDuyet !== statusFilter) pass = false;
-        
+
         if (subjectFilter !== 'all' && doc.MaMonHoc != subjectFilter) pass = false;
-        
+
         if (filetypeFilter !== 'all') {
             const ext = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
             if (filetypeFilter === 'pdf' && ext !== 'pdf') pass = false;
             if (filetypeFilter === 'doc' && ext !== 'doc' && ext !== 'docx') pass = false;
             if (filetypeFilter === 'ppt' && ext !== 'ppt' && ext !== 'pptx') pass = false;
         }
-        
+
         if (searchFilter && !doc.TenTL.toLowerCase().includes(searchFilter)) pass = false;
 
         return pass;
@@ -169,7 +169,7 @@ function renderTable() {
     docsToRender.forEach((doc, index) => {
         const tr = document.createElement('tr');
         tr.style.animationDelay = `${index * 0.04}s`;
-        
+
         let icon = 'fa-file';
         let color = '#6b7280';
         let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
@@ -201,7 +201,7 @@ function renderTable() {
         const dateStr = `${timeStr} <span style="color: #D1D5DB; margin: 0 4px;">|</span> ${dateOnlyStr}`;
 
         let actionBtns = `<button class="btn-action" title="Xem chi tiết" onclick="window.location.href='documentDetails.html?id=${doc.MaTL}'"><i class="fa-solid fa-eye"></i></button>`;
-        
+
         if (currentTab === 'uploaded') {
             if (doc.TrangThaiKiemDuyet === 'TuChoi') {
                 actionBtns += `
@@ -226,7 +226,7 @@ function renderTable() {
         }
 
         tr.innerHTML = `
-            <td>
+            <td data-label="Tên tài liệu">
                 <div style="display:flex; align-items:center; gap: 10px;">
                     <i class="fa-solid ${icon}" style="color: ${color}; font-size: 1.2rem;"></i>
                     <a href="documentDetails.html?id=${doc.MaTL}" style="color: inherit; text-decoration: none; font-weight: 500;">
@@ -235,16 +235,16 @@ function renderTable() {
                     </a>
                 </div>
             </td>
-            <td>${doc.TenMonHoc || 'Không có'}</td>
-            <td>
+            <td data-label="Môn học">${doc.TenMonHoc || 'Không có'}</td>
+            <td data-label="Trạng thái">
                 <div style="display:inline-flex; align-items:center; gap:6px;" title="${statusTitle}">
                     <span style="width:8px; height:8px; border-radius:50%; background:${statusColor};"></span>
                     <span style="font-size: 14px; color: ${statusColor}; font-weight: 600;">${statusText}</span>
                 </div>
             </td>
-            <td>${doc.SoLuotTai || 0}</td>
-            <td>${dateStr}</td>
-            <td>
+            <td data-label="Lượt tải">${doc.SoLuotTai || 0}</td>
+            <td data-label="Ngày tải lên">${dateStr}</td>
+            <td data-label="Hành động">
                 <div class="action-btns">
                     ${actionBtns}
                 </div>
@@ -368,14 +368,14 @@ function openRejectReasonModal(doc) {
     btnSubmit.disabled = true;
     btnSubmit.style.opacity = '0.5';
     btnSubmit.style.cursor = 'not-allowed';
-    
+
     btnSubmit.onclick = async () => {
         const phanHoi = inputAppeal.value.trim();
         if (!phanHoi) return;
-        
+
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang gửi...';
-        
+
         const token = getToken();
         try {
             const res = await fetch(`${API_URL}/documents/${doc.MaTL}/appeal`, {
@@ -621,7 +621,7 @@ function openEditModal(doc) {
                 const hasFile = fileInput.files.length > 0;
                 let currentGiaXu = '';
                 let isGiaXuValid = true;
-                
+
                 if (giaXuInput) {
                     currentGiaXu = String(giaXuInput.value || 0);
                     const val = parseInt(currentGiaXu);
@@ -647,7 +647,7 @@ function openEditModal(doc) {
             moTaTextarea.addEventListener('input', validate);
             fileInput.addEventListener('change', validate);
             if (giaXuInput) giaXuInput.addEventListener('input', validate);
-            
+
             validate();
         },
         preConfirm: () => {
@@ -697,7 +697,7 @@ function openEditModal(doc) {
                         allowOutsideClick: false,
                         didOpen: () => Swal.showLoading()
                     });
-                    
+
                     const sigRes = await fetch(`${API_URL}/documents/generate-signature`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });

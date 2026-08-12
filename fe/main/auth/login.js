@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.head.appendChild(recaptchaScript);
 
     const loginForm = document.getElementById('loginForm');
-    
+
     const lastLoginMethod = localStorage.getItem('lastLoginMethod');
     if (lastLoginMethod && loginForm) {
         let badgeHtml = '';
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             badgeHtml = `<div class="last-login-badge" style="background-color: #E3F2FD; color: #1565C0; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 24px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #BBDEFB; box-shadow: 0 2px 4px rgba(21, 101, 192, 0.1);"><i class="fa-brands fa-facebook" style="font-size: 15px;"></i> Lần trước bạn đã dùng Facebook</div>`;
         }
         loginForm.insertAdjacentHTML('beforebegin', `<div style="text-align:center; animation: fadeInDown 0.5s ease-out;">${badgeHtml}</div>`);
-        
+
         if (!document.getElementById('badge-animation')) {
             const style = document.createElement('style');
             style.id = 'badge-animation';
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.head.appendChild(style);
         }
     }
-    
+
     const loginSubmitBtn = loginForm?.querySelector('button[type="submit"]');
     if (loginSubmitBtn) {
         loginSubmitBtn.disabled = true;
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!loginSubmitBtn) return;
         const email = document.getElementById('loginEmail')?.value.trim() || '';
         const matKhau = document.getElementById('loginPassword')?.value || '';
-        
+
         if (isValidEmail(email) && matKhau.length > 0 && window.isCaptchaSolved) {
             loginSubmitBtn.disabled = false;
             loginSubmitBtn.style.opacity = '1';
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const email = document.getElementById('loginEmail').value.trim();
             const matKhau = document.getElementById('loginPassword').value;
             const rememberLogin = document.getElementById('rememberLogin')?.checked ?? true;
-            
+
             const Toast = Swal.mixin({
                 toast: true,
                 position: 'top-end',
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
                     submitBtn.innerHTML = originalText;
-                    
+
                     const { value: totpCode } = await Swal.fire({
                         title: 'Xác thực 2 bước',
                         html: '<p>Tài khoản của bạn đã được bảo vệ bằng 2FA.</p><p>Vui lòng nhập mã 6 số từ Google Authenticator:</p>',
@@ -230,30 +230,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                             return code;
                         }
                     });
-                    
+
                     if (totpCode) {
                         Swal.fire({
                             title: 'Đang xác thực...',
                             allowOutsideClick: false,
                             didOpen: () => { Swal.showLoading(); }
                         });
-                        
+
                         const verifyRes = await fetch(`${API_URL}/auth/2fa/login`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ tempToken: data.tempToken, totpCode })
                         });
                         const verifyData = await verifyRes.json();
-                        
+
                         if (!verifyRes.ok) {
                             Swal.fire('Lỗi', verifyData.message || 'Mã xác thực không hợp lệ', 'error');
                             return;
                         }
-                        
+
                         const greeting = getTimeBasedGreeting('login');
                         Toast.fire({ icon: 'success', title: greeting });
                         localStorage.setItem('lastLoginMethod', 'email');
-                        
+
                         saveLoginSession({
                             token: verifyData.token,
                             refreshToken: verifyData.refreshToken,
@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const greeting = getTimeBasedGreeting('login');
                     Toast.fire({ icon: 'success', title: greeting });
                     localStorage.setItem('lastLoginMethod', 'email');
-                    
+
                     saveLoginSession({
                         token: data.token,
                         refreshToken: data.refreshToken,
@@ -336,7 +336,7 @@ window.handleGoogleLogin = async function(response) {
             body: JSON.stringify({ credential: response.credential })
         });
         const data = await res.json();
-        
+
         if (res.ok) {
             localStorage.setItem('lastLoginMethod', 'google');
             saveLoginSession({
@@ -368,8 +368,6 @@ window.handleGoogleLogin = async function(response) {
         Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
     }
 };
-
-
 
     const facebookLoginBtn = document.getElementById('facebookLoginBtn');
     if (facebookLoginBtn) {
@@ -405,7 +403,7 @@ window.handleFacebookLogin = async function(accessToken) {
             body: JSON.stringify({ accessToken })
         });
         const data = await res.json();
-        
+
         if (res.ok) {
             localStorage.setItem('lastLoginMethod', 'facebook');
             saveLoginSession({

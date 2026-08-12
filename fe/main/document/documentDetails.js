@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    
     if (token) {
         try {
             const payload = decodeJWT(token);
@@ -30,13 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const btnVerify = document.getElementById('btn-verify');
                     if (btnVerify) btnVerify.style.display = 'flex';
                 }
-                
+
                 const navUserName = document.getElementById('navUserName');
                 const navAvatar = document.getElementById('navAvatar');
                 const commentAvatar = document.querySelector('.comment-avatar');
-                
+
                 if (navUserName) navUserName.textContent = payload.HoTen || 'Người dùng';
-                
+
                 const savedAvatar = getAvatar();
                 if (savedAvatar && savedAvatar !== 'null') {
                     const imgHtml = `<img src="${getAssetUrl(savedAvatar)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
@@ -70,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         const userProfileNav = document.getElementById('userProfileNav');
         if (userProfileNav) userProfileNav.style.display = 'none';
-        
+
         const commentForm = document.querySelector('.comment-form');
         if (commentForm) commentForm.innerHTML = '<p style="color:var(--text-secondary); text-align:center; padding:10px;">Vui lòng <a href="../auth/login.html" style="color:var(--primary); font-weight:600;">đăng nhập</a> để bình luận.</p>';
     }
@@ -92,7 +91,7 @@ async function fetchDocumentDetails() {
         const data = await response.json();
         renderDocumentInfo(data.document, data.hasPurchased);
         updateSEO(data.document.TenTL, data.document.TextSEO || data.document.MoTa);
-        
+
         allComments = data.comments || [];
         documentOwnerId = data.document.MaND_NguoiDang;
         renderComments(allComments, documentOwnerId);
@@ -245,7 +244,7 @@ function renderDocumentInfo(doc, hasPurchased) {
         authorAvatarEl.style.backgroundColor = 'var(--primary-light)';
         authorAvatarEl.style.color = 'var(--primary)';
     }
-    
+
     const dateObj = new Date(doc.NgayDang);
     const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
     const dateOnlyStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;
@@ -254,15 +253,13 @@ function renderDocumentInfo(doc, hasPurchased) {
 
     document.getElementById('doc-views').textContent = (doc.SoLuotXem || 0).toLocaleString();
     document.getElementById('doc-downloads').textContent = (doc.SoLuotTai || 0).toLocaleString();
-    
-    
+
     const avgScore = doc.DiemDanhGia ? parseFloat(doc.DiemDanhGia).toFixed(1) : '0.0';
     document.getElementById('doc-rating-score').textContent = avgScore;
     const ratingHint = document.querySelector('.rating-count');
     if (ratingHint) ratingHint.textContent = `${Number(doc.SoDanhGia || 0).toLocaleString('vi-VN')} lượt đánh giá`;
     updateStarUI(Math.round(avgScore));
 
-    
     document.getElementById('preview-filename').textContent = doc.TenTL || getFileNameFromPath(doc.FileURL);
     let icon = 'fa-file';
     let badgeClass = 'badge-primary';
@@ -270,7 +267,7 @@ function renderDocumentInfo(doc, hasPurchased) {
     if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; badgeClass = 'badge-file-pdf'; }
     else if (loaiFile === 'pptx' || loaiFile === 'ppt') icon = 'fa-chart-column';
     else if (loaiFile === 'docx' || loaiFile === 'doc') icon = 'fa-pen-to-square';
-    
+
     const previewContainer = document.querySelector('.preview-pages');
     if (previewContainer) {
         previewContainer.style.background = '';
@@ -280,11 +277,11 @@ function renderDocumentInfo(doc, hasPurchased) {
         let rawUrl = doc.FileURL || doc.PreviewURL;
         if (rawUrl) {
             let fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
-            
+
             if (loaiFile === 'pdf' && doc.MaTL && rawUrl && rawUrl.includes('uploads/')) {
                 fileUrlFull = `${API_URL}/documents/${doc.MaTL}/stream`;
             }
-            
+
             renderPdfToCanvas(fileUrlFull, previewContainer);
             previewContainer.style.width = '100%';
             previewContainer.style.height = 'calc(100% - 44px)';
@@ -314,19 +311,17 @@ function renderDocumentInfo(doc, hasPurchased) {
 
     const badgesContainer = document.getElementById('doc-badges');
     badgesContainer.innerHTML = '';
-    
+
     const fileBadge = document.createElement('span');
     fileBadge.className = `badge ${badgeClass}`;
     fileBadge.innerHTML = `<i class="fa-solid ${icon}"></i> ${doc.LoaiFile.toUpperCase()}`;
     badgesContainer.appendChild(fileBadge);
 
-    
     const subjectBadge = document.createElement('span');
     subjectBadge.className = 'badge badge-primary';
     subjectBadge.innerHTML = `<i class="fa-solid fa-folder"></i> ${doc.TenMonHoc}`;
     badgesContainer.appendChild(subjectBadge);
 
-    
     if (doc.LaTaiLieuChinhThuc) {
         const officialBadge = document.createElement('span');
         officialBadge.className = 'badge badge-official';
@@ -356,7 +351,7 @@ function renderDocumentInfo(doc, hasPurchased) {
         }
         badgesContainer.appendChild(premiumBadge);
     }
-    
+
     const btnDownload = document.getElementById('btn-download');
     if (btnDownload) {
         if (doc.LaTaiLieuDocQuyen && !hasPurchased) {
@@ -365,7 +360,7 @@ function renderDocumentInfo(doc, hasPurchased) {
                 btnDownload.style.backgroundColor = '#F59E0B';
                 btnDownload.onclick = async () => {
                     if (!token) return Swal.fire('Vui lòng đăng nhập để mở khoá tài liệu.');
-                    
+
                     const result = await Swal.fire({
                         title: 'Mở khoá tài liệu',
                         html: `Bạn có muốn mở khoá tài liệu <b>${doc.TenTL}</b> với giá <b>${doc.GiaXu} Xu</b> không?`,
@@ -394,7 +389,7 @@ function renderDocumentInfo(doc, hasPurchased) {
                         }
                     }
                 };
-                
+
                 const previewContainer = document.querySelector('.preview-pages');
                 if (previewContainer) {
                     previewContainer.innerHTML = `
@@ -416,8 +411,7 @@ function renderDocumentInfo(doc, hasPurchased) {
             btnDownload.onclick = handleDownload;
         }
     }
-    
-    
+
     const btnVerify = document.getElementById('btn-verify');
     if (btnVerify && btnVerify.style.display !== 'none') {
         const verifyIcon = document.getElementById('verify-icon');
@@ -468,7 +462,7 @@ function lockRatingUI(message = 'Cảm ơn bạn đã đánh giá') {
 }
 
 function setupEventListeners() {
-    
+
     const btnVerify = document.getElementById('btn-verify');
     if (btnVerify) {
         btnVerify.addEventListener('click', async () => {
@@ -492,13 +486,11 @@ function setupEventListeners() {
         });
     }
 
-
-
     let isBookmarking = false;
     document.getElementById('btn-bookmark').addEventListener('click', async () => {
         if (!token) return Swal.fire('Vui lòng đăng nhập để lưu tài liệu.');
         if (isBookmarking) return;
-        
+
         isBookmarking = true;
         const btnBookmark = document.getElementById('btn-bookmark');
         btnBookmark.style.pointerEvents = 'none';
@@ -536,13 +528,13 @@ function setupEventListeners() {
 
     let isReporting = false;
     const btnReport = document.getElementById('btn-report');
-    
+
     btnReport.addEventListener('click', async () => {
         if (!token) return Swal.fire('Vui lòng đăng nhập để báo cáo.');
         if (isReporting) return;
-        
+
         isReporting = true;
-        
+
         const { value: lyDo, isDismissed } = await Swal.fire({
             title: 'Báo cáo vi phạm',
             input: 'textarea',
@@ -557,7 +549,7 @@ function setupEventListeners() {
                 }
             }
         });
-        
+
         if (isDismissed || !lyDo || lyDo.trim() === '') {
             setTimeout(() => {
                 isReporting = false;
@@ -580,7 +572,7 @@ function setupEventListeners() {
                 body: JSON.stringify({ lyDo })
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 Swal.fire({ icon: 'success', title: data.message || 'Đã gửi báo cáo thành công.' });
                 btnReport.innerHTML = '<span><i class="fa-solid fa-flag"></i></span> Đã báo cáo';
@@ -612,7 +604,6 @@ function setupEventListeners() {
         }
     });
 
-    
     const stars = document.querySelectorAll('#doc-rating-stars i');
     stars.forEach(star => {
         star.addEventListener('click', async (e) => {
@@ -646,7 +637,7 @@ function setupEventListeners() {
     });
 
     const btnSubmitComment = document.getElementById('btn-submit-comment');
-    
+
     let commentEditor;
     if (typeof Quill !== 'undefined' && document.getElementById('comment-editor')) {
         commentEditor = new Quill('#comment-editor', {
@@ -661,7 +652,7 @@ function setupEventListeners() {
                 ]
             }
         });
-        
+
         btnSubmitComment.disabled = true;
         btnSubmitComment.style.opacity = '0.5';
         btnSubmitComment.style.cursor = 'not-allowed';
@@ -697,7 +688,7 @@ async function fetchRelatedGroups() {
 
         const data = await response.json();
         const groups = data.groups || [];
-        
+
         cardEl.style.display = 'block';
         if (groups.length === 0) {
             listEl.innerHTML = '<div style="font-size: 13px; color: var(--text-secondary); text-align: left; padding: 12px 0;">Chưa có nhóm nào có liên quan.</div>';
@@ -713,12 +704,12 @@ async function fetchRelatedGroups() {
 
 function renderRelatedGroups(groups) {
     const listEl = document.getElementById('related-groups-list');
-    
+
     listEl.innerHTML = groups.map(group => {
         const avatarHtml = group.AnhBia 
             ? `<img src="${getAssetUrl(group.AnhBia)}" alt="${escapeHTML(group.TenNhom)}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover;">`
             : `<div style="width: 48px; height: 48px; border-radius: 8px; background: var(--primary-light); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px;">${escapeHTML(group.TenNhom.charAt(0).toUpperCase())}</div>`;
-            
+
         return `
             <a href="../group/groupDetails.html?id=${group.MaNhom}" class="related-item" style="text-decoration: none;">
                 <div class="related-thumb" style="width: 48px; height: 48px; overflow: hidden; border-radius: 8px; flex-shrink: 0; border: 1px solid var(--border);">
@@ -810,7 +801,7 @@ async function submitComment(noiDung, maBL_Cha) {
             },
             body: JSON.stringify({ noiDung, maBL_Cha })
         });
-        
+
         if (res.ok) {
             lastCommentTime = Date.now();
             if (typeof Quill !== 'undefined' && document.getElementById('comment-editor')) {
@@ -841,12 +832,10 @@ async function submitComment(noiDung, maBL_Cha) {
     }
 }
 
-
 function renderComments(comments, documentOwnerId) {
     const listEl = document.getElementById('comments-list');
     listEl.innerHTML = '';
-    
-    
+
     const commentMap = {};
     const rootComments = [];
 
@@ -859,7 +848,6 @@ function renderComments(comments, documentOwnerId) {
         }
     });
 
-    
     const buildCommentNode = (comment, depth) => {
         const item = document.createElement('div');
         item.className = `comment-item ${depth > 0 ? 'reply' : ''}`;
@@ -877,18 +865,18 @@ function renderComments(comments, documentOwnerId) {
         const isDocOwner = Number(currentUserMaND) === Number(documentOwnerId);
         const isCommentOwner = Number(comment.MaND) === Number(currentUserMaND);
         const canDelete = isCommentOwner || isDocOwner;
-        
+
         let avatarHtml = `<div class="comment-avatar" style="${isAuthor ? 'background:#FEE2E2; color:#EF4444' : ''}">${userInitial}</div>`;
-        
+
         if (comment.AvatarURL) {
             avatarHtml = `<div class="comment-avatar" style="background:transparent; color:transparent; padding:0;"><img src="${getAssetUrl(comment.AvatarURL)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;"></div>`;
         }
 
         const authorSuffix = isAuthor ? ' (Tác giả)' : '';
         const pinnedBadge = comment.DaGhim ? `<span style="font-size: 11px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i class="fa-solid fa-thumbtack" style="margin-right: 4px;"></i> Đã ghim</span>` : '';
-        
+
         const deleteBtnHtml = canDelete ? `<span class="comment-action delete-btn" data-id="${comment.MaBL}" style="color: #EF4444; margin-left: 12px;"><i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Xóa</span>` : '';
-        
+
         let pinBtnHtml = '';
         if (isDocOwner) {
             const pinText = comment.DaGhim ? 'Bỏ ghim' : 'Ghim';
@@ -914,7 +902,6 @@ function renderComments(comments, documentOwnerId) {
 
         listEl.appendChild(item);
 
-        
         if (commentMap[comment.MaBL]) {
             commentMap[comment.MaBL].forEach(child => buildCommentNode(child, depth + 1));
         }
@@ -922,15 +909,14 @@ function renderComments(comments, documentOwnerId) {
 
     rootComments.forEach(c => buildCommentNode(c, 0));
 
-    
     const replyBtns = listEl.querySelectorAll('.reply-btn');
     replyBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const parentId = e.currentTarget.getAttribute('data-id');
             const commentContent = e.currentTarget.closest('.comment-content');
-            
+
             document.querySelectorAll('.inline-reply-form').forEach(form => form.remove());
-            
+
             const commentAvatarEl = document.querySelector('.comment-form .comment-avatar');
             const avatarHtml = commentAvatarEl ? commentAvatarEl.innerHTML : 'U';
             const avatarStyle = commentAvatarEl ? (commentAvatarEl.getAttribute('style') || '') : '';
@@ -951,7 +937,7 @@ function renderComments(comments, documentOwnerId) {
                 </div>
               </div>
             `;
-            
+
             commentContent.appendChild(formContainer);
 
             const btnCancelReply = document.getElementById(`btn-cancel-reply-${parentId}`);
@@ -959,7 +945,7 @@ function renderComments(comments, documentOwnerId) {
             btnCancelReply.addEventListener('mouseout', () => btnCancelReply.style.background = 'white');
 
             const btnSubmitReply = document.getElementById(`btn-submit-reply-${parentId}`);
-            
+
             let replyEditor;
             if (typeof Quill !== 'undefined') {
                 replyEditor = new Quill(`#reply-editor-${parentId}`, {
@@ -974,7 +960,7 @@ function renderComments(comments, documentOwnerId) {
                         ]
                     }
                 });
-                
+
                 replyEditor.on('text-change', () => {
                     const val = replyEditor.getText().trim();
                     if (val.length > 0 && val.length <= 1000) {
@@ -1005,7 +991,7 @@ function renderComments(comments, documentOwnerId) {
         btn.addEventListener('click', async (e) => {
             if (!token) return Swal.fire('Vui lòng đăng nhập.');
             const commentId = e.currentTarget.getAttribute('data-id');
-            
+
             const result = await Swal.fire({
                 title: 'Xóa bình luận?',
                 text: 'Bạn có chắc chắn muốn xóa bình luận này không?',
@@ -1021,7 +1007,7 @@ function renderComments(comments, documentOwnerId) {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
-                    
+
                     if (res.ok) {
                         fetchDocumentDetails();
                     } else {
@@ -1041,9 +1027,9 @@ function renderComments(comments, documentOwnerId) {
             if (!token) return Swal.fire('Vui lòng đăng nhập.');
             const commentId = e.currentTarget.getAttribute('data-id');
             const isPinned = e.currentTarget.getAttribute('data-pinned') === '1';
-            
+
             const actionText = isPinned ? 'bỏ ghim' : 'ghim';
-            
+
             const result = await Swal.fire({
                 title: `${isPinned ? 'Bỏ ghim' : 'Ghim'} bình luận?`,
                 text: `Bạn có chắc chắn muốn ${actionText} bình luận này không?`,
@@ -1059,7 +1045,7 @@ function renderComments(comments, documentOwnerId) {
                         method: 'PUT',
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
-                    
+
                     if (res.ok) {
                         fetchDocumentDetails();
                     } else {
@@ -1088,7 +1074,7 @@ async function handleDownload() {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            
+
             let fileName = `Tailieu_${currentMaTL}`;
             const downloadFileName = res.headers.get('x-download-filename');
             if (downloadFileName) {
@@ -1107,7 +1093,7 @@ async function handleDownload() {
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
-            
+
             const countEl = document.getElementById('doc-downloads');
             countEl.textContent = (parseInt(countEl.textContent.replace(/,/g, '')) + 1).toLocaleString();
             const ratingHint = document.querySelector('.rating-count');
@@ -1132,48 +1118,48 @@ async function renderPdfToCanvas(url, container) {
             container.innerHTML = '<div style="margin:auto; color:red;">Lỗi tải thư viện đọc PDF.</div>';
             return;
         }
-        
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        
+
         const loadingTask = pdfjsLib.getDocument(url);
         const pdf = await loadingTask.promise;
         container.innerHTML = ''; 
-        
+
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
-            
+
             const containerWidth = container.clientWidth - 40;
             const unscaledViewport = page.getViewport({ scale: 1.0 });
             let scale = containerWidth / unscaledViewport.width;
             if (scale > 1.5) scale = 1.5;
             if (scale < 0.5) scale = 1.0;
-            
+
             const viewport = page.getViewport({ scale });
-            
+
             const canvas = document.createElement('canvas');
             canvas.className = 'pdf-page-canvas';
             canvas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
             canvas.style.marginBottom = '10px';
             canvas.style.maxWidth = '100%';
-            
+
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-            
+
             container.appendChild(canvas);
-            
+
             const renderContext = {
                 canvasContext: context,
                 viewport: viewport
             };
-            
+
             await page.render(renderContext).promise;
         }
-        
+
         container.oncontextmenu = e => { e.preventDefault(); return false; };
         container.style.userSelect = 'none';
         container.addEventListener('dragstart', e => e.preventDefault());
-        
+
     } catch (err) {
         console.error('Error rendering PDF:', err);
         container.innerHTML = '<div style="margin:auto; padding:20px; color:#EF4444;">Không thể hiển thị bản xem trước. Bạn có thể tải tài liệu để xem toàn bộ.</div>';

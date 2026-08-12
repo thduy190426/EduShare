@@ -39,7 +39,7 @@ function loadUserProfileNav() {
         const payload = decodeJWT(token);
         if (!payload) return;
         const avatarEl = document.querySelector('.navbar .user-profile .avatar');
-        
+
         if (avatarEl && payload.HoTen) {
             const savedAvatar = getAvatar();
             if (savedAvatar && savedAvatar !== 'null') {
@@ -66,7 +66,7 @@ async function fetchNotifications(page = 1) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.message || 'Lỗi tải thông báo');
         }
@@ -90,22 +90,22 @@ function renderNotifications(notifications, page = 1, hasMore = false) {
     }
 
     const pageActions = document.querySelector('.page-actions');
-    
+
     if (page === 1 && notifications.length === 0) {
         list.innerHTML = '<div style="text-align:center; padding:2rem; color:#6b7280;">Bạn không có thông báo nào.</div>';
         if (pageActions) pageActions.style.display = 'none';
         return;
     }
-    
+
     if (pageActions) pageActions.style.display = 'flex';
 
     notifications.forEach(noti => {
         const item = document.createElement('div');
         item.className = `notification-item ${noti.DaDoc ? '' : 'unread'}`;
-        
+
         let iconClass = 'fa-bell';
         let typeClass = 'system';
-        
+
         if (noti.LoaiTB === 'TaiLieu') {
             iconClass = 'fa-file-pdf';
             typeClass = 'document';
@@ -217,7 +217,7 @@ async function deleteNotification(maTB, itemEl) {
             list.innerHTML = '<div style="text-align:center; padding:2rem; color:#6b7280;">Bạn không có thông báo nào.</div>';
             const pageActions = document.querySelector('.page-actions');
             if (pageActions) pageActions.style.display = 'none';
-            
+
             const btnLoadMore = document.getElementById('btn-load-more');
             if (btnLoadMore) btnLoadMore.style.display = 'none';
         }
@@ -282,7 +282,7 @@ async function deleteAllNotifications() {
         }
         const pageActions = document.querySelector('.page-actions');
         if (pageActions) pageActions.style.display = 'none';
-        
+
         const btnLoadMore = document.getElementById('btn-load-more');
         if (btnLoadMore) btnLoadMore.style.display = 'none';
 
@@ -311,7 +311,7 @@ async function markAllAsRead() {
         });
 
         if (res.ok) {
-            
+
             const unreadItems = document.querySelectorAll('.notification-item.unread');
             unreadItems.forEach(item => {
                 item.classList.remove('unread');

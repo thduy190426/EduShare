@@ -67,7 +67,7 @@ describe('Documents API', () => {
             expect(response.status).toBe(200);
             expect(response.body.subjects[0].TenMonHoc).toBe('Toan');
         });
-        
+
         it('Nên báo lỗi 500 nếu db lỗi', async () => {
             mockPoolExecute(app, () => Promise.reject(new Error('Lỗi DB')));
             const response = await request(app).get('/api/documents/subjects');
@@ -111,7 +111,7 @@ describe('Documents API', () => {
                 .field('publicId', 'test_public_id')
                 .field('mimeType', 'application/pdf')
                 .field('fileName', 'test.pdf');
-            
+
             expect(response.status).toBe(200);
             expect(response.body.message).toBe('Tai len tai lieu thanh cong.');
         });

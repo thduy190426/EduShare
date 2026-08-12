@@ -16,7 +16,7 @@ describe('Admin API', () => {
 
     it('Nên báo lỗi 403 nếu user thường cố truy cập Admin Dashboard', async () => {
         const token = generateTestToken({ MaND: 1, VaiTro: 'SinhVien' }); 
-        
+
         mockPoolExecute(app, (query) => {
             if (query.includes('SELECT TrangThai FROM NGUOIDUNG')) return Promise.resolve([[{ TrangThai: 'HoatDong' }]]);
             return Promise.resolve([[]]);

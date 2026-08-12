@@ -52,17 +52,17 @@ function renderPromos() {
     tableBody.innerHTML = promos.map((promo, index) => {
         return `
             <tr>
-                <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
-                <td style="font-weight: 600; color: var(--primary);">${escapeHTML(promo.Code)}</td>
-                <td>+${promo.DiscountPercent}%</td>
-                <td style="color: var(--text-secondary); font-size: 14px;">${escapeHTML(promo.Description || '')}</td>
-                <td>
+                <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1}</td>
+                <td style="font-weight: 600; color: var(--primary);" data-label="Mã giảm giá">${escapeHTML(promo.Code)}</td>
+                <td data-label="Tỉ lệ (%)">+${promo.DiscountPercent}%</td>
+                <td style="color: var(--text-secondary); font-size: 14px;" data-label="Mô tả">${escapeHTML(promo.Description || '')}</td>
+                <td data-label="Trạng thái">
                     <span class="status-badge ${promo.IsActive ? 'active' : 'inactive'}" style="display: inline-flex; align-items: center; color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; font-size: 13px; font-weight: 500;">
                         <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background-color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; margin-right: 6px;"></span>
                         ${promo.IsActive ? 'Hoạt động' : 'Tạm ngừng'}
                     </span>
                 </td>
-                <td>
+                <td data-label="Hành động">
                     <button class="btn-action btn-edit" data-id="${promo.MaPromo}" title="Sửa" style="background: none; border: none; cursor: pointer; color: #3b82f6; font-size: 16px; margin-right: 10px;">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </button>

@@ -317,9 +317,14 @@
       .menu-group:not(:first-child) { display: none; }
       
       .content-area { margin-left: 0; margin-bottom: 60px; padding: 24px 16px; }
-      .doc-grid, .group-grid { grid-template-columns: 1fr; }
+      .doc-grid, .group-grid, .my-subject-grid { grid-template-columns: 1fr; }
       .section-header { flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 32px; }
       .logo { width: auto; font-size: 20px; }
+      .hero-banner { flex-direction: column; text-align: center; gap: 20px; padding: 24px 16px; }
+      .hero-content { max-width: 100%; }
+      .leaderboard-widget { padding: 16px; margin-top: 16px; margin-bottom: 16px; }
+      .leaderboard-item { flex-direction: column; text-align: center; gap: 8px; }
+      .lb-avatar { margin: 0; }
     }
 body { -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: auto; user-select: auto; }

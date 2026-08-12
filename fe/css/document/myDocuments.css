@@ -115,8 +115,14 @@
       .logo { width: auto; font-size: 20px; }
       .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
       .tabs-container { overflow-x: auto; white-space: nowrap; padding-bottom: 8px; }
-      .table-card { overflow-x: auto; }
-      .data-table { min-width: 600px; }
+      .table-card { overflow: visible; background: transparent; border: none; box-shadow: none; }
+      .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; min-width: 0; }
+      .data-table thead { display: none; }
+      .data-table tr { margin-bottom: 16px; background: var(--white); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+      .data-table td { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; text-align: right; }
+      .data-table td:last-child { border-bottom: none; justify-content: flex-end; }
+      .data-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-secondary); margin-right: auto; text-align: left; }
+      .doc-name-cell { flex-direction: column; align-items: flex-end; text-align: right; }
     }
 body { -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: auto; user-select: auto; }

@@ -134,7 +134,7 @@ async function renderSidebar() {
                         body: JSON.stringify({ refreshToken: currentRefreshToken })
                     });
                 }
-                
+
                 clearAuthSession();
                 setTimeout(() => {
                     window.location.href = '../auth/login.html';
@@ -165,7 +165,7 @@ async function renderSidebar() {
             document.documentElement.classList.toggle('sidebar-collapsed');
             const isCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
             localStorage.setItem('sidebar-collapsed', isCollapsed);
-            
+
             const iconEl = document.getElementById('icon-toggle-sidebar');
             if (iconEl) {
                 if (isCollapsed) {
@@ -233,7 +233,7 @@ function setupSidebarNavigation(sidebarEl) {
 window.refreshSidebarBadges = async function () {
     const token = getToken();
     if (!token) return;
-    
+
     const decoded = decodeJWT(token);
     if (!decoded || !decoded.VaiTro) return;
 
@@ -251,7 +251,7 @@ window.refreshSidebarBadges = async function () {
             if (menuItem) menuItem.classList.remove('has-unread');
         }
     };
-    
+
     if (decoded.VaiTro === 'Admin') {
         try {
             const res = await fetch(`${API_URL}/admin/stats/overview`, {
@@ -289,11 +289,11 @@ function renderNavbarUserProfile() {
         if (!token) return;
         const payload = decodeJWT(token);
         if (!payload) return;
-        
+
         const avatarEl = document.getElementById('navAvatar');
         const nameEl = document.getElementById('navUserName');
         const roleEl = document.getElementById('navUserRole');
-        
+
         if (avatarEl && payload.HoTen) {
             const savedAvatar = getAvatar();
             if (savedAvatar && savedAvatar !== 'null') {
@@ -306,11 +306,11 @@ function renderNavbarUserProfile() {
                 avatarEl.style.color = 'var(--primary)';
             }
         }
-        
+
         if (nameEl && payload.HoTen) {
             nameEl.textContent = payload.HoTen;
         }
-        
+
         if (roleEl && payload.VaiTro) {
             roleEl.textContent = payload.VaiTro === 'Admin' ? 'Quản trị viên' : (payload.VaiTro === 'GiaoVien' ? 'Giáo viên' : 'Sinh viên');
             if (payload.VaiTro === 'Admin') {
@@ -318,7 +318,6 @@ function renderNavbarUserProfile() {
                 roleEl.style.fontWeight = '600';
             }
         }
-        
 
     } catch (e) {
         console.error('Lỗi load user profile navbar:', e);
@@ -368,7 +367,7 @@ function setupNotificationNavigation() {
 function setupRealtimeNotifications() {
     const socket = getSocket();
     if (!socket) return;
-    
+
     socket.on('notification', (payload) => {
         const { type, data } = payload;
         if (typeof Swal !== 'undefined') {
@@ -385,7 +384,7 @@ function setupRealtimeNotifications() {
         } else if (typeof showToast === 'function') {
             showToast('info', data.message || 'Bạn có thông báo mới');
         }
-        
+
         const badgeEls = document.querySelectorAll('.notification-badge, #notificationCount, .badge-count');
         badgeEls.forEach(badge => {
             let count = parseInt(badge.textContent || '0');

@@ -48,13 +48,21 @@ export const saveLoginSession = ({ token, refreshToken, avatarURL, rememberLogin
     const persistentStorage = rememberLogin ? localStorage : sessionStorage;
     const otherStorage = rememberLogin ? sessionStorage : localStorage;
 
+    otherStorage.removeItem('isLoggedIn');
     otherStorage.removeItem('token');
     otherStorage.removeItem('refreshToken');
     otherStorage.removeItem('avatar');
-    
+    otherStorage.removeItem('userId');
+    otherStorage.removeItem('userRole');
+
+    persistentStorage.setItem('isLoggedIn', 'true');
     persistentStorage.setItem('token', token);
-    if (refreshToken) {
-        persistentStorage.setItem('refreshToken', refreshToken);
+    persistentStorage.setItem('refreshToken', refreshToken);
+
+    const decoded = decodeJWT(token);
+    if (decoded) {
+        persistentStorage.setItem('userId', decoded.MaND);
+        persistentStorage.setItem('userRole', decoded.VaiTro);
     }
 
     if (avatarURL) {
@@ -74,17 +82,24 @@ export const setAvatarForCurrentSession = (avatarURL) => {
 };
 
 export const clearAuthSession = () => {
+    localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('avatar');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    sessionStorage.removeItem('isLoggedIn');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('refreshToken');
     sessionStorage.removeItem('avatar');
+    sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('userRole');
 };
 
 export const checkAuth = () => {
     const token = getToken();
-    return token ? decodeJWT(token) : null;
+    if (!token) return null;
+    return decodeJWT(token);
 };
 
 export const escapeHTML = (str) => {
@@ -145,22 +160,24 @@ const originalFetch = window.fetch;
 window.fetch = async function () {
     let url = arguments[0];
     let options = arguments[1] || {};
-    
-    const token = getToken();
-    if (token && typeof url === 'string' && url.includes('/api/')) {
-        options.headers = {
-            ...options.headers,
-            'Authorization': `Bearer ${token}`
-        };
+
+    if (typeof url === 'string' && url.includes('/api/')) {
+        const token = getToken();
+        if (token) {
+            options.headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${token}`
+            };
+        }
         arguments[1] = options;
     }
 
     let response = await originalFetch.apply(this, arguments);
-    
+
     if (response.status === 401) {
         if (typeof url === 'string' && url.includes('/api/') && !url.includes('/login') && !url.includes('/register') && !url.includes('/refresh-token')) {
             const refreshToken = getRefreshToken();
-            
+
             if (refreshToken) {
                 if (!isRefreshing) {
                     isRefreshing = true;
@@ -168,19 +185,14 @@ window.fetch = async function () {
                         const refreshRes = await originalFetch('http://localhost:3000/api/refresh-token', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ refreshToken })
+                            credentials: 'include'
                         });
-                        
+
                         if (refreshRes.ok) {
-                            const data = await refreshRes.json();
-                            const newToken = data.token;
-                            if (localStorage.getItem('refreshToken')) localStorage.setItem('token', newToken);
-                            else sessionStorage.setItem('token', newToken);
-                            
                             isRefreshing = false;
-                            onRefreshed(newToken);
-                            
-                            options.headers['Authorization'] = `Bearer ${newToken}`;
+                            onRefreshed(true);
+
+                            options.credentials = 'include';
                             return await originalFetch(url, options);
                         } else {
                             throw new Error('Refresh token invalid');
@@ -194,8 +206,8 @@ window.fetch = async function () {
                     }
                 } else {
                     return new Promise((resolve) => {
-                        subscribeTokenRefresh((newToken) => {
-                            options.headers['Authorization'] = `Bearer ${newToken}`;
+                        subscribeTokenRefresh(() => {
+                            options.credentials = 'include';
                             resolve(originalFetch(url, options));
                         });
                     });
@@ -231,7 +243,7 @@ function redirectToLogin() {
 
 export const getTimeBasedGreeting = (type = 'home') => {
     const hour = new Date().getHours();
-    
+
     let timeOfDay = '';
     if (hour >= 5 && hour < 12) timeOfDay = 'morning';
     else if (hour >= 12 && hour < 18) timeOfDay = 'afternoon';
@@ -271,7 +283,7 @@ export const renderPagination = (containerId, totalPages, currentPage, onPageCha
     currentPage = Math.max(1, currentPage || 1);
 
     container.innerHTML = '';
-    
+
     const prevBtn = document.createElement('button');
     prevBtn.className = 'page-btn prev-btn';
     prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';

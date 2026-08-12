@@ -17,7 +17,7 @@ export const getSocket = () => {
 
         socket.on('disconnect', () => {
         });
-        
+
         socket.on('connect_error', (err) => {
             console.error('[Socket] Lỗi kết nối:', err.message);
         });

@@ -8,13 +8,37 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const nodemailer = require('nodemailer');
 const { OAuth2Client } = require('google-auth-library');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const { authMiddleware } = require('./middlewares/auth');
+const { validate } = require('./middlewares/validate');
+const { loginSchema, registerSchema, twoFactorLoginSchema } = require('./schemas/authSchemas');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '891380242693-mebda946u7bpcbbnjd8ro50lsaqp6unu.apps.googleusercontent.com');
 
+const winstonLogger = require('./config/logger');
+
+const originalConsoleError = console.error;
+console.error = function(...args) {
+    originalConsoleError.apply(console, args);
+
+    let msg = '';
+    let meta = {};
+    args.forEach(arg => {
+        if (arg instanceof Error) {
+            msg += arg.message + ' ';
+            meta.stack = arg.stack;
+        } else if (typeof arg === 'object') {
+            msg += JSON.stringify(arg) + ' ';
+        } else {
+            msg += arg + ' ';
+        }
+    });
+
+    winstonLogger.error(msg.trim(), meta);
+};
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -138,7 +162,11 @@ app.use(helmet({
     contentSecurityPolicy: false,
     frameguard: false
 }));
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:8080', 'http://127.0.0.1:8080', 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    credentials: true
+}));
+app.use(cookieParser());
 app.use(express.json());
 app.use(requestLogger);
 app.use('/uploads', express.static('public/uploads'));
@@ -194,6 +222,7 @@ const routes = [
     ['/api/payment', require('./payment')],
     ['/api/settings', require('./settings')],
     ['/api/chat', require('./chat')],
+    ['/api/badges', require('./badges')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -267,13 +296,10 @@ app.post('/api/register/send-otp', registerLimiter, async (req, res) => {
     }
 });
 
-app.post('/api/register', registerLimiter, async (req, res) => {
+app.post('/api/register', registerLimiter, validate(registerSchema), async (req, res) => {
     const { hoTen, email, matKhau, truongHoc, khoaNganh, otp } = req.body;
 
     const normalizedRole = 'SinhVien';
-
-    if (!hoTen || !email || !matKhau || !otp)
-        return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin và mã OTP.' });
 
     try {
         const [otpRows] = await pool.execute('SELECT * FROM REGISTER_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
@@ -305,7 +331,6 @@ app.post('/api/register', registerLimiter, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-
 
 app.post('/api/auth/google', loginLimiter, async (req, res) => {
     const { credential } = req.body;
@@ -352,6 +377,13 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
 
         logger.success(`Google Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
 
@@ -424,6 +456,13 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
             { expiresIn: '7d' }
         );
 
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
         logger.success(`Facebook Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
 
         res.json({
@@ -442,14 +481,11 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
     }
 });
 
-app.post('/api/login', loginLimiter, async (req, res) => {
+app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => {
     const { email, matKhau, rememberLogin, recaptchaToken } = req.body;
 
     const isHuman = await verifyRecaptcha(recaptchaToken);
     if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
-
-    if (!email || !matKhau)
-        return res.status(400).json({ message: 'Vui lòng cung cấp email và mật khẩu.' });
 
     try {
         const [rows] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
@@ -495,6 +531,20 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             [user.MaND, refreshToken, expiresAt]
         );
 
+        res.cookie('token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: expiresDays * 24 * 60 * 60 * 1000
+        });
+
         logger.success(`Login OK — id: ${user.MaND}  role: ${user.VaiTro}  remember: ${!!rememberLogin}`);
         res.status(200).json({
             message: 'Đăng nhập thành công.',
@@ -509,11 +559,8 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     }
 });
 
-app.post('/api/auth/2fa/login', loginLimiter, async (req, res) => {
+app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), async (req, res) => {
     const { tempToken, totpCode } = req.body;
-    if (!tempToken || !totpCode) {
-        return res.status(400).json({ message: 'Vui lòng cung cấp mã 2FA.' });
-    }
 
     try {
         const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
@@ -549,6 +596,20 @@ app.post('/api/auth/2fa/login', loginLimiter, async (req, res) => {
             'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt) VALUES (?, ?, ?)',
             [user.MaND, refreshToken, expiresAt]
         );
+
+        res.cookie('token', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: expiresDays * 24 * 60 * 60 * 1000
+        });
 
         logger.success(`2FA Login OK — id: ${user.MaND}`);
         res.status(200).json({
@@ -633,7 +694,7 @@ app.post('/api/auth/2fa/disable', authMiddleware, async (req, res) => {
 });
 
 app.post('/api/refresh-token', async (req, res) => {
-    const { refreshToken } = req.body;
+    const refreshToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
     if (!refreshToken) return res.status(400).json({ message: 'Thiếu Refresh Token.' });
 
     try {
@@ -659,6 +720,13 @@ app.post('/api/refresh-token', async (req, res) => {
             { expiresIn: '15m' }
         );
 
+        res.cookie('token', newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000
+        });
+
         res.status(200).json({ token: newAccessToken });
 
     } catch (err) {
@@ -668,7 +736,11 @@ app.post('/api/refresh-token', async (req, res) => {
 });
 
 app.post('/api/logout', async (req, res) => {
-    const { refreshToken } = req.body;
+    const refreshToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
+    
+    res.clearCookie('token');
+    res.clearCookie('refreshToken');
+
     if (!refreshToken) return res.status(200).json({ message: 'Đã đăng xuất.' });
 
     try {
@@ -724,13 +796,13 @@ const generateOTPRegisterEmail = (hoTen, otp) => {
                 <td class="content">
                   <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Xin chào, ${hoTen}!</h2>
                   <p>Cảm ơn bạn đã đăng ký tài khoản tại EduShare. Để hoàn tất quá trình đăng ký, vui lòng sử dụng mã xác thực OTP dưới đây:</p>
-                  
+
                   <div class="otp-box">
                     <div class="otp-code">${otp}</div>
                   </div>
-                  
+
                   <p>Mã xác thực này sẽ <strong>hết hạn sau 10 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
-                  
+
                   <p style="margin-top: 32px; margin-bottom: 0;">Trân trọng,<br><strong style="color: #4F46E5;">Đội ngũ EduShare</strong></p>
                 </td>
               </tr>
@@ -794,15 +866,15 @@ const generateOTPResetEmail = (hoTen, otp) => {
                 <td class="content">
                   <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Xin chào, ${hoTen}!</h2>
                   <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản EduShare của bạn. Dưới đây là mã xác thực OTP để hoàn tất quá trình thiết lập lại mật khẩu:</p>
-                  
+
                   <div class="otp-box">
                     <div class="otp-code">${otp}</div>
                   </div>
-                  
+
                   <p>Mã xác thực này sẽ <strong>hết hạn sau 10 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai để đảm bảo an toàn cho tài khoản của bạn.</p>
-                  
+
                   <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn được an toàn.</p>
-                  
+
                   <p style="margin-top: 32px; margin-bottom: 0;">Trân trọng,<br><strong style="color: #4F46E5;">Đội ngũ EduShare</strong></p>
                 </td>
               </tr>
@@ -1015,6 +1087,22 @@ app.post('/api/contact', contactLimiter, async (req, res) => {
         logger.error('Failed to send contact email', err);
         res.status(500).json({ message: 'Không thể gửi tin nhắn lúc này. Vui lòng thử lại sau.' });
     }
+});
+
+app.use((err, req, res, next) => {
+    const statusCode = err.statusCode || 500;
+
+    winstonLogger.error(`Unhandled Error: ${err.message}`, {
+        method: req.method,
+        url: req.url,
+        stack: err.stack,
+        ip: req.ip
+    });
+
+    res.status(statusCode).json({
+        success: false,
+        message: 'Đã xảy ra lỗi trên máy chủ, vui lòng thử lại sau.'
+    });
 });
 
 if (process.env.NODE_ENV !== 'test') {

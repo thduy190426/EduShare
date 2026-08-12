@@ -28,8 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-
-
 let followersList = [];
 let followingList = [];
 let initialProfileState = {};
@@ -122,7 +120,7 @@ window.openFollowModal = function(type) {
     const title = document.getElementById('follow-modal-title');
     const container = document.getElementById('follow-list-container');
     container.innerHTML = '';
-    
+
     let list = [];
     if (type === 'followers') {
         title.textContent = 'Người theo dõi';
@@ -131,7 +129,7 @@ window.openFollowModal = function(type) {
         title.textContent = 'Đang theo dõi';
         list = followingList;
     }
-    
+
     if (list.length === 0) {
         container.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-secondary);">Danh sách trống</div>';
     } else {
@@ -141,7 +139,7 @@ window.openFollowModal = function(type) {
                 : `<div style="width:40px; height:40px; border-radius:50%; background:var(--primary-light); color:var(--primary); display:flex; justify-content:center; align-items:center; font-weight:bold;">${user.HoTen.trim().split(' ').pop().charAt(0).toUpperCase()}</div>`;
 
             const roleStr = user.VaiTro === 'SinhVien' ? 'Sinh viên' : (user.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên');
-            
+
             const item = document.createElement('div');
             item.style.display = 'flex';
             item.style.alignItems = 'center';
@@ -181,7 +179,7 @@ async function initProfile() {
             fetch(`${API_URL}/khoanganh`)
         ]);
         if (!res.ok) throw new Error('Không thể lấy thông tin cá nhân.');
-        
+
         const data = await res.json();
         const profile = data.profile;
         currentProfile = profile;
@@ -189,10 +187,10 @@ async function initProfile() {
         if (schoolRes.ok && majorRes.ok) {
             const schoolData = await schoolRes.json();
             const majorData = await majorRes.json();
-            
+
             const schoolSelect = document.getElementById('input-truonghoc');
             const majorSelect = document.getElementById('input-khoanganh');
-            
+
             if (schoolSelect) {
                 schoolData.truongHoc.forEach(school => {
                     const option = document.createElement('option');
@@ -201,7 +199,7 @@ async function initProfile() {
                     schoolSelect.appendChild(option);
                 });
             }
-            
+
             if (majorSelect) {
                 majorData.khoaNganh.forEach(major => {
                     const option = document.createElement('option');
@@ -211,9 +209,14 @@ async function initProfile() {
                 });
             }
         }
-        
-        
+
         document.getElementById('header-name').textContent = profile.HoTen;
+        if (profile.DanhHieu) {
+            const badgeEl = document.getElementById('header-badge');
+            if (badgeEl) {
+                badgeEl.innerHTML = `<span style="color: ${profile.DanhHieuMauSac}; font-size: 0.9em; margin-left: 5px;" title="${escapeHTML(profile.DanhHieu)}"><i class="${escapeHTML(profile.DanhHieuIcon)}"></i></span>`;
+            }
+        }
         document.getElementById('header-email').textContent = profile.Email;
         document.getElementById('header-role').textContent = profile.VaiTro === 'SinhVien' ? 'Sinh viên' : profile.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên';
         const elSoDuXu = document.getElementById('header-soduxu');
@@ -224,15 +227,14 @@ async function initProfile() {
                 elSoDuXu.parentElement.style.display = 'none';
             }
         }
-        
+
         const tabGiaoDich = document.querySelector('.tab-btn[data-tab="transactions"]');
         if (tabGiaoDich && profile.VaiTro !== 'SinhVien') {
             tabGiaoDich.style.display = 'none';
         }
-        
+
         renderCurrentUserAvatar(profile);
 
-        
         document.getElementById('input-hoten').value = profile.HoTen;
         document.getElementById('input-email').value = profile.Email; 
         document.getElementById('input-tuoi').value = profile.Tuoi || '';
@@ -247,7 +249,7 @@ async function initProfile() {
             const changePasswordSection = document.getElementById('change-password-section');
             if (changePasswordSection) changePasswordSection.style.display = 'none';
         }
-        
+
         initialProfileState = {
             hoTen: profile.HoTen || '',
             tuoi: profile.Tuoi ? String(profile.Tuoi) : '',
@@ -259,19 +261,19 @@ async function initProfile() {
             privacyRatings: profile.HienThiDanhGia !== 0
         };
         checkProfileChanges();
-        
+
         if (profile.VaiTro === 'SinhVien') {
             document.getElementById('upgrade-teacher-section').style.display = 'block';
             initUpgradeTeacher();
         }
-        
+
         const twoFaSection = document.getElementById('twofa-section');
         if (twoFaSection) {
             twoFaSection.style.display = 'block';
             const btnSetup = document.getElementById('btn-setup-2fa');
             const btnDisable = document.getElementById('btn-disable-2fa');
             const msgSetup = document.getElementById('2fa-status-msg');
-            
+
             if (profile.IsTwoFactorEnabled) {
                 if (btnSetup) btnSetup.style.display = 'none';
                 if (btnDisable) btnDisable.style.display = 'inline-block';
@@ -291,13 +293,13 @@ async function initProfile() {
 async function initUpgradeTeacher() {
     const statusContainer = document.getElementById('upgrade-status-container');
     const form = document.getElementById('form-upgrade-teacher');
-    
+
     try {
         const res = await fetch(`${API_URL}/users/upgrade-status`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        
+
         if (data.status) {
             statusContainer.style.display = 'block';
             if (data.status.TrangThai === 'ChoDuyet') {
@@ -328,7 +330,6 @@ async function initUpgradeTeacher() {
     }
 }
 
-
 async function saveProfile() {
     const hoTen = document.getElementById('input-hoten').value;
     const tuoi = document.getElementById('input-tuoi').value;
@@ -338,7 +339,7 @@ async function saveProfile() {
     const khoaNganh = document.getElementById('input-khoanganh').value;
     const hienThiLichSuTai = document.getElementById('input-privacy-downloads').checked ? 1 : 0;
     const hienThiDanhGia = document.getElementById('input-privacy-ratings').checked ? 1 : 0;
-    
+
     if (!hoTen.trim()) return Toast.fire({ icon: 'warning', title: 'Họ tên không được để trống.' });
 
     try {
@@ -354,11 +355,6 @@ async function saveProfile() {
         if (res.ok) {
             Toast.fire({ icon: 'success', title: 'Cập nhật thông tin thành công!' });
             if (data.token) {
-                if (localStorage.getItem('token')) {
-                    localStorage.setItem('token', data.token);
-                } else if (sessionStorage.getItem('token')) {
-                    sessionStorage.setItem('token', data.token);
-                }
             }
             setTimeout(() => window.location.reload(), 1500);
         } else {
@@ -407,18 +403,13 @@ async function changePassword() {
         if (res.ok) {
             Toast.fire({ icon: 'success', title: 'Cập nhật mật khẩu thành công!' });
             if (data.token) {
-                if (localStorage.getItem('token')) {
-                    localStorage.setItem('token', data.token);
-                } else if (sessionStorage.getItem('token')) {
-                    sessionStorage.setItem('token', data.token);
-                }
             }
             document.getElementById('input-old-pw').value = '';
             document.getElementById('input-new-pw').value = '';
             document.getElementById('input-confirm-pw').value = '';
             document.getElementById('input-change-pw-otp').value = '';
             checkPasswordChanges();
-            
+
             const btnTogglePwd = document.getElementById('btn-toggle-pwd');
             if (btnTogglePwd) {
                 document.getElementById('pwd-content').classList.remove('expanded');
@@ -435,25 +426,23 @@ async function changePassword() {
 
 let isDeletingAccount = false;
 
-
-
 let currentAppealDocId = null;
 
 window.openRejectReasonModal = function(docId, title, reason) {
     currentAppealDocId = docId;
     document.getElementById('reject-reason-doc-title').textContent = title;
     document.getElementById('reject-reason-content').textContent = reason || 'Không có lý do cụ thể.';
-    
+
     const input = document.getElementById('input-reject-appeal');
     input.value = '';
-    
+
     const btnSubmit = document.getElementById('btn-submit-appeal');
     if (btnSubmit) {
         btnSubmit.disabled = true;
         btnSubmit.style.opacity = '0.5';
         btnSubmit.style.cursor = 'not-allowed';
     }
-    
+
     const modal = document.getElementById('reject-reason-modal');
     modal.style.display = 'flex';
     setTimeout(() => { modal.style.opacity = '1'; }, 10);
@@ -469,7 +458,7 @@ window.closeRejectReasonModal = function() {
 function openDeleteAccountModal() {
     const modal = document.getElementById('delete-account-modal');
     if (!modal) return;
-    
+
     const inputPw = document.getElementById('input-delete-pw');
     const deletePwWrapper = document.getElementById('delete-pw-wrapper');
     const inputOtp = document.getElementById('input-delete-otp');
@@ -482,10 +471,10 @@ function openDeleteAccountModal() {
     } else {
         if (deletePwWrapper) deletePwWrapper.style.display = 'block';
     }
-    
+
     if(inputPw) inputPw.value = '';
     if(inputOtp) inputOtp.value = '';
-    
+
     if (btnSendOtp) {
         btnSendOtp.disabled = false;
         btnSendOtp.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP';
@@ -494,18 +483,18 @@ function openDeleteAccountModal() {
         clearInterval(deleteOtpTimer);
     }
     errorMsg.style.display = 'none';
-    
+
     if (btnConfirm) {
         btnConfirm.disabled = true;
         btnConfirm.style.opacity = '0.5';
         btnConfirm.style.cursor = 'not-allowed';
     }
-    
+
     modal.style.display = 'flex';
     modal.offsetHeight; 
     modal.style.opacity = '1';
     modal.querySelector('.modal-content').style.transform = 'scale(1)';
-    
+
     setTimeout(() => {
         inputPw.focus();
     }, 300);
@@ -516,7 +505,7 @@ function closeDeleteAccountModal() {
     if (!modal) return;
     modal.style.opacity = '0';
     modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
-    
+
     setTimeout(() => {
         modal.style.display = 'none';
     }, 300);
@@ -526,7 +515,7 @@ let deleteOtpTimer;
 
 async function sendDeleteAccountOtp() {
     const btnSendOtp = document.getElementById('btn-send-delete-otp');
-    
+
     btnSendOtp.disabled = true;
     btnSendOtp.style.opacity = '0.5';
     btnSendOtp.style.cursor = 'not-allowed';
@@ -555,7 +544,7 @@ async function sendDeleteAccountOtp() {
 
         let timeLeft = 60;
         btnSendOtp.innerHTML = `<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi lại (${timeLeft}s)`;
-        
+
         clearInterval(deleteOtpTimer);
         deleteOtpTimer = setInterval(() => {
             timeLeft--;
@@ -582,14 +571,14 @@ async function sendDeleteAccountOtp() {
 
 async function processDeleteAccount() {
     if (isDeletingAccount) return;
-    
+
     const inputPw = document.getElementById('input-delete-pw');
     const inputOtp = document.getElementById('input-delete-otp');
     const errorMsg = document.getElementById('delete-pw-error');
     const matKhau = inputPw ? inputPw.value.trim() : '';
     const otp = inputOtp ? inputOtp.value.trim() : '';
     const errorTextSpan = errorMsg.querySelector('span');
-    
+
     const isLocal = !currentProfile || currentProfile.AuthType === 'Local';
 
     if (isLocal && !matKhau) {
@@ -602,10 +591,10 @@ async function processDeleteAccount() {
         errorMsg.style.display = 'block';
         return;
     }
-    
+
     errorMsg.style.display = 'none';
     isDeletingAccount = true;
-    
+
     const btnConfirm = document.getElementById('btn-confirm-delete');
     if (!btnConfirm) return;
     const originalText = btnConfirm.innerHTML;
@@ -651,7 +640,6 @@ async function processDeleteAccount() {
     }
 }
 
-
 async function deleteAvatar() {
     if (!currentProfile?.AvatarURL) return;
 
@@ -688,10 +676,6 @@ async function deleteAvatar() {
     }
 }
 
-
-
-
-
 function renderPagination(container, currentPage, totalPages, fetchFnName) {
     if (totalPages <= 1) return;
     const paginationEl = document.createElement('div');
@@ -701,7 +685,7 @@ function renderPagination(container, currentPage, totalPages, fetchFnName) {
     paginationEl.style.gap = '8px';
     paginationEl.style.marginTop = '16px';
     paginationEl.style.width = '100%';
-    
+
     let html = '';
     for (let i = 1; i <= totalPages; i++) {
         const bg = i === currentPage ? 'var(--primary)' : '#fff';
@@ -731,7 +715,7 @@ async function fetchMyDocuments(page = 1) {
         if (tab) tab.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi (${data.total || 0})`;
         const container = document.getElementById('my-docs-container');
         container.innerHTML = '';
-        
+
         if (data.documents.length === 0) {
             container.innerHTML = '<p>Bạn chưa đăng tài liệu nào.</p>';
             return;
@@ -741,7 +725,7 @@ async function fetchMyDocuments(page = 1) {
             const el = document.createElement('div');
             el.className = 'doc-item';
             el.style.animationDelay = `${index * 0.04}s`;
-            
+
             let icon = 'fa-file';
             let iconColor = 'inherit';
             let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
@@ -797,7 +781,7 @@ async function fetchBookmarks(page = 1) {
         if (tab) tab.innerHTML = `<i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu (${data.total || 0})`;
         const container = document.getElementById('bookmarks-container');
         container.innerHTML = '';
-        
+
         if (data.documents.length === 0) {
             container.innerHTML = '<p>Bạn chưa lưu tài liệu nào.</p>';
             return;
@@ -807,7 +791,7 @@ async function fetchBookmarks(page = 1) {
             const el = document.createElement('div');
             el.className = 'doc-item';
             el.style.animationDelay = `${index * 0.04}s`;
-            
+
             let icon = 'fa-file';
             let iconColor = 'inherit';
             let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
@@ -853,7 +837,7 @@ async function fetchPurchasedDocuments(page = 1) {
         if (tab) tab.innerHTML = `<i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM (${data.total || 0})`;
         const container = document.getElementById('purchased-container');
         container.innerHTML = '';
-        
+
         if (!data.documents || data.documents.length === 0) {
             container.innerHTML = '<p>Bạn chưa mua tài liệu PREMIUM nào.</p>';
             return;
@@ -863,7 +847,7 @@ async function fetchPurchasedDocuments(page = 1) {
             const el = document.createElement('div');
             el.className = 'doc-item';
             el.style.animationDelay = `${index * 0.04}s`;
-            
+
             let icon = 'fa-file';
             let iconColor = 'inherit';
             let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
@@ -910,9 +894,9 @@ async function fetchTransactions() {
         if (tab) tab.innerHTML = `<i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Lịch sử giao dịch Xu (${data.transactions ? data.transactions.length : 0})`;
         const container = document.getElementById('transactions-container');
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         if (!data.transactions || data.transactions.length === 0) {
             container.innerHTML = '<p>Bạn chưa có giao dịch nào.</p>';
             return;
@@ -922,7 +906,7 @@ async function fetchTransactions() {
             const el = document.createElement('div');
             el.className = 'doc-item';
             el.style.animationDelay = `${index * 0.04}s`;
-            
+
             const isCong = txn.SoXuThayDoi > 0;
             const icon = isCong ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
             const iconColor = isCong ? 'var(--success)' : 'var(--danger)';
@@ -947,7 +931,7 @@ async function fetchTransactions() {
             `;
             container.appendChild(el);
         });
-        
+
     } catch (err) {
         console.error(err);
     }
@@ -963,7 +947,7 @@ async function fetchMyReports(page = 1) {
         if (tab) tab.innerHTML = `<i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm (${data.total || 0})`;
         const container = document.getElementById('my-reports-container');
         container.innerHTML = '';
-        
+
         if (!data.reports || data.reports.length === 0) {
             container.innerHTML = '<p>Bạn chưa gửi báo cáo nào.</p>';
             return;
@@ -973,7 +957,7 @@ async function fetchMyReports(page = 1) {
             const el = document.createElement('div');
             el.className = 'doc-item';
             el.style.animationDelay = `${index * 0.04}s`;
-            
+
             const statusColor = report.TrangThai === 'DaXuLy' ? 'var(--success)' : 
                                (report.TrangThai === 'ChoXuLy' ? 'var(--warning)' : 'var(--danger)');
             const statusText = report.TrangThai === 'DaXuLy' ? 'Đã xử lý' : 
@@ -1009,7 +993,7 @@ function setupTabListeners() {
     const tabBookmarks = document.getElementById('tab-bookmarks');
     const tabPurchased = document.getElementById('tab-purchased');
     const tabMyReports = document.getElementById('tab-my-reports');
-    
+
     const containerMyDocs = document.getElementById('my-docs-container');
     const containerBookmarks = document.getElementById('bookmarks-container');
     const containerPurchased = document.getElementById('purchased-container');
@@ -1020,7 +1004,7 @@ function setupTabListeners() {
         tabBookmarks.classList.remove('active');
         tabPurchased.classList.remove('active');
         tabMyReports.classList.remove('active');
-        
+
         containerMyDocs.style.display = 'none';
         containerBookmarks.style.display = 'none';
         containerPurchased.style.display = 'none';
@@ -1043,7 +1027,7 @@ function setupTabListeners() {
         containerBookmarks.style.gap = '15px';
         fetchBookmarks();
     });
-    
+
     tabPurchased.addEventListener('click', () => {
         resetTabs();
         tabPurchased.classList.add('active');
@@ -1052,7 +1036,6 @@ function setupTabListeners() {
         containerPurchased.style.gap = '15px';
         fetchPurchasedDocuments();
     });
-    
 
     tabMyReports.addEventListener('click', () => {
         resetTabs();
@@ -1064,21 +1047,18 @@ function setupTabListeners() {
     });
 }
 
-
-
-
 async function initNotificationsLegacy() {
     try {
         const res = await fetch(`${API_URL}/notifications`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        
+
         const list = document.getElementById('notif-list');
         list.innerHTML = '';
-        
+
         let unreadCount = 0;
-        
+
         if (data.notifications.length === 0) {
             list.innerHTML = '<div style="padding:15px; text-align:center; color:#6b7280;">Chưa có thông báo nào.</div>';
         } else {
@@ -1107,7 +1087,6 @@ async function initNotificationsLegacy() {
                     </div>
                 `;
 
-                
                 item.addEventListener('click', async () => {
                     if (!tb.DaDoc) {
                         try {
@@ -1155,7 +1134,7 @@ function checkPasswordChanges() {
     const confirm = document.getElementById('input-confirm-pw').value;
     const otp = document.getElementById('input-change-pw-otp').value;
     const btn = document.getElementById('btn-change-pw');
-    
+
     const isLocal = !currentProfile || currentProfile.AuthType === 'Local';
     const oldPwValid = isLocal ? matKhauCu.trim().length > 0 : true;
 
@@ -1174,14 +1153,14 @@ function checkDeleteAccountPassword() {
     const inputPw = document.getElementById('input-delete-pw');
     const inputOtp = document.getElementById('input-delete-otp');
     const btnConfirm = document.getElementById('btn-confirm-delete');
-    
+
     if (inputPw && inputOtp && btnConfirm) {
         const matKhau = inputPw.value.trim();
         const otp = inputOtp.value.trim();
-        
+
         const isLocal = !currentProfile || currentProfile.AuthType === 'Local';
         const pwValid = isLocal ? matKhau.length >= 6 : true;
-        
+
         if (pwValid && otp.length === 6) {
             btnConfirm.disabled = false;
             btnConfirm.style.opacity = '1';
@@ -1198,16 +1177,16 @@ function setupEventListeners() {
     document.getElementById('btn-save-profile').addEventListener('click', saveProfile);
     const btnDeleteAccount = document.getElementById('btn-delete-account');
     if (btnDeleteAccount) btnDeleteAccount.addEventListener('click', openDeleteAccountModal);
-    
+
     const btnCancelDelete = document.getElementById('btn-cancel-delete');
     if (btnCancelDelete) btnCancelDelete.addEventListener('click', closeDeleteAccountModal);
-    
+
     const btnConfirmDelete = document.getElementById('btn-confirm-delete');
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', processDeleteAccount);
-    
+
     const inputDeletePw = document.getElementById('input-delete-pw');
     const toggleDeletePw = document.getElementById('toggle-delete-pw');
-    
+
     if (toggleDeletePw && inputDeletePw) {
         toggleDeletePw.addEventListener('click', function () {
             const type = inputDeletePw.getAttribute('type') === 'password' ? 'text' : 'password';
@@ -1220,17 +1199,17 @@ function setupEventListeners() {
 
     const inputDeleteOtp = document.getElementById('input-delete-otp');
     if (inputDeleteOtp) inputDeleteOtp.addEventListener('input', checkDeleteAccountPassword);
-    
+
     const btnSendDeleteOtp = document.getElementById('btn-send-delete-otp');
     if (btnSendDeleteOtp) btnSendDeleteOtp.addEventListener('click', sendDeleteAccountOtp);
-    
+
     const modalOverlay = document.getElementById('delete-account-modal');
     if (modalOverlay) {
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay) closeDeleteAccountModal();
         });
     }
-    
+
     const btnChangePw = document.getElementById('btn-change-pw');
     btnChangePw.addEventListener('click', changePassword);
 
@@ -1241,7 +1220,7 @@ function setupEventListeners() {
             const icon = btnToggle2Fa.querySelector('.toggle-icon');
             const text = btnToggle2Fa.querySelector('.toggle-text');
             const isExpanded = content.classList.contains('expanded');
-            
+
             if (isExpanded) {
                 content.classList.remove('expanded');
                 btnToggle2Fa.classList.remove('expanded');
@@ -1256,15 +1235,15 @@ function setupEventListeners() {
 
     const btnSetup2Fa = document.getElementById('btn-setup-2fa');
     if (btnSetup2Fa) btnSetup2Fa.addEventListener('click', handleSetup2FA);
-    
+
     const btnDisable2Fa = document.getElementById('btn-disable-2fa');
     if (btnDisable2Fa) btnDisable2Fa.addEventListener('click', handleDisable2FA);
-    
+
     const btnSendPwOtp = document.getElementById('btn-send-pw-otp');
     if (btnSendPwOtp) btnSendPwOtp.addEventListener('click', sendChangePasswordOtp);
-    
+
     document.getElementById('input-change-pw-otp')?.addEventListener('input', checkPasswordChanges);
-    
+
     document.querySelectorAll('.toggle-password').forEach(icon => {
         icon.addEventListener('click', function() {
             const input = this.previousElementSibling;
@@ -1340,25 +1319,25 @@ function setupEventListeners() {
         const el = document.getElementById(id);
         if(el) el.addEventListener('input', checkPasswordChanges);
     });
-    
+
     ['input-hoten', 'input-tuoi', 'input-gioitinh', 'input-diachi', 'input-truonghoc', 'input-khoanganh'].forEach(id => {
         document.getElementById(id).addEventListener('input', checkProfileChanges);
         document.getElementById(id).addEventListener('change', checkProfileChanges);
     });
-    
+
     ['input-privacy-downloads', 'input-privacy-ratings'].forEach(id => {
         document.getElementById(id).addEventListener('change', checkProfileChanges);
     });
     const gioiTinhEl = document.getElementById('input-gioitinh');
     if(gioiTinhEl) gioiTinhEl.addEventListener('change', checkProfileChanges);
-    
+
     const btnTogglePwd = document.getElementById('btn-toggle-pwd');
     if (btnTogglePwd) {
         btnTogglePwd.addEventListener('click', () => {
             const content = document.getElementById('pwd-content');
             const textSpan = btnTogglePwd.querySelector('.toggle-text');
             const isExpanded = content.classList.contains('expanded');
-            
+
             if (isExpanded) {
                 content.classList.remove('expanded');
                 btnTogglePwd.classList.remove('expanded');
@@ -1370,7 +1349,7 @@ function setupEventListeners() {
             }
         });
     }
-    
+
     setupTabListeners();
 
     const btnEditAvatar = document.querySelector('.btn-edit-avatar');
@@ -1462,7 +1441,6 @@ function setupEventListeners() {
         }
     }
 
-    
     const btnNotif = document.getElementById('btn-notifications');
     const dropdown = document.getElementById('notif-dropdown');
     if (!btnNotif || !dropdown) return;
@@ -1474,7 +1452,7 @@ function setupEventListeners() {
     document.addEventListener('click', () => {
         dropdown.style.display = 'none';
     });
-    
+
     dropdown.addEventListener('click', (e) => {
         e.stopPropagation(); 
     });
@@ -1488,10 +1466,10 @@ async function sendChangePasswordOtp() {
 
     const btn = document.getElementById('btn-send-pw-otp');
     const originalText = btn.innerHTML;
-    
+
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
     btn.disabled = true;
-    
+
     try {
         const res = await fetch(`${API_URL}/users/send-change-password-otp`, {
             method: 'POST',
@@ -1501,11 +1479,11 @@ async function sendChangePasswordOtp() {
             },
             body: JSON.stringify({ matKhauCu })
         });
-        
+
         const data = await res.json();
         if (res.ok) {
             Toast.fire({ icon: 'success', title: data.message });
-            
+
             let timeLeft = 60;
             const timerId = setInterval(() => {
                 if (timeLeft <= 0) {
@@ -1534,7 +1512,7 @@ function addLoadMoreButton(container, step = 5) {
     let visibleCount = step;
     const items = container.querySelectorAll('.doc-item');
     if (items.length <= visibleCount) return;
-    
+
     items.forEach((item, idx) => {
         if (idx >= visibleCount) item.style.display = 'none';
     });
@@ -1544,7 +1522,7 @@ function addLoadMoreButton(container, step = 5) {
     btnWrapper.style.marginTop = '15px';
     btnWrapper.style.width = '100%';
     btnWrapper.className = 'load-more-wrapper';
-    
+
     const btn = document.createElement('button');
     btn.className = 'btn-outline-primary btn-load-more';
     btn.innerHTML = '<i class="fa-solid fa-angle-down" style="margin-right: 6px;"></i> Tải thêm';
@@ -1552,7 +1530,7 @@ function addLoadMoreButton(container, step = 5) {
     btn.style.borderRadius = '20px';
     btn.style.fontWeight = '500';
     btn.style.transition = 'all 0.3s ease';
-    
+
     btn.onclick = () => {
         const nextVisible = visibleCount + step;
         for (let i = visibleCount; i < nextVisible && i < items.length; i++) {
@@ -1563,7 +1541,7 @@ function addLoadMoreButton(container, step = 5) {
             btnWrapper.style.display = 'none';
         }
     };
-    
+
     btnWrapper.appendChild(btn);
     container.appendChild(btnWrapper);
 }
@@ -1574,7 +1552,7 @@ if (upgradeHeader) {
         const content = document.getElementById('upgrade-teacher-content');
         const textSpan = upgradeHeader.querySelector('.toggle-text');
         const isExpanded = content.classList.contains('expanded');
-        
+
         if (isExpanded) {
             content.classList.remove('expanded');
             upgradeHeader.classList.remove('expanded');
@@ -1609,13 +1587,13 @@ if (fileInput && btnSubmitUpgrade) {
                 resetPreview();
                 return;
             }
-            
+
             const reader = new FileReader();
             reader.onload = function(e) {
                 previewImg.src = e.target.result;
                 if (uploadZone) uploadZone.style.display = 'none';
                 if (previewZone) previewZone.style.display = 'block';
-                
+
                 btnSubmitUpgrade.disabled = false;
                 btnSubmitUpgrade.style.opacity = '1';
                 btnSubmitUpgrade.style.cursor = 'pointer';
@@ -1632,7 +1610,7 @@ if (fileInput && btnSubmitUpgrade) {
             resetPreview();
         });
     }
-    
+
     function resetPreview() {
         if (uploadZone) uploadZone.style.display = 'block';
         if (previewZone) previewZone.style.display = 'none';
@@ -1705,7 +1683,7 @@ async function handleSetup2FA() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        
+
         if (!res.ok) throw new Error(data.message || 'Không thể thiết lập 2FA');
 
         const { value: totpCode } = await Swal.fire({
@@ -1747,7 +1725,7 @@ async function handleSetup2FA() {
                 body: JSON.stringify({ token: totpCode })
             });
             const verifyData = await verifyRes.json();
-            
+
             if (verifyRes.ok) {
                 Swal.fire('Thành công', 'Xác thực 2 bước đã được bật.', 'success');
                 document.getElementById('btn-setup-2fa').style.display = 'none';
@@ -1785,7 +1763,7 @@ async function handleDisable2FA() {
                 body: JSON.stringify({ password })
             });
             const data = await res.json();
-            
+
             if (res.ok) {
                 Swal.fire('Thành công', data.message, 'success');
                 document.getElementById('btn-setup-2fa').style.display = 'inline-block';

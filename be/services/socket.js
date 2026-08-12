@@ -30,12 +30,10 @@ const initSocket = (server, app) => {
         const userId = socket.user.MaND.toString();
         if (!userSockets.has(userId)) {
             userSockets.set(userId, new Set());
-            // Broadcast user is online
             io.emit('user_status_change', { userId, status: 'online' });
         }
         userSockets.get(userId).add(socket.id);
-        
-        // Trả về trạng thái online của tất cả liên hệ cho user mới kết nối
+
         socket.emit('initial_status', Array.from(userSockets.keys()));
 
         socket.on('join_document', (docId) => {
@@ -49,12 +47,11 @@ const initSocket = (server, app) => {
         socket.on('leave_document', (docId) => {
             socket.leave(`document_${docId}`);
         });
-        
+
         socket.on('leave_group', (groupId) => {
             socket.leave(`group_${groupId}`);
         });
 
-        // Xử lý chat 1-1
         socket.on('send_message', async (data) => {
             const { receiverId, text, type, replyToId } = data;
             const senderId = socket.user.MaND;
@@ -62,13 +59,12 @@ const initSocket = (server, app) => {
             if (!receiverId || !text || !text.trim()) return;
 
             try {
-                // Lưu vào DB
                 const pool = app.locals.pool;
                 const [result] = await pool.execute(
                     'INSERT INTO TINNHAN (NguoiGui, NguoiNhan, NoiDung, LoaiTinNhan, TraLoiCho_MaTN) VALUES (?, ?, ?, ?, ?)',
                     [senderId, receiverId, text.trim(), messageType, replyToId || null]
                 );
-                
+
                 const messageObj = {
                     MaTN: result.insertId,
                     NguoiGui: senderId,
@@ -83,19 +79,16 @@ const initSocket = (server, app) => {
                     TraLoiCho_MaTN: replyToId || null
                 };
 
-                // Gửi cho người nhận nếu online
                 const receiverSockets = userSockets.get(receiverId.toString());
                 if (receiverSockets && receiverSockets.size > 0) {
                     receiverSockets.forEach(sockId => {
                         io.to(sockId).emit('receive_message', messageObj);
                     });
-                    
-                    // Đánh dấu là đã nhận (Delivered) vì đối phương đang online
+
                     await pool.execute('UPDATE TINNHAN SET DaNhan = 1 WHERE MaTN = ?', [result.insertId]);
                     messageObj.DaNhan = 1;
                 }
 
-                // Trả về cho người gửi để hiển thị
                 socket.emit('message_sent', messageObj);
 
             } catch (err) {
@@ -117,7 +110,6 @@ const initSocket = (server, app) => {
             }
         });
 
-        // Hỗ trợ thu hồi / react qua socket cho mượt
         socket.on('message_unsent', (data) => {
             const receiverSockets = userSockets.get(data.receiverId.toString());
             if (receiverSockets) {

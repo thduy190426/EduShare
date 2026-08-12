@@ -6,7 +6,7 @@ router.get('/', async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT TenCauHinh, GiaTri, MoTa FROM CAUHINH_HETHONG');
-        
+
         const settings = {};
         rows.forEach(row => {
             settings[row.TenCauHinh] = {
@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
                 moTa: row.MoTa
             };
         });
-        
+
         res.status(200).json(settings);
     } catch (error) {
         console.error('Lỗi khi lấy cấu hình hệ thống:', error);
@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 
 router.put('/', adminMiddleware, async (req, res) => {
     const updates = req.body; 
-    
+
     if (!updates || typeof updates !== 'object') {
         return res.status(400).json({ message: 'Dữ liệu cập nhật không hợp lệ.' });
     }

@@ -1,15 +1,23 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = async (req, res, next) => {
-    const authHeader = req.header('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token = null;
+    if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    } else {
+        const authHeader = req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.split(' ')[1];
+        }
+    }
+
+    if (!token) {
         return res.status(401).json({ message: 'Không tìm thấy token xác thực.' });
     }
 
-    const token = authHeader.split(' ')[1];
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        
+
         const pool = req.app.locals.pool;
         if (pool) {
             const [userRows] = await pool.execute('SELECT TrangThai, VaiTro FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
@@ -21,7 +29,7 @@ const authMiddleware = async (req, res, next) => {
             }
             decoded.VaiTro = userRows[0].VaiTro;
         }
-        
+
         req.user = decoded;
         next();
     } catch (err) {

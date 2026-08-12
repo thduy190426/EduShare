@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function setupPromoCode() {
     const btnApply = document.getElementById("btn-apply-promo");
     const inputCode = document.getElementById("promo-code-input");
-    
+
     if (btnApply && inputCode) {
         inputCode.addEventListener("input", (e) => {
             if (e.target.value.trim().length > 0) {
@@ -48,7 +48,7 @@ function setupPromoCode() {
                 });
 
                 const data = await res.json();
-                
+
                 if (res.ok) {
                     activePromo = code;
                     promoDiscount = data.discountPercent / 100;
@@ -76,7 +76,7 @@ async function fetchPackages() {
     try {
         const response = await fetch(`${API_URL}/payment/packages`);
         if (!response.ok) throw new Error("Failed to fetch packages");
-        
+
         const data = await response.json();
         currentPackages = data.packages || [];
         renderPackages(currentPackages);
@@ -93,13 +93,13 @@ function renderPackages(packages) {
     packages.forEach((pkg, index) => {
         const baseCoins = pkg.price / 100;
         let finalCoins = pkg.coins;
-        
+
         if (promoDiscount > 0) {
             finalCoins = Math.floor(finalCoins * (1 + promoDiscount));
         }
 
         let discountHtml = "";
-        
+
         if (finalCoins > baseCoins) {
             const bonus = finalCoins - baseCoins;
             const percent = Math.round((bonus / baseCoins) * 100);
@@ -149,7 +149,7 @@ async function handleBuy(packageId, cardElement) {
             document.getElementById("qrCodeImage").src = data.qrUrl;
             document.getElementById("qrAmount").textContent = `${data.amount.toLocaleString('vi-VN')} VNĐ`;
             document.getElementById("qrAddInfo").textContent = data.addInfo;
-            
+
             const modal = document.getElementById("qrModal");
             modal.classList.remove("hide");
             modal.classList.add("show");
@@ -157,7 +157,7 @@ async function handleBuy(packageId, cardElement) {
 
             const closeBtn = document.getElementById("btn-close-qr");
             const markBtn = document.getElementById("btn-close-mark");
-            
+
             const closeModal = () => {
                 modal.classList.remove("show");
                 modal.classList.add("hide");

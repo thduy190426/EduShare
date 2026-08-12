@@ -30,7 +30,7 @@ describe('Payment API', () => {
             .post('/api/payment/create')
             .set('Authorization', `Bearer ${token}`)
             .send({ packageId: 'invalid_pkg' });
-            
+
         expect(response.status).toBe(400);
         expect(response.body.message).toBe('Gói nạp không hợp lệ.');
     });
@@ -49,7 +49,7 @@ describe('Payment API', () => {
             .post('/api/payment/create')
             .set('Authorization', `Bearer ${token}`)
             .send({ packageId: 'G10K' });
-            
+
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('maGD');
     });
@@ -65,7 +65,7 @@ describe('Payment API', () => {
         const response = await request(app)
             .post('/api/payment/approve/999')
             .set('Authorization', `Bearer ${token}`);
-            
+
         expect(response.status).toBe(404);
         expect(response.body.message).toBe('Không tìm thấy giao dịch.');
     });

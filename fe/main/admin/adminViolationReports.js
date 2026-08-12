@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentSortBy = sortKey;
                 currentOrder = 'ASC';
             }
-            
+
             sortHeaders.forEach(header => {
                 const icon = header.querySelector('.fa-sort, .fa-sort-up, .fa-sort-down');
                 if (icon) {
@@ -56,13 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     icon.style.color = '#9ca3af';
                 }
             });
-            
+
             const activeIcon = th.querySelector('.sort-icon, .fa-sort, .fa-sort-up, .fa-sort-down');
             if (activeIcon) {
                 activeIcon.className = currentOrder === 'ASC' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
                 activeIcon.style.color = 'var(--primary)';
             }
-            
+
             fetchReports();
         });
     });
@@ -135,13 +135,13 @@ async function fetchCounts() {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         if (response.ok) {
             const counts = await response.json();
             const pendingCountTab = document.getElementById("pending-count-tab");
             const approvedCountTab = document.getElementById("approved-count-tab");
             const rejectedCountTab = document.getElementById("rejected-count-tab");
-            
+
             if (pendingCountTab) pendingCountTab.textContent = counts.ChoXuLy || 0;
             if (approvedCountTab) approvedCountTab.textContent = counts.DaXuLy || 0;
             if (rejectedCountTab) rejectedCountTab.textContent = counts.TuChoi || 0;
@@ -165,7 +165,7 @@ async function fetchReports() {
 
         const data = await res.json();
         renderReports(data.data || []);
-        
+
         if (data.pagination) {
             renderPagination('report-pagination', data.pagination.totalPages, currentPage, (page) => {
                 currentPage = page;
@@ -180,7 +180,7 @@ async function fetchReports() {
 function renderReports(reports) {
     const tbody = document.getElementById('report-list');
     tbody.innerHTML = '';
-    
+
     updateBulkToolbar();
 
     if (reports.length === 0) {
@@ -190,16 +190,16 @@ function renderReports(reports) {
 
     reports.forEach((report, index) => {
         const tr = document.createElement('tr');
-        
+
         const d = new Date(report.NgayBaoCao);
         const timeStr = d.toLocaleTimeString('vi-VN');
         const dateStrFormatted = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth()+1).padStart(2, '0')}/${d.getFullYear()}`;
-        
+
         const initial = report.NguoiBaoCao ? report.NguoiBaoCao.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
         const avatarHtml = report.AvatarNguoiBaoCao && report.AvatarNguoiBaoCao !== 'null'
             ? `<img src="${getAssetUrl(report.AvatarNguoiBaoCao)}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<div style=\\'width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;\\'>${initial}</div>';">`
             : `<div style="width: 28px; height: 28px; border-radius: 50%; background: #EFF6FF; color: #2563EB; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">${initial}</div>`;
-        
+
         let statusBadge = '';
         if (report.TrangThai === 'ChoXuLy') statusBadge = '<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span style="color:var(--warning); font-size:14px; font-weight:600;">Chờ xử lý</span></div>';
         else if (report.TrangThai === 'DaXuLy') statusBadge = '<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--success);"></span><span style="color:var(--success); font-size:14px; font-weight:600;">Đã xử lý (Xóa TL)</span></div>';
@@ -224,35 +224,35 @@ function renderReports(reports) {
         }
 
         tr.innerHTML = `
-            <td style="text-align: center;">
+            <td style="text-align: center;" data-label="">
                 <input type="checkbox" class="report-checkbox" value="${report.MaBC}" style="cursor: pointer;">
             </td>
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">
                 <span>${(currentPage - 1) * limit + index + 1}</span>
             </td>
-            <td>
+            <td data-label="Người báo cáo">
                 <div style="display:flex; align-items:center; flex-direction:row; gap:8px;">
                   ${avatarHtml}
                   <span style="font-weight:500; font-size:14px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${report.NguoiBaoCao}">${report.NguoiBaoCao}</span>
                 </div>
             </td>
-            <td>
+            <td data-label="Tài liệu vi phạm">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <i class="fa-solid fa-file-pdf" style="color: #DC2626; font-size: 1.2rem;"></i>
                     <div style="font-weight:600; color:var(--text-primary); max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${report.TenTL}">${report.TenTL}</div>
                 </div>
             </td>
-            <td>
+            <td data-label="Lý do chi tiết">
                 <div style="font-size: 13px; color: var(--text-secondary); max-height: 40px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;" title="${report.LyDo}">${report.LyDo}</div>
             </td>
-            <td>
+            <td data-label="Ngày báo cáo">
                 <div style="font-size:13px; color:var(--text-secondary);">
                     <div>${timeStr}</div>
                     <div>${dateStrFormatted}</div>
                 </div>
             </td>
-            <td>${statusBadge}</td>
-            <td>${actionHtml}</td>
+            <td data-label="Trạng thái">${statusBadge}</td>
+            <td data-label="Thao tác">${actionHtml}</td>
         `;
 
         tbody.appendChild(tr);

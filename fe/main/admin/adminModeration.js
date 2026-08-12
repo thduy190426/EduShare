@@ -17,13 +17,13 @@ document.addEventListener("DOMContentLoaded", () => {
       tab.addEventListener('click', (e) => {
           tabs.forEach(t => t.classList.remove('active'));
           e.currentTarget.classList.add('active');
-          
+
           currentTabStatus = e.currentTarget.getAttribute('data-status');
           currentPage = 1;
-          
+
           const selectAllDocs = document.getElementById("selectAllDocs");
           if (selectAllDocs) selectAllDocs.checked = false;
-          
+
           fetchDocuments(currentTabStatus);
       });
   });
@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
               currentSortBy = sortKey;
               currentOrder = 'ASC';
           }
-          
+
           sortHeaders.forEach(header => {
               const icon = header.querySelector('.fa-sort, .fa-sort-up, .fa-sort-down');
               if (icon) {
@@ -46,13 +46,13 @@ document.addEventListener("DOMContentLoaded", () => {
                   icon.style.color = '#9ca3af';
               }
           });
-          
+
           const activeIcon = th.querySelector('.sort-icon, .fa-sort, .fa-sort-up, .fa-sort-down');
           if (activeIcon) {
               activeIcon.className = currentOrder === 'ASC' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
               activeIcon.style.color = 'var(--primary)';
           }
-          
+
           fetchDocuments(currentTabStatus);
       });
   });
@@ -89,7 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (btnCloseModal) btnCloseModal.addEventListener("click", closeModal);
   if (btnCancelModal) btnCancelModal.addEventListener("click", closeModal);
 
-  
   const reasonInput = document.getElementById("reject-reason-input");
   if (reasonInput && btnConfirmReject) {
     reasonInput.addEventListener('input', () => {
@@ -203,7 +202,7 @@ async function fetchDocuments(status) {
     const data = await response.json();
     renderDocuments(data.data || [], status);
     fetchCounts();
-    
+
     if (data.pagination) {
         renderPagination('moderation-pagination', data.pagination.totalPages, currentPage, (page) => {
             currentPage = page;
@@ -227,13 +226,13 @@ async function fetchCounts() {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` }
     });
-    
+
     if (response.ok) {
       const counts = await response.json();
       const pendingCountTab = document.getElementById("pending-count-tab");
       const approvedCountTab = document.getElementById("approved-count-tab");
       const rejectedCountTab = document.getElementById("rejected-count-tab");
-      
+
       if (pendingCountTab) pendingCountTab.textContent = counts.ChoDuyet || 0;
       if (approvedCountTab) approvedCountTab.textContent = counts.DaDuyet || 0;
       if (rejectedCountTab) rejectedCountTab.textContent = counts.TuChoi || 0;
@@ -248,7 +247,7 @@ function renderDocuments(documents, status) {
   if (!tbody) return;
 
   tbody.innerHTML = "";
-  
+
   updateBulkToolbar();
 
   if (documents.length === 0) {
@@ -267,7 +266,7 @@ function renderDocuments(documents, status) {
     let iconColor = "#64748B";
     let iconBg = "#F1F5F9";
     let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : "";
-    
+
     if (loaiFile === "pdf") {
       icon = "fa-file-pdf";
       iconColor = "#DC2626";
@@ -290,7 +289,7 @@ function renderDocuments(documents, status) {
 
     if (status === 'ChoDuyet') {
         statusBadgeHtml = `<div style="display:flex; align-items:center; gap:6px;"><span style="width:8px; height:8px; border-radius:50%; background:var(--warning);"></span><span style="color:var(--warning); font-size:14px; font-weight:600;">Chờ duyệt</span></div>`;
-        
+
         if (doc.PhanHoiTuChoi) {
             statusBadgeHtml += `<div style="display:inline-flex; align-items:center; gap:4px; font-size:12px; color:#D97706; background: #FEF3C7; padding: 3px 8px; border-radius: 12px; margin-top: 6px; border: 1px solid #FDE68A; cursor:pointer; font-weight: 500;" onclick="Swal.fire({title: 'Người dùng phản hồi', text: \`${doc.PhanHoiTuChoi.replace(/`/g, '\\`')}\`, icon: 'info', confirmButtonColor: '#3B82F6'})"><i class="fa-solid fa-comment-dots"></i> Xem phản hồi</div>`;
         }
@@ -306,12 +305,12 @@ function renderDocuments(documents, status) {
             <span style="color:var(--success); font-size:14px; font-weight:600;">Đã duyệt</span>
             ${isHidden ? '<span style="background:#f1f5f9; color:#475569; font-size:12px; padding:2px 6px; border-radius:12px; font-weight:500; margin-left:4px;"><i class="fa-solid fa-eye-slash"></i> Đã ẩn</span>' : ''}
         </div>`;
-        
+
         const toggleIcon = isHidden ? 'fa-eye' : 'fa-eye-slash';
         const toggleTitle = isHidden ? 'Hiện tài liệu' : 'Ẩn tài liệu';
         const toggleColor = isHidden ? '#10b981' : '#f59e0b';
         const toggleBg = isHidden ? '#ecfdf5' : '#fef3c7';
-        
+
         actionBtnsHtml += `
             <button class="btn-action btn-toggle-visibility" style="background:${toggleBg}; color:${toggleColor}; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="${toggleTitle}" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}" data-status="${doc.TrangThaiHienThi}"><i class="fa-solid ${toggleIcon}"></i></button>
             <button class="btn-action btn-delete-doc" style="background:#fef2f2; color:#ef4444; padding:4px 8px; border:none; border-radius:4px; cursor:pointer; margin-left:8px;" title="Xóa vĩnh viễn" data-id="${doc.MaTL}" data-title="${escapeHTML(doc.TenTL)}"><i class="fa-solid fa-trash"></i></button>
@@ -350,28 +349,28 @@ function renderDocuments(documents, status) {
     }
 
         tr.innerHTML = `
-            <td style="text-align: center;">
+            <td style="text-align: center;" data-label="">
                 ${status === 'ChoDuyet' ? `<input type="checkbox" class="doc-checkbox" value="${doc.MaTL}" style="cursor: pointer;">` : ''}
             </td>
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">
                 <span>${(currentPage - 1) * limit + index + 1}</span>
             </td>
-            <td>
+            <td data-label="Tên tài liệu">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <i class="fa-solid ${icon}" style="color: ${iconColor}; font-size: 1.4rem;"></i>
                     <div class="doc-name" style="font-weight:600; color:var(--text-primary); max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${doc.TenTL}">${doc.TenTL}</div>
                 </div>
             </td>
-            <td>
+            <td data-label="Người đăng">
                 <div class="uploader-info" style="display:flex; align-items:center; flex-direction:row; gap:8px;">
                   ${avatarHtml}
                   <span style="font-weight:500; font-size:14px; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${tenNguoiDang}">${tenNguoiDang}</span>
                 </div>
             </td>
-            <td>${doc.TenMonHoc || "Không có"}</td>
-            <td>${dateStr}</td>
-            <td>${statusBadgeHtml}</td>
-            <td>
+            <td data-label="Môn học">${doc.TenMonHoc || "Không có"}</td>
+            <td data-label="Ngày đăng">${dateStr}</td>
+            <td data-label="Trạng thái">${statusBadgeHtml}</td>
+            <td data-label="Thao tác">
                 <div class="action-btns" style="display:flex; gap:8px;">
                   ${actionBtnsHtml}
                 </div>
@@ -450,9 +449,9 @@ function renderDocuments(documents, status) {
       const title = e.currentTarget.getAttribute("data-title");
       const currentStatus = e.currentTarget.getAttribute("data-status");
       const isHidden = currentStatus === 'An';
-      
+
       const actionText = isHidden ? "hiện" : "ẩn";
-      
+
       if (
         (
           await Swal.fire({

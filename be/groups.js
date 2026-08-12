@@ -46,7 +46,6 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-
 router.post('/', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), async (req, res) => {
     const { tenNhom, moTa, maMonHoc } = req.body;
     const maND = req.user.MaND;
@@ -61,13 +60,11 @@ router.post('/', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), asyn
     try {
         await conn.beginTransaction();
 
-
         const [groupResult] = await conn.execute(
             'INSERT INTO NHOM (TenNhom, MoTa, MaND_QuanTri, MaMonHoc) VALUES (?, ?, ?, ?)',
             [tenNhom, moTa || '', maND, maMonHoc || null]
         );
         const maNhom = groupResult.insertId;
-
 
         await conn.execute(
             'INSERT INTO THANHVIEN_NHOM (MaND, MaNhom, VaiTroTrongNhom) VALUES (?, ?, ?)',
@@ -195,7 +192,6 @@ router.post('/:maNhom/join', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-
         const [groupCheck] = await pool.execute('SELECT TrangThai, MaND_QuanTri, TenNhom FROM NHOM WHERE MaNhom = ?', [maNhom]);
         if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
         if (groupCheck[0].TrangThai !== 'HoatDong') return res.status(400).json({ message: 'Nhóm đã bị khóa.' });
@@ -291,7 +287,7 @@ router.post('/:maNhom/leave', authMiddleware, async (req, res) => {
                     nextAdminId = newAdminId;
                 }
             }
-            
+
             if (!nextAdminId) {
                 const [nextAdminRows] = await conn.execute(`
                     SELECT MaND
@@ -322,7 +318,6 @@ router.post('/:maNhom/leave', authMiddleware, async (req, res) => {
             }
         }
 
-
         await conn.execute('DELETE FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
         await conn.commit();
 
@@ -335,7 +330,6 @@ router.post('/:maNhom/leave', authMiddleware, async (req, res) => {
         conn.release();
     }
 });
-
 
 router.get('/:maNhom/members', authMiddleware, async (req, res) => {
     const maNhom = req.params.maNhom;
@@ -401,7 +395,7 @@ router.delete('/:maNhom/members/:memberId', authMiddleware, async (req, res) => 
         if (memberRows.length === 0) {
             return res.status(404).json({ message: 'Không tìm thấy thành viên trong nhóm.' });
         }
-        
+
         const targetRole = memberRows[0].VaiTroTrongNhom;
         if (adminRole === 'PhoNhom' && targetRole !== 'ThanhVien') {
             return res.status(403).json({ message: 'Phó nhóm chỉ có quyền đuổi Thành viên thường.' });
@@ -436,12 +430,10 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
 
-
         const [memberRows] = await pool.execute('SELECT * FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
         if (memberRows.length === 0) {
             return res.status(403).json({ message: 'Bạn không phải là thành viên của nhóm này.' });
         }
-
 
         const [docRows] = await pool.execute('SELECT MaND_NguoiDang, TrangThaiKiemDuyet, TrangThaiHienThi FROM TAILIEU WHERE MaTL = ?', [maTL]);
         if (docRows.length === 0) {
@@ -452,7 +444,6 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
             return res.status(403).json({ message: 'Tài liệu chưa được duyệt, bị ẩn hoặc bạn không có quyền chia sẻ tài liệu này.' });
         }
 
-
         const [docCheckRows] = await pool.execute('SELECT * FROM TAILIEU_NHOM WHERE MaTL = ? AND MaNhom = ?', [maTL, maNhom]);
         if (docCheckRows.length > 0) {
             return res.status(400).json({ message: 'Tài liệu này đã được chia sẻ trong nhóm.' });
@@ -460,7 +451,7 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
 
         const [settingRows] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "MAX_DOCS_PER_GROUP"');
         const MAX_DOCS_PER_GROUP = settingRows.length > 0 ? parseInt(settingRows[0].GiaTri, 10) : 25;
-        
+
         const [countRows] = await pool.execute('SELECT COUNT(*) AS total FROM TAILIEU_NHOM WHERE MaNhom = ?', [maNhom]);
         if (countRows[0].total >= MAX_DOCS_PER_GROUP) {
             return res.status(400).json({ message: `Nhóm đã đạt giới hạn tối đa ${MAX_DOCS_PER_GROUP} tài liệu. Vui lòng gỡ bớt tài liệu cũ để chia sẻ thêm.` });
@@ -474,7 +465,6 @@ router.post('/:maNhom/share-document', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-
 
 router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
     const maNhom = req.params.maNhom;
@@ -547,7 +537,7 @@ router.get('/:maNhom/documents', authMiddleware, async (req, res) => {
         if (!isGroupAdmin) {
             query += " AND TN.TrangThai = 'Hien'";
         }
-        
+
         if (searchQuery) {
             const booleanQuery = buildBooleanSearchQuery(searchQuery);
             if (booleanQuery) {
@@ -614,12 +604,12 @@ router.put('/:maNhom/documents/:maTL/toggle-status', authMiddleware, async (req,
         if (docCheck.length > 0) {
             const tenTL = docCheck[0].TenTL;
             const nguoiDangId = docCheck[0].MaND_NguoiDang;
-            
+
             if (String(nguoiDangId) !== String(maND)) {
                 const actionText = newStatus === 'An' ? 'ẩn' : 'hiện lại';
                 const thongBaoMsg = `Tài liệu "${tenTL}" của bạn đã bị quản trị viên ${actionText} trong nhóm "${tenNhom}".`;
                 const linkDich = `/fe/pages/group/groupDetails.html?id=${maNhom}`;
-                
+
                 await conn.execute(
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [nguoiDangId, 'HeThong', thongBaoMsg, linkDich]
@@ -638,7 +628,6 @@ router.put('/:maNhom/documents/:maTL/toggle-status', authMiddleware, async (req,
     }
 });
 
-
 router.get('/:maNhom', authMiddleware, async (req, res) => {
     const maNhom = req.params.maNhom;
     try {
@@ -652,7 +641,6 @@ router.get('/:maNhom', authMiddleware, async (req, res) => {
         `, [maNhom]);
 
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
-
 
         const [memberCheck] = await pool.execute('SELECT * FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
         const [requestCheck] = await pool.execute('SELECT * FROM YEUCAUTHAMGIA_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
@@ -744,20 +732,20 @@ router.delete('/:maNhom/documents/:maTL', authMiddleware, async (req, res) => {
         }
 
         const [docCheck] = await conn.execute('SELECT TenTL, MaND_NguoiDang FROM TAILIEU WHERE MaTL = ?', [maTL]);
-        
+
         await conn.execute('DELETE FROM TAILIEU_NHOM WHERE MaNhom = ? AND MaTL = ?', [maNhom, maTL]);
 
         if (docCheck.length > 0) {
             const tenTL = docCheck[0].TenTL;
             const nguoiDangId = docCheck[0].MaND_NguoiDang;
-            
+
             if (String(nguoiDangId) !== String(maND)) {
                 let thongBaoMsg = `Tài liệu "${tenTL}" của bạn đã bị quản trị viên ẩn/xóa khỏi nhóm "${tenNhom}".`;
                 if (lyDo && lyDo.trim()) {
                     thongBaoMsg += ` Lý do: ${lyDo.trim()}`;
                 }
                 const linkDich = `/fe/pages/document/documentDetails.html?id=${maTL}`;
-                
+
                 await conn.execute(
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [nguoiDangId, 'HeThong', thongBaoMsg, linkDich]
@@ -782,7 +770,7 @@ router.get('/:maNhom/requests', authMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
-        
+
         const [adminRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
         if (adminRows.length === 0 || (adminRows[0].VaiTroTrongNhom !== 'QuanTri' && adminRows[0].VaiTroTrongNhom !== 'PhoNhom')) {
             return res.status(403).json({ message: 'Bạn không có quyền xem danh sách chờ duyệt.' });
@@ -847,7 +835,7 @@ router.post('/:maNhom/requests/:targetId/reject', authMiddleware, async (req, re
 
     try {
         const pool = req.app.locals.pool;
-        
+
         const [adminRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
         if (adminRows.length === 0 || (adminRows[0].VaiTroTrongNhom !== 'QuanTri' && adminRows[0].VaiTroTrongNhom !== 'PhoNhom')) {
             return res.status(403).json({ message: 'Bạn không có quyền từ chối yêu cầu này.' });
@@ -873,7 +861,7 @@ router.put('/:maNhom/members/:targetId/role', authMiddleware, async (req, res) =
 
     try {
         const pool = req.app.locals.pool;
-        
+
         const [adminRows] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
         if (adminRows.length === 0 || adminRows[0].VaiTroTrongNhom !== 'QuanTri') {
             return res.status(403).json({ message: 'Chỉ Trưởng nhóm mới có quyền thay đổi vai trò.' });
@@ -907,10 +895,10 @@ router.get('/:maNhom/posts', authMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
-        
+
         const [groupCheck] = await pool.execute('SELECT IsPrivate FROM NHOM WHERE MaNhom = ?', [maNhom]);
         if (groupCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy nhóm.' });
-        
+
         const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, req.user.MaND]);
         if (memberCheck.length === 0 && req.user.VaiTro !== 'Admin' && groupCheck[0].IsPrivate) {
             return res.status(403).json({ message: 'Bạn không có quyền xem nhóm này.' });
@@ -952,7 +940,7 @@ router.post('/:maNhom/posts', authMiddleware, moderationMiddleware(['noiDung']),
 
     try {
         const pool = req.app.locals.pool;
-        
+
         const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, maND]);
         if (memberCheck.length === 0) {
             return res.status(403).json({ message: 'Bạn không phải là thành viên nhóm này.' });
@@ -1001,20 +989,20 @@ router.delete('/:maNhom/posts/:postId', authMiddleware, async (req, res) => {
 
     try {
         const pool = req.app.locals.pool;
-        
+
         const [postCheck] = await pool.execute('SELECT MaND FROM BAIVIET_NHOM WHERE MaBaiViet = ? AND MaNhom = ?', [postId, maNhom]);
         if (postCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy bài viết.' });
-        
+
         const isAuthor = postCheck[0].MaND === maND;
         let isGroupAdmin = false;
-        
+
         if (!isAuthor) {
             const [adminCheck] = await pool.execute('SELECT VaiTroTrongNhom FROM THANHVIEN_NHOM WHERE MaND = ? AND MaNhom = ?', [maND, maNhom]);
             if (adminCheck.length > 0 && (adminCheck[0].VaiTroTrongNhom === 'QuanTri' || adminCheck[0].VaiTroTrongNhom === 'PhoNhom')) {
                 isGroupAdmin = true;
             }
         }
-        
+
         if (!isAuthor && !isGroupAdmin && req.user.VaiTro !== 'Admin') {
             return res.status(403).json({ message: 'Bạn không có quyền xóa bài viết này.' });
         }
@@ -1077,7 +1065,7 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddlew
         if (taggedUserIds.size > 0) {
             const [currentUserRows] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
             const currentUserHoTen = currentUserRows.length > 0 ? currentUserRows[0].HoTen : 'Một người dùng';
-            
+
             for (const taggedMaND of taggedUserIds) {
                 if (taggedMaND !== maND) {
                     await pool.execute(

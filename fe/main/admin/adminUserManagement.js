@@ -1,10 +1,12 @@
 import { API_URL } from '../shared/config.js';
 import { escapeHTML, getAssetUrl, getToken, showToast, renderPagination } from '../shared/utils.js';
 
-
 const token = getToken();
 let currentPage = 1;
 const limit = 10;
+
+let allBadges = [];
+let currentAssigningUserId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!token) {
@@ -14,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fetchUsers();
+    fetchBadges();
 
     ['input-search', 'filter-role', 'filter-status', 'filter-sort'].forEach(id => {
         document.getElementById(id)?.addEventListener(id === 'input-search' ? 'input' : 'change', () => {
@@ -33,14 +36,78 @@ document.addEventListener('DOMContentLoaded', () => {
         updateClearFilterButton();
     });
 
+    const closeBadgeModal = () => {
+        const modal = document.getElementById('badge-modal');
+        modal.classList.add('closing');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            modal.classList.remove('closing');
+        }, 250);
+    };
+
+    document.getElementById('close-badge-modal')?.addEventListener('click', closeBadgeModal);
+
+    document.getElementById('badge-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'badge-modal') closeBadgeModal();
+    });
+
+    document.getElementById('btn-submit-badge')?.addEventListener('click', async () => {
+        if (!currentAssigningUserId) return;
+        const badgeId = document.getElementById('badge-select').value;
+        const isPrimary = document.getElementById('badge-is-primary').checked;
+        
+        try {
+            const res = await fetch(`${API_URL}/badges/admin/assign`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ maND: currentAssigningUserId, maDanhHieu: badgeId, laDanhHieuChinh: isPrimary })
+            });
+            if (res.ok) {
+                showToast('success', 'Trao danh hiệu thành công!');
+                closeBadgeModal();
+                fetchUsers();
+            } else {
+                const data = await res.json();
+                showToast('error', data.message || 'Lỗi trao danh hiệu');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Lỗi kết nối máy chủ');
+        }
+    });
+
     updateClearFilterButton();
 });
+
+async function fetchBadges() {
+    try {
+        const res = await fetch(`${API_URL}/badges`);
+        if (res.ok) {
+            allBadges = await res.json();
+            const select = document.getElementById('badge-select');
+            if (select) {
+                select.innerHTML = allBadges.map(b => `<option value="${b.MaDanhHieu}">${b.TenDanhHieu}</option>`).join('');
+            }
+        }
+    } catch (err) {
+        console.error('Lỗi lấy danh hiệu:', err);
+    }
+}
+
+window.openBadgeModal = (maND, name) => {
+    currentAssigningUserId = maND;
+    document.getElementById('badge-user-name').innerText = name;
+    document.getElementById('badge-modal').style.display = 'flex';
+};
 
 function updateClearFilterButton() {
     const filters = getUserFilters();
     const btn = document.getElementById('btn-clear-filter');
     if (!btn) return;
-    
+
     const hasFilter = filters.search !== '' || filters.role !== '' || filters.status !== '' || filters.sort !== 'newest';
     if (hasFilter) {
         btn.disabled = false;
@@ -93,14 +160,14 @@ async function fetchUsers() {
 
         const data = await res.json();
         renderUsers(data.data || []);
-        
+
         if (data.pagination) {
             renderPagination('user-pagination', data.pagination.totalPages, currentPage, (newPage) => {
                 currentPage = newPage;
                 fetchUsers();
             });
         }
-        
+
         const selectAll = document.getElementById('selectAllUsers');
         if (selectAll) selectAll.checked = false;
         updateSelectedCount();
@@ -120,13 +187,13 @@ function renderUsers(users) {
 
     users.forEach((user, index) => {
         const tr = document.createElement('tr');
-        
+
         const userName = user.HoTen || 'Người dùng ẩn danh';
         const userEmail = user.Email || '';
         const initial = userName.trim().split(' ').pop().charAt(0).toUpperCase();
         let avatarHtml = `<div class="user-initial">${escapeHTML(initial)}</div>`;
         if (user.AvatarURL && user.AvatarURL !== 'null') {
-            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${escapeHTML(getAssetUrl(user.AvatarURL))}" alt="${escapeHTML(userName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.onerror=null; this.parentElement.style.background='#EFF6FF'; this.parentElement.style.color='#2563EB'; this.parentElement.innerHTML='${escapeHTML(initial)}';" /></div>`;
+            avatarHtml = `<div class="user-initial" style="background: transparent; color: transparent; overflow: hidden;"><img src="${escapeHTML(getAssetUrl(user.AvatarURL))}" alt="${escapeHTML(userName)}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" referrerpolicy="no-referrer" onerror="this.onerror=null; this.parentElement.style.background='#EFF6FF'; this.parentElement.style.color='#2563EB'; this.parentElement.innerHTML='${escapeHTML(initial)}';" /></div>`;
         }
 
         let roleBadgeClass = 'role-student';
@@ -159,37 +226,45 @@ function renderUsers(users) {
             joinDate = `${hh}:${mm}:${ss} <span style="color:var(--border); margin: 0 4px;">|</span> ${dd}/${mo}/${yyyy}`;
         }
 
+        let badgeHtml = '';
+        if (user.DanhHieu) {
+            badgeHtml = `<span style="margin-left: 6px; color: ${user.DanhHieuMauSac};" title="${escapeHTML(user.DanhHieu)}"><i class="${escapeHTML(user.DanhHieuIcon)}"></i></span>`;
+        }
+
         tr.innerHTML = `
-            <td style="text-align: center;"><input type="checkbox" class="user-checkbox" value="${user.MaND}" data-id="${user.MaND}" style="cursor: pointer; transform: scale(1.2);"></td>
-            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);">${index + 1}</td>
-            <td>
+            <td style="text-align: center;" data-label=""><input type="checkbox" class="user-checkbox" value="${user.MaND}" data-id="${user.MaND}" style="cursor: pointer; transform: scale(1.2);"></td>
+            <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1}</td>
+            <td data-label="Người dùng">
                 <div class="user-cell">
                   ${avatarHtml}
                   <div>
-                    <div class="user-name">${escapeHTML(userName)}</div>
+                    <div class="user-name" style="display: flex; align-items: center;">${escapeHTML(userName)} ${badgeHtml}</div>
                   </div>
                 </div>
             </td>
-            <td><span class="role-badge ${roleBadgeClass}">${roleName}</span></td>
-            <td class="email-cell" data-full="${escapeHTML(userEmail)}" data-masked="${escapeHTML(maskedEmail)}">
+            <td data-label="Vai trò"><span class="role-badge ${roleBadgeClass}">${roleName}</span></td>
+            <td class="email-cell" data-full="${escapeHTML(userEmail)}" data-masked="${escapeHTML(maskedEmail)}" data-label="Email">
                 <span class="email-text">${escapeHTML(maskedEmail)}</span>
                 <button class="btn-toggle-email" title="Hiện/ẩn Email" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); margin-left: 6px;">
                     <i class="fa-solid fa-eye"></i>
                 </button>
             </td>
-            <td><span style="color: var(--text-secondary); font-size: 13px; font-weight: 500;">${joinDate}</span></td>
-            <td><span class="${statusClass}"><span class="status-dot"></span>${statusText}</span></td>
-            <td>
+            <td data-label="Ngày tham gia"><span style="color: var(--text-secondary); font-size: 13px; font-weight: 500;">${joinDate}</span></td>
+            <td data-label="Trạng thái"><span class="${statusClass}"><span class="status-dot"></span>${statusText}</span></td>
+            <td data-label="Hành động">
               <div class="action-cell">
                 <select class="role-select" data-id="${user.MaND}">
                     <option value="SinhVien" ${user.VaiTro === 'SinhVien' ? 'selected' : ''}>Sinh viên</option>
                     <option value="GiaoVien" ${user.VaiTro === 'GiaoVien' ? 'selected' : ''}>Giáo viên</option>
                     <option value="Admin" ${user.VaiTro === 'Admin' ? 'selected' : ''}>Admin</option>
                 </select>
-                <button class="btn-action ${isActive ? 'btn-lock' : 'btn-unlock'} btn-toggle-status" data-id="${user.MaND}" data-status="${isActive ? 'BiKhoa' : 'HoatDong'}">
+                <button class="btn-action btn-assign-badge" data-id="${user.MaND}" data-name="${escapeHTML(userName)}" title="Trao danh hiệu" style="color: var(--primary);">
+                    <i class="fa-solid fa-award"></i>
+                </button>
+                <button class="btn-action ${isActive ? 'btn-lock' : 'btn-unlock'} btn-toggle-status" data-id="${user.MaND}" data-status="${isActive ? 'BiKhoa' : 'HoatDong'}" title="${isActive ? 'Khóa' : 'Mở khóa'}">
                     ${isActive ? '<i class="fa-solid fa-lock-open"></i>' : '<i class="fa-solid fa-lock"></i>'}
                 </button>
-                <button class="btn-action btn-delete" data-id="${user.MaND}" data-name="${escapeHTML(userName)}">
+                <button class="btn-action btn-delete" data-id="${user.MaND}" data-name="${escapeHTML(userName)}" title="Xóa">
                     <i class="fa-solid fa-trash"></i>
                 </button>
               </div>
@@ -214,11 +289,14 @@ function renderUsers(users) {
     document.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => window.deleteUser(e.currentTarget.dataset.id, e.currentTarget.dataset.name));
     });
+    document.querySelectorAll('.btn-assign-badge').forEach(btn => {
+        btn.addEventListener('click', (e) => window.openBadgeModal(e.currentTarget.dataset.id, e.currentTarget.dataset.name));
+    });
 }
 
 window.changeRole = async (maND, newRole) => {
     if (!(await Swal.fire({ title: 'Xác nhận', text: 'Bạn có chắc chắn muốn thay đổi quyền của người dùng này?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Đồng ý', cancelButtonText: 'Hủy' })).isConfirmed) return;
-    
+
     try {
         const res = await fetch(`${API_URL}/admin/users/${maND}/role`, {
             method: 'PUT',
@@ -293,11 +371,11 @@ window.updateSelectedCount = () => {
     if (selectAllBtn) {
         selectAllBtn.checked = checkboxes.length > 0 && checkboxes.length === checkedBoxes.length;
     }
-    
+
     if (countDisplay) {
         countDisplay.textContent = checkedBoxes.length;
     }
-    
+
     if (bulkContainer) {
         bulkContainer.style.display = checkedBoxes.length > 0 ? 'flex' : 'none';
     }
@@ -327,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function handleBulkAction(newStatus) {
     const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
     const userIds = Array.from(checkedBoxes).map(cb => cb.value);
-    
+
     if (userIds.length === 0) return;
 
     const actionText = newStatus === 'BiKhoa' ? 'KHÓA' : 'MỞ KHÓA';
@@ -352,9 +430,9 @@ async function handleBulkAction(newStatus) {
             },
             body: JSON.stringify({ userIds, trangThai: newStatus })
         });
-        
+
         const data = await res.json();
-        
+
         if (res.ok) {
             showToast('success', data.message);
             fetchUsers();
@@ -387,9 +465,9 @@ window.deleteUser = async (maND, userName) => {
                 'Authorization': `Bearer ${token}`
             }
         });
-        
+
         const data = await res.json();
-        
+
         if (res.ok) {
             showToast('success', data.message || 'Đã xóa người dùng vĩnh viễn!');
             fetchUsers();

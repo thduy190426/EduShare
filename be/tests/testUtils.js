@@ -2,10 +2,6 @@ const jwt = require('jsonwebtoken');
 
 process.env.JWT_SECRET = 'test_secret_key';
 
-/**
- * Sinh token xác thực cho các test case cần đăng nhập
- * @param {Object} user - Object chứa { MaND, VaiTro, HoTen }
- */
 function generateTestToken(user = {}) {
     const payload = {
         MaND: user.MaND || 1,
@@ -15,11 +11,6 @@ function generateTestToken(user = {}) {
     return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 }
 
-/**
- * Mock hàm pool.execute() và pool.getConnection() của MySQL
- * @param {Object} app - Express app
- * @param {Function} logic - Hàm chứa logic mock, trả về mảng kết quả mock: [[rows], [fields]]
- */
 function mockPoolExecute(app, logic) {
     if (app.locals.pool) {
         if (app.locals.pool.execute) {
