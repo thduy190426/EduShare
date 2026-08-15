@@ -60,6 +60,16 @@ const initSocket = (server, app) => {
 
             try {
                 const pool = app.locals.pool;
+
+                const [blockCheck] = await pool.execute(
+                    'SELECT DaChan FROM CAIDAT_CHAT WHERE (MaND = ? AND MaND_DoiTac = ?) OR (MaND = ? AND MaND_DoiTac = ?)',
+                    [senderId, receiverId, receiverId, senderId]
+                );
+                const isBlocked = blockCheck.some(r => r.DaChan);
+                if (isBlocked) {
+                    return socket.emit('message_error', { message: 'Bạn không thể gửi tin nhắn cho người này.' });
+                }
+
                 const [result] = await pool.execute(
                     'INSERT INTO TINNHAN (NguoiGui, NguoiNhan, NoiDung, LoaiTinNhan, TraLoiCho_MaTN) VALUES (?, ?, ?, ?, ?)',
                     [senderId, receiverId, text.trim(), messageType, replyToId || null]
@@ -96,6 +106,52 @@ const initSocket = (server, app) => {
             }
         });
 
+        socket.on('send_group_message', async (data) => {
+            const { groupId, text, type, replyToId, replyToName, replyToText, replyToType } = data;
+            const senderId = socket.user.MaND;
+            const messageType = type || 'text';
+            if (!groupId || !text || !text.trim()) return;
+
+            try {
+                const pool = app.locals.pool;
+                
+                const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [groupId, senderId]);
+                if (memberCheck.length === 0) return;
+
+                const [result] = await pool.execute(
+                    'INSERT INTO TINNHAN_NHOM (MaNhom, MaND_Gui, NoiDung, LoaiTinNhan, TraLoiCho_MaTN) VALUES (?, ?, ?, ?, ?)',
+                    [groupId, senderId, text.trim(), messageType, replyToId || null]
+                );
+
+                const [userRows] = await pool.execute('SELECT HoTen, AvatarURL FROM NGUOIDUNG WHERE MaND = ?', [senderId]);
+                const senderName = userRows[0]?.HoTen || socket.user.HoTen;
+                const senderAvatar = userRows[0]?.AvatarURL || socket.user.AvatarURL;
+
+                const messageObj = {
+                    MaTN: result.insertId,
+                    MaNhom: groupId,
+                    MaND_Gui: senderId,
+                    HoTen: senderName,
+                    AvatarURL: senderAvatar,
+                    NoiDung: text.trim(),
+                    NgayGui: new Date().toISOString(),
+                    LoaiTinNhan: messageType,
+                    DaThuHoi: 0,
+                    DaChinhSua: 0,
+                    Reactions: null,
+                    TraLoiCho_MaTN: replyToId || null,
+                    TraLoi_HoTen: replyToName || null,
+                    TraLoi_NoiDung: replyToText || null,
+                    TraLoi_LoaiTinNhan: replyToType || 'text'
+                };
+
+                io.to(`group_${groupId}`).emit('receive_group_message', messageObj);
+
+            } catch (err) {
+                console.error('Lỗi khi gửi tin nhắn nhóm qua socket:', err);
+            }
+        });
+
         socket.on('typing', (data) => {
             const receiverSockets = userSockets.get(data.receiverId.toString());
             if (receiverSockets) {
@@ -128,6 +184,24 @@ const initSocket = (server, app) => {
             const receiverSockets = userSockets.get(data.receiverId.toString());
             if (receiverSockets) {
                 receiverSockets.forEach(sockId => io.to(sockId).emit('message_reacted', data));
+            }
+        });
+
+        socket.on('group_message_unsent', (data) => {
+            if (data.groupId) {
+                io.to(`group_${data.groupId}`).emit('group_message_unsent', data);
+            }
+        });
+
+        socket.on('group_message_edited', (data) => {
+            if (data.groupId) {
+                io.to(`group_${data.groupId}`).emit('group_message_edited', data);
+            }
+        });
+
+        socket.on('group_message_reacted', (data) => {
+            if (data.groupId) {
+                io.to(`group_${data.groupId}`).emit('group_message_reacted', data);
             }
         });
 

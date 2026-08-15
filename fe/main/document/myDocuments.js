@@ -67,7 +67,11 @@ function setupTabs() {
     if (statusFilter) statusFilter.addEventListener('change', renderTable);
     if (subjectFilter) subjectFilter.addEventListener('change', renderTable);
     if (filetypeFilter) filetypeFilter.addEventListener('change', renderTable);
-    if (searchFilter) searchFilter.addEventListener('input', renderTable);
+    let myDocsSearchTimer = null;
+    if (searchFilter) searchFilter.addEventListener('input', () => {
+        clearTimeout(myDocsSearchTimer);
+        myDocsSearchTimer = setTimeout(() => renderTable(), 500);
+    });
 }
 
 async function fetchAllData() {

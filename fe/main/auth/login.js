@@ -58,6 +58,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const loginForm = document.getElementById('loginForm');
 
+    const registeredEmail = localStorage.getItem('registeredEmail');
+    if (registeredEmail) {
+        const loginEmailInput = document.getElementById('loginEmail');
+        if (loginEmailInput) {
+            loginEmailInput.value = registeredEmail;
+            setTimeout(() => {
+                loginEmailInput.dispatchEvent(new Event('input'));
+                const loginPasswordInput = document.getElementById('loginPasswordVisual');
+                if (loginPasswordInput) loginPasswordInput.focus();
+            }, 100);
+            localStorage.removeItem('registeredEmail');
+        }
+    }
+
     const lastLoginMethod = localStorage.getItem('lastLoginMethod');
     if (lastLoginMethod && loginForm) {
         let badgeHtml = '';
@@ -90,6 +104,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!loginSubmitBtn) return;
         const email = document.getElementById('loginEmail')?.value.trim() || '';
         const matKhau = document.getElementById('loginPassword')?.value || '';
+        
+        const emailError = document.getElementById('emailError');
+        
+        if (email.length > 0) {
+            if (!isValidEmail(email)) {
+                if(emailError) emailError.style.display = 'block';
+                document.getElementById('loginEmail').style.borderColor = 'var(--danger)';
+            } else {
+                if(emailError) emailError.style.display = 'none';
+                document.getElementById('loginEmail').style.borderColor = 'var(--success)';
+            }
+        } else {
+            if(emailError) emailError.style.display = 'none';
+            if(document.getElementById('loginEmail')) document.getElementById('loginEmail').style.borderColor = '';
+        }
 
         if (isValidEmail(email) && matKhau.length > 0 && window.isCaptchaSolved) {
             loginSubmitBtn.disabled = false;

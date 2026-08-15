@@ -96,6 +96,85 @@ document.addEventListener('DOMContentLoaded', async () => {
         const xacNhanMatKhau = document.getElementById('registerConfirmPassword')?.value || '';
         const agreeTerms = document.getElementById('registerAgreeTerms')?.checked || false;
 
+        const nameError = document.getElementById('nameError');
+        const emailError = document.getElementById('emailError');
+        const confirmPwdError = document.getElementById('confirmPwdError');
+        const pwdStrengthContainer = document.getElementById('pwdStrengthContainer');
+        const pwdStrengthBar = document.getElementById('pwdStrengthBar');
+        const pwdStrengthText = document.getElementById('pwdStrengthText');
+
+        if (hoTen.length > 0) {
+            if (!isValidName(hoTen)) {
+                if(nameError) nameError.style.display = 'block';
+                document.getElementById('registerName').style.borderColor = 'var(--danger)';
+            } else {
+                if(nameError) nameError.style.display = 'none';
+                document.getElementById('registerName').style.borderColor = 'var(--success)';
+            }
+        } else {
+            if(nameError) nameError.style.display = 'none';
+            if(document.getElementById('registerName')) document.getElementById('registerName').style.borderColor = '';
+        }
+
+        if (email.length > 0) {
+            if (!isValidEmail(email)) {
+                if(emailError) emailError.style.display = 'block';
+                document.getElementById('registerEmail').style.borderColor = 'var(--danger)';
+            } else {
+                if(emailError) emailError.style.display = 'none';
+                document.getElementById('registerEmail').style.borderColor = 'var(--success)';
+            }
+        } else {
+            if(emailError) emailError.style.display = 'none';
+            if(document.getElementById('registerEmail')) document.getElementById('registerEmail').style.borderColor = '';
+        }
+
+        if (matKhau.length > 0) {
+            if(pwdStrengthContainer) pwdStrengthContainer.style.display = 'block';
+            let strength = 0;
+            if (matKhau.length >= 6) strength += 1;
+            if (matKhau.length >= 8) strength += 1;
+            if (/[A-Z]/.test(matKhau)) strength += 1;
+            if (/[0-9]/.test(matKhau)) strength += 1;
+            if (/[^A-Za-z0-9]/.test(matKhau)) strength += 1;
+
+            if (pwdStrengthBar && pwdStrengthText) {
+                if (strength <= 2) {
+                    pwdStrengthBar.style.width = '33%';
+                    pwdStrengthBar.style.background = 'var(--danger)';
+                    pwdStrengthText.textContent = 'Yếu';
+                    pwdStrengthText.style.color = 'var(--danger)';
+                } else if (strength <= 4) {
+                    pwdStrengthBar.style.width = '66%';
+                    pwdStrengthBar.style.background = 'var(--warning)';
+                    pwdStrengthText.textContent = 'Trung bình';
+                    pwdStrengthText.style.color = 'var(--warning)';
+                } else {
+                    pwdStrengthBar.style.width = '100%';
+                    pwdStrengthBar.style.background = 'var(--success)';
+                    pwdStrengthText.textContent = 'Mạnh';
+                    pwdStrengthText.style.color = 'var(--success)';
+                }
+            }
+            if(document.getElementById('registerPasswordVisual')) document.getElementById('registerPasswordVisual').style.borderColor = strength >= 3 ? 'var(--success)' : 'var(--warning)';
+        } else {
+            if(pwdStrengthContainer) pwdStrengthContainer.style.display = 'none';
+            if(document.getElementById('registerPasswordVisual')) document.getElementById('registerPasswordVisual').style.borderColor = '';
+        }
+
+        if (xacNhanMatKhau.length > 0) {
+            if (matKhau !== xacNhanMatKhau) {
+                if(confirmPwdError) confirmPwdError.style.display = 'block';
+                document.getElementById('registerConfirmPasswordVisual').style.borderColor = 'var(--danger)';
+            } else {
+                if(confirmPwdError) confirmPwdError.style.display = 'none';
+                document.getElementById('registerConfirmPasswordVisual').style.borderColor = 'var(--success)';
+            }
+        } else {
+            if(confirmPwdError) confirmPwdError.style.display = 'none';
+            if(document.getElementById('registerConfirmPasswordVisual')) document.getElementById('registerConfirmPasswordVisual').style.borderColor = '';
+        }
+
         if (isValidName(hoTen) && isValidEmail(email) && matKhau.length >= 6 && matKhau === xacNhanMatKhau && agreeTerms && window.isCaptchaSolved) {
             registerSubmitBtn.disabled = false;
             registerSubmitBtn.style.opacity = '1';
@@ -111,7 +190,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (registerForm) {
         document.getElementById('registerName')?.addEventListener('input', validateRegisterForm);
         document.getElementById('registerEmail')?.addEventListener('input', validateRegisterForm);
+        document.getElementById('registerPasswordVisual')?.addEventListener('input', validateRegisterForm);
         document.getElementById('registerPassword')?.addEventListener('input', validateRegisterForm);
+        document.getElementById('registerConfirmPasswordVisual')?.addEventListener('input', validateRegisterForm);
         document.getElementById('registerConfirmPassword')?.addEventListener('input', validateRegisterForm);
         document.getElementById('registerAgreeTerms')?.addEventListener('change', validateRegisterForm);
     }

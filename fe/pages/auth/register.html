@@ -58,6 +58,7 @@
             <div class="input-wrapper">
               <input type="text" id="registerName" class="form-control" placeholder="Nhập họ và tên" required>
             </div>
+            <div id="nameError" class="validation-message" style="color: var(--danger); font-size: 12px; margin-top: 4px; display: none;">Họ tên phải từ 2-50 ký tự và không chứa số/kí tự đặc biệt.</div>
           </div>
 
           <div class="form-group">
@@ -65,26 +66,36 @@
             <div class="input-wrapper">
               <input type="email" id="registerEmail" class="form-control" placeholder="Nhập địa chỉ email" required>
             </div>
+            <div id="emailError" class="validation-message" style="color: var(--danger); font-size: 12px; margin-top: 4px; display: none;">Email không hợp lệ.</div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu:</label>
               <div class="input-wrapper">
-                <input type="password" id="registerPassword" class="form-control" placeholder="Tạo mật khẩu" autocomplete="new-password" required>
+                <input type="text" id="registerPasswordVisual" class="form-control" placeholder="Tạo mật khẩu" autocomplete="off" required>
+                <input type="password" id="registerPassword" style="display:none;" autocomplete="new-password">
                 <span class="toggle-password" id="toggleRegisterPassword">
                   <i class="fa-solid fa-eye" id="toggleRegisterIcon"></i>
                 </span>
+              </div>
+              <div class="password-strength-container" style="margin-top: 8px; display: none;" id="pwdStrengthContainer">
+                <div style="height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;">
+                  <div id="pwdStrengthBar" style="height: 100%; width: 0%; background: var(--danger); transition: all 0.3s;"></div>
+                </div>
+                <div id="pwdStrengthText" style="font-size: 11px; margin-top: 4px; color: var(--text-secondary); text-align: right;">Yếu</div>
               </div>
             </div>
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-lock"></i> Xác nhận mật khẩu:</label>
               <div class="input-wrapper">
-                <input type="password" id="registerConfirmPassword" class="form-control" placeholder="Nhập lại mật khẩu" autocomplete="new-password" required>
+                <input type="text" id="registerConfirmPasswordVisual" class="form-control" placeholder="Nhập lại mật khẩu" autocomplete="off" required>
+                <input type="password" id="registerConfirmPassword" style="display:none;" autocomplete="new-password">
                 <span class="toggle-password" id="toggleConfirmPassword">
                   <i class="fa-solid fa-eye" id="toggleConfirmIcon"></i>
                 </span>
               </div>
+              <div id="confirmPwdError" class="validation-message" style="color: var(--danger); font-size: 12px; margin-top: 4px; display: none;">Mật khẩu không khớp.</div>
             </div>
           </div>
 
@@ -152,6 +163,106 @@
       window.isCaptchaSolved = false;
       if (window.validateRegisterForm) window.validateRegisterForm();
     }
+
+    function setupPasswordMasking(visualId, realId, toggleBtnId) {
+      const visualInput = document.getElementById(visualId);
+      const realInput = document.getElementById(realId);
+      const toggleBtn = document.getElementById(toggleBtnId);
+      
+      let realValue = "";
+      let isVisible = false;
+      let maskTimeout = null;
+
+      if (!visualInput || !realInput) return;
+
+      visualInput.addEventListener('input', (e) => {
+        const visualValue = visualInput.value;
+        const cursor = visualInput.selectionStart;
+        
+        if (isVisible) {
+          realValue = visualValue;
+        } else {
+          if (visualValue.length > realValue.length) {
+            const diff = visualValue.length - realValue.length;
+            const added = visualValue.substring(cursor - diff, cursor);
+            realValue = realValue.substring(0, cursor - diff) + added + realValue.substring(cursor - diff);
+          } else if (visualValue.length < realValue.length) {
+            const diff = realValue.length - visualValue.length;
+            realValue = realValue.substring(0, cursor) + realValue.substring(cursor + diff);
+          } else {
+             const lastChar = visualValue.substring(cursor - 1, cursor);
+             if (lastChar !== '•') {
+                 realValue = realValue.substring(0, cursor - 1) + lastChar + realValue.substring(cursor);
+             }
+          }
+        }
+        
+        realInput.value = realValue;
+        realInput.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        if (!isVisible) {
+          let masked = "";
+          for(let i = 0; i < realValue.length; i++) {
+              if (i === cursor - 1) {
+                  masked += realValue[i];
+              } else {
+                  masked += '•';
+              }
+          }
+          visualInput.value = masked;
+          visualInput.setSelectionRange(cursor, cursor);
+          
+          clearTimeout(maskTimeout);
+          maskTimeout = setTimeout(() => {
+            if (!isVisible) {
+               const cur = visualInput.selectionStart;
+               visualInput.value = '•'.repeat(realValue.length);
+               if (document.activeElement === visualInput) {
+                   visualInput.setSelectionRange(cur, cur);
+               }
+            }
+          }, 300);
+        }
+      });
+
+      visualInput.addEventListener('paste', (e) => {
+         e.preventDefault();
+         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+         const cursor = visualInput.selectionStart;
+         const cursorEnd = visualInput.selectionEnd;
+         
+         realValue = realValue.substring(0, cursor) + text + realValue.substring(cursorEnd);
+         realInput.value = realValue;
+         realInput.dispatchEvent(new Event('input', { bubbles: true }));
+         
+         if (isVisible) {
+             visualInput.value = realValue;
+         } else {
+             visualInput.value = '•'.repeat(realValue.length);
+         }
+         
+         const newCursor = cursor + text.length;
+         visualInput.setSelectionRange(newCursor, newCursor);
+      });
+
+      if (toggleBtn) {
+          toggleBtn.addEventListener('click', () => {
+             setTimeout(() => {
+                 isVisible = (realInput.getAttribute('type') === 'text');
+                 if (isVisible) {
+                     visualInput.value = realValue;
+                 } else {
+                     visualInput.value = '•'.repeat(realValue.length);
+                 }
+             }, 10);
+          });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupPasswordMasking('registerPasswordVisual', 'registerPassword', 'toggleRegisterPassword');
+      setupPasswordMasking('registerConfirmPasswordVisual', 'registerConfirmPassword', 'toggleConfirmPassword');
+    });
   </script>
 </body>
 </html>

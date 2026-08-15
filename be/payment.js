@@ -12,16 +12,31 @@ router.get('/packages', async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
+
+router.get('/flash-sale', async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT Code, DiscountPercent, NgayHetHan FROM PROMO_CODE WHERE IsActive = TRUE AND IsFlashSale = TRUE AND (NgayHetHan IS NULL OR NgayHetHan > CURRENT_TIMESTAMP) ORDER BY NgayHetHan ASC LIMIT 1');
+        if (rows.length > 0) {
+            res.status(200).json(rows[0]);
+        } else {
+            res.status(200).json(null);
+        }
+    } catch (err) {
+        console.error('Lỗi khi lấy flash sale:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
 router.post('/promos/validate', authMiddleware, async (req, res) => {
     const { code } = req.body;
     if (!code) return res.status(400).json({ message: 'Vui lòng nhập mã ưu đãi.' });
     try {
         const pool = req.app.locals.pool;
-        const [rows] = await pool.execute('SELECT MaPromo, DiscountPercent, IsActive FROM PROMO_CODE WHERE Code = ?', [code.trim().toUpperCase()]);
+        const [rows] = await pool.execute('SELECT MaPromo, DiscountPercent, IsActive, NgayHetHan FROM PROMO_CODE WHERE Code = ?', [code.trim().toUpperCase()]);
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Mã ưu đãi không tồn tại.' });
         }
-        if (!rows[0].IsActive) {
+        if (!rows[0].IsActive || (rows[0].NgayHetHan && new Date(rows[0].NgayHetHan) < new Date())) {
             return res.status(400).json({ message: 'Mã ưu đãi đã hết hạn hoặc bị vô hiệu hóa.' });
         }
         const [used] = await pool.execute('SELECT MaGD FROM GIAODICH_NAPXU WHERE MaND = ? AND MaPromo = ? AND TrangThai = "DaDuyet"', [req.user.MaND, rows[0].MaPromo]);
@@ -47,8 +62,8 @@ router.post('/create', authMiddleware, paymentLimiter, async (req, res) => {
         let coins = pkgRows[0].SoXu;
         let maPromo = null;
         if (promoCode) {
-            const [promoRows] = await pool.execute('SELECT MaPromo, DiscountPercent, IsActive FROM PROMO_CODE WHERE Code = ?', [promoCode.trim().toUpperCase()]);
-            if (promoRows.length > 0 && promoRows[0].IsActive) {
+            const [promoRows] = await pool.execute('SELECT MaPromo, DiscountPercent, IsActive, NgayHetHan FROM PROMO_CODE WHERE Code = ?', [promoCode.trim().toUpperCase()]);
+            if (promoRows.length > 0 && promoRows[0].IsActive && (!promoRows[0].NgayHetHan || new Date(promoRows[0].NgayHetHan) >= new Date())) {
                 maPromo = promoRows[0].MaPromo;
                 const [used] = await pool.execute('SELECT MaGD FROM GIAODICH_NAPXU WHERE MaND = ? AND MaPromo = ? AND TrangThai = "DaDuyet"', [userId, maPromo]);
                 if (used.length > 0) {

@@ -2,6 +2,7 @@ import { API_URL } from './config.js';
 import { decodeJWT, getAssetUrl, getToken, getRefreshToken, getAvatar, clearAuthSession, showToast, getTimeBasedGreeting } from './utils.js';
 import { getSocket } from './socketClient.js';
 import './chatWidget.js';
+import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 
 const SIDEBAR_ITEMS = [
     { label: 'Trang chủ', icon: 'fa-house', href: '../user/userHome.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -400,6 +401,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupUserProfileNavigation();
     setupNotificationNavigation();
     setupRealtimeNotifications();
+
+    if (window.location.pathname.includes('/admin/')) {
+        makeAdminTablesResizableAndSticky();
+    }
 });
 
 window.refreshSidebarBadges = async function() {

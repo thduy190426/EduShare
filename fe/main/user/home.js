@@ -43,7 +43,7 @@ async function fetchMySubjects() {
     const token = getToken();
     const grid = document.getElementById('mySubjectGrid');
     if (!token || !grid) return;
-    grid.innerHTML = renderInlineState('fa-spinner fa-spin', 'Đang tải môn học của bạn...');
+    grid.innerHTML = renderDocumentSkeleton(4);
     try {
         const response = await fetch(`${API_URL}/subjects/my`, {
             headers: { 'Authorization': `Bearer ${token}` }

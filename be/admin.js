@@ -1329,12 +1329,12 @@ router.get('/promos', adminMiddleware, async (req, res) => {
     }
 });
 router.post('/promos', adminMiddleware, async (req, res) => {
-    const { Code, DiscountPercent, IsActive, Description } = req.body;
+    const { Code, DiscountPercent, IsActive, Description, IsFlashSale, NgayHetHan } = req.body;
     try {
         const pool = req.app.locals.pool;
         await pool.execute(
-            'INSERT INTO PROMO_CODE (Code, DiscountPercent, IsActive, Description) VALUES (?, ?, ?, ?)',
-            [Code.trim().toUpperCase(), DiscountPercent, IsActive !== undefined ? IsActive : true, Description || null]
+            'INSERT INTO PROMO_CODE (Code, DiscountPercent, IsActive, Description, IsFlashSale, NgayHetHan) VALUES (?, ?, ?, ?, ?, ?)',
+            [Code.trim().toUpperCase(), DiscountPercent, IsActive !== undefined ? IsActive : true, Description || null, IsFlashSale ? 1 : 0, NgayHetHan || null]
         );
         res.status(201).json({ message: 'Tạo mã ưu đãi thành công' });
     } catch (err) {
@@ -1346,13 +1346,13 @@ router.post('/promos', adminMiddleware, async (req, res) => {
     }
 });
 router.put('/promos/:id', adminMiddleware, async (req, res) => {
-    const { Code, DiscountPercent, Description } = req.body;
+    const { Code, DiscountPercent, Description, IsFlashSale, NgayHetHan } = req.body;
     const { id } = req.params;
     try {
         const pool = req.app.locals.pool;
         await pool.execute(
-            'UPDATE PROMO_CODE SET Code = ?, DiscountPercent = ?, Description = ? WHERE MaPromo = ?',
-            [Code.trim().toUpperCase(), DiscountPercent, Description || null, id]
+            'UPDATE PROMO_CODE SET Code = ?, DiscountPercent = ?, Description = ?, IsFlashSale = ?, NgayHetHan = ? WHERE MaPromo = ?',
+            [Code.trim().toUpperCase(), DiscountPercent, Description || null, IsFlashSale ? 1 : 0, NgayHetHan || null, id]
         );
         res.status(200).json({ message: 'Cập nhật mã ưu đãi thành công' });
     } catch (err) {

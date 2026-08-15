@@ -87,6 +87,19 @@
         <textarea id="custom-promo-desc" class="form-input-custom" placeholder="Nhập mô tả (không bắt buộc)..." rows="3" style="width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; transition: border-color 0.2s;"></textarea>
       </div>
 
+      <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <input type="checkbox" id="custom-promo-flashsale" style="width: 18px; height: 18px; cursor: pointer;">
+        <label for="custom-promo-flashsale" style="cursor: pointer; margin: 0; font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#eab308" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          Áp dụng làm Flash Sale (FOMO)
+        </label>
+      </div>
+
+      <div class="form-group" id="flashsale-date-group" style="display: none; margin-bottom: 20px;">
+        <label><i class="fa-regular fa-clock"></i> Thời gian kết thúc (Flash Sale)</label>
+        <input type="datetime-local" id="custom-promo-enddate" class="form-input-custom" style="width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; margin-top: 8px;">
+      </div>
+
       <div class="modal-actions">
         <button id="btn-cancel-custom" class="btn-custom btn-custom-cancel">
           <i class="fa-solid fa-times"></i> Hủy

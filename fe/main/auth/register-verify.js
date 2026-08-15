@@ -33,14 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
         btnVerifyOTP.style.cursor = 'not-allowed';
     }
 
+    const otpBoxes = document.querySelectorAll('.otp-box');
+
     const checkOtpInput = () => {
         if (!otpInput || !btnVerifyOTP) return;
-        const val = otpInput.value.trim();
+        let val = '';
+        otpBoxes.forEach(box => {
+            val += box.value;
+        });
+        otpInput.value = val;
+
         const isValid = /^\d{6}$/.test(val);
         if (isValid) {
             btnVerifyOTP.disabled = false;
             btnVerifyOTP.style.opacity = '1';
             btnVerifyOTP.style.cursor = 'pointer';
+            if (verifyForm) {
+                btnVerifyOTP.click();
+            }
         } else {
             btnVerifyOTP.disabled = true;
             btnVerifyOTP.style.opacity = '0.5';
@@ -48,8 +58,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    if (otpInput) {
-        otpInput.addEventListener('input', checkOtpInput);
+    if (otpBoxes.length > 0) {
+        otpBoxes.forEach((box, index) => {
+            box.addEventListener('input', (e) => {
+                const value = e.target.value;
+                if (!/^[0-9]$/.test(value)) {
+                    e.target.value = '';
+                } else if (value !== '' && index < otpBoxes.length - 1) {
+                    otpBoxes[index + 1].focus();
+                }
+                checkOtpInput();
+            });
+
+            box.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                    otpBoxes[index - 1].focus();
+                }
+            });
+            
+            box.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').substring(0, 6);
+                for (let i = 0; i < pastedData.length; i++) {
+                    if (otpBoxes[i]) {
+                        otpBoxes[i].value = pastedData[i];
+                        if (i < 5) otpBoxes[i+1].focus();
+                        else otpBoxes[i].focus();
+                    }
+                }
+                checkOtpInput();
+            });
+        });
     }
 
     const Toast = Swal.mixin({
@@ -105,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         timer: 2000,
                         showConfirmButton: false
                     });
+                    localStorage.setItem('registeredEmail', registerData.email);
                     sessionStorage.removeItem('registerData');
                     setTimeout(() => {
                         window.location.href = 'login.html';

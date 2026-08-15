@@ -1,3 +1,6 @@
+body, input, button, textarea, select {
+    font-family: 'Inter', sans-serif !important;
+}
 #chat-widget-container {
     position: fixed;
     bottom: 20px;

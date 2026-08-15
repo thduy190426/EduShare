@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const { sendNotificationToUser } = require('./socket');
 
 function initCronJobs(pool) {
     cron.schedule('1 0 1 * *', async () => {
@@ -46,6 +47,7 @@ function initCronJobs(pool) {
                         "INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, 'HeThong')",
                         [user.MaND, `Chúc mừng! Bạn đã đạt Top ${i + 1} Bảng Vàng đóng góp tháng trước và nhận được ${xuThuong} Xu từ EduShare!`]
                     );
+                    sendNotificationToUser(user.MaND, 'new_notification', { message: `Chúc mừng! Bạn đã đạt Top ${i + 1} Bảng Vàng đóng góp tháng trước và nhận được ${xuThuong} Xu từ EduShare!` });
                 }
 
                 await connection.commit();

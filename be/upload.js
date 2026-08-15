@@ -11,6 +11,7 @@ const streamifier = require('streamifier');
 const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
+const { sendNotificationToUser } = require('./services/socket');
 async function extractTextFromFile(filePath, mimeType) {
     try {
         let text = '';
@@ -180,6 +181,7 @@ async function notifyActiveAdmins(pool, noiDung, linkDich, excludeUserId = null)
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [admin.MaND, 'HeThong', noiDung, linkDich]
             );
+            sendNotificationToUser(admin.MaND, 'new_notification', { message: noiDung, link: linkDich });
         }
     } catch (error) {
         console.error('Lỗi gửi thông báo cho Admin:', error);
@@ -456,7 +458,7 @@ router.get('/recommended', authMiddleware, async (req, res) => {
 router.get('/search', async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        let { tuKhoa, maMonHoc, loaiFile, sapXep, trang, limit: queryLimit, capHoc, nguoiDang, tuNgay, denNgay, chinhThuc } = req.query;
+        let { tuKhoa, maMonHoc, loaiFile, sapXep, trang, limit: queryLimit, capHoc, nguoiDang, tuNgay, denNgay, chinhThuc, danhGia } = req.query;
         if (tuKhoa) tuKhoa = xss(tuKhoa);
         const page = Math.max(parseInt(trang) || 1, 1);
         const limit = Math.min(Math.max(parseInt(queryLimit) || 20, 1), 50);
@@ -532,6 +534,11 @@ router.get('/search', async (req, res) => {
         }
         if (chinhThuc === 'true') {
             whereClause += ` AND TL.LaTaiLieuChinhThuc = 1`;
+        }
+        if (danhGia) {
+            whereClause += ` AND COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) >= ?`;
+            params.push(danhGia);
+            countParams.push(danhGia);
         }
         let orderClause = '';
         if (sapXep === 'PhoBien') {
@@ -750,6 +757,48 @@ router.get('/:maTL', async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
+
+router.get('/:maTL/preview-pdf', async (req, res) => {
+    const maTL = req.params.maTL;
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT FileURL, LoaiFile, PreviewURL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND IsDeleted = FALSE', [maTL]);
+        
+        if (rows.length === 0) {
+            return res.status(404).send('Không tìm thấy tài liệu.');
+        }
+        
+        const doc = rows[0];
+        
+        if (doc.PreviewURL) {
+            return res.redirect(doc.PreviewURL);
+        }
+        
+        if (doc.LoaiFile !== 'pdf' || !doc.FileURL) {
+            return res.status(400).send('Định dạng không hỗ trợ xem trước hoặc không có file gốc.');
+        }
+
+        const tempFilePath = path.join(os.tmpdir(), `preview_${Date.now()}_${maTL}.pdf`);
+        await downloadFile(doc.FileURL, tempFilePath);
+        
+        const fileBuffer = fs.readFileSync(tempFilePath);
+        const previewBuffer = await generatePreviewPdf(fileBuffer);
+        
+        if (fs.existsSync(tempFilePath)) {
+            fs.unlinkSync(tempFilePath);
+        }
+        
+        if (previewBuffer) {
+            res.contentType('application/pdf');
+            res.send(previewBuffer);
+        } else {
+            res.status(500).send('Lỗi tạo bản xem trước.');
+        }
+    } catch (error) {
+        console.error('Lỗi khi xem trước PDF:', error);
+        res.status(500).send('Lỗi máy chủ.');
+    }
+});
 router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) => {
     const maTL = req.params.maTL;
     const maND = req.user.MaND;
@@ -814,6 +863,7 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
                                 "INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, 'HeThong')",
                                 [doc.MaND_NguoiDang, `Bạn vừa nhận được +1 Xu từ lượt tải tài liệu "${doc.TenTL}". (Giới hạn: ${todayRewards[0].count + 1}/${maxDailyReward} Xu thưởng mỗi ngày)`]
                             );
+                            sendNotificationToUser(doc.MaND_NguoiDang, 'new_notification', { message: `Bạn vừa nhận được +1 Xu từ lượt tải tài liệu "${doc.TenTL}". (Giới hạn: ${todayRewards[0].count + 1}/${maxDailyReward} Xu thưởng mỗi ngày)` });
                         }
                     }
                 }
@@ -981,7 +1031,6 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
             );
             await connection.commit();
             connection.release();
-            const { sendNotificationToUser } = require('./services/socket');
             sendNotificationToUser(doc.MaND_NguoiDang, 'document_bought', {
                 message: `Bạn vừa nhận được ${giaXu} Xu do có người mua tài liệu "${doc.TenTL}".`
             });
@@ -1077,6 +1126,7 @@ router.post('/:maTL/comments', authMiddleware, commentLimiter, moderationMiddlew
                         'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                         [parentMaND, 'PhanHoiBL', 'Có người đã trả lời bình luận của bạn.', `../document/documentDetails.html?id=${maTL}`]
                     );
+                    sendNotificationToUser(parentMaND, 'new_notification', { message: 'Có người đã trả lời bình luận của bạn.', link: `../document/documentDetails.html?id=${maTL}` });
                 }
             }
         }
@@ -1095,6 +1145,7 @@ router.post('/:maTL/comments', authMiddleware, commentLimiter, moderationMiddlew
                         'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                         [taggedMaND, 'NhacDen', `${currentUserHoTen} đã nhắc đến bạn trong một bình luận.`, `../document/documentDetails.html?id=${maTL}`]
                     );
+                    sendNotificationToUser(taggedMaND, 'new_notification', { message: `${currentUserHoTen} đã nhắc đến bạn trong một bình luận.`, link: `../document/documentDetails.html?id=${maTL}` });
                 }
             }
         }
@@ -1213,6 +1264,7 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [docs[0].MaND_NguoiDang, 'HeThong', `Tài liệu "${docs[0].TenTL}" của bạn đã bị tạm ẩn do nhận được quá nhiều báo cáo vi phạm từ cộng đồng. Admin sẽ kiểm tra lại.`, `../document/myDocuments.html`]
             );
+            sendNotificationToUser(docs[0].MaND_NguoiDang, 'new_notification', { message: `Tài liệu "${docs[0].TenTL}" của bạn đã bị tạm ẩn do nhận được quá nhiều báo cáo vi phạm từ cộng đồng. Admin sẽ kiểm tra lại.`, link: `../document/myDocuments.html` });
         } else {
             await notifyActiveAdmins(
                 pool,

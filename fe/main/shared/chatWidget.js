@@ -290,14 +290,18 @@ function renderContacts(contacts) {
             msgText = 'Bạn: ' + msgText;
         }
 
+        const isPinnedIcon = c.IsPinned ? '<i class="fa-solid fa-thumbtack" style="color: var(--primary); font-size: 12px; margin-right: 4px;"></i>' : '';
         item.innerHTML = `
             <div class="contact-avatar-wrapper">
                 ${avatarHtml}
                 <div class="contact-status-dot ${isOnline}" id="contact-status-${c.PartnerId || c.MaND}"></div>
             </div>
             <div class="contact-info">
-                <div class="contact-name">${c.HoTen}</div>
+                <div class="contact-name">${isPinnedIcon}${c.HoTen}</div>
                 <div class="${msgClass}">${msgText}</div>
+            </div>
+            <div class="contact-actions" style="padding: 0 10px; color: #94a3b8; cursor: pointer; display: flex; align-items: center;" onclick="event.stopPropagation(); toggleContactMenu(event, ${c.PartnerId || c.MaND}, ${c.IsPinned}, ${c.IsBlocked})">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
             </div>
             ${unreadDot}
         `;
@@ -868,3 +872,91 @@ window.cancelEdit = cancelEdit;
 window.startReply = window.startReply;
 window.cancelReply = window.cancelReply;
 window.addEventListener('DOMContentLoaded', injectChatWidget);
+
+window.toggleContactMenu = function(event, partnerId, isPinned, isBlocked) {
+    let menu = document.getElementById('contact-context-menu');
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'contact-context-menu';
+        menu.style.position = 'absolute';
+        menu.style.background = 'white';
+        menu.style.border = '1px solid var(--border)';
+        menu.style.borderRadius = 'var(--radius-sm)';
+        menu.style.boxShadow = 'var(--shadow-md)';
+        menu.style.zIndex = '10000';
+        menu.style.padding = '8px 0';
+        menu.style.minWidth = '180px';
+        document.body.appendChild(menu);
+
+        document.addEventListener('click', () => {
+            if (menu) menu.style.display = 'none';
+        });
+    }
+
+    menu.style.display = 'block';
+    
+    const x = Math.min(event.pageX, window.innerWidth - 200);
+    menu.style.left = `${x}px`;
+    menu.style.top = `${event.pageY + 10}px`;
+
+    menu.innerHTML = `
+        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; color: var(--text-main);" class="menu-item" onclick="pinContact(${partnerId})">
+            <i class="fa-solid fa-thumbtack" style="width: 16px;"></i> ${isPinned ? 'Bỏ ghim' : 'Ghim'}
+        </div>
+        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; color: var(--text-main);" class="menu-item" onclick="blockContact(${partnerId})">
+            <i class="fa-solid fa-ban" style="width: 16px;"></i> ${isBlocked ? 'Bỏ chặn' : 'Chặn'}
+        </div>
+        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; color: var(--danger);" class="menu-item" onclick="deleteContact(${partnerId})">
+            <i class="fa-solid fa-trash" style="width: 16px;"></i> Xóa cuộc trò chuyện
+        </div>
+    `;
+    
+    const items = menu.querySelectorAll('.menu-item');
+    items.forEach(el => {
+        el.addEventListener('mouseover', () => el.style.background = '#f1f5f9');
+        el.addEventListener('mouseout', () => el.style.background = 'white');
+    });
+};
+
+window.pinContact = async function(partnerId) {
+    try {
+        const res = await fetch(`${API_URL}/api/chat/pin/${partnerId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+        if (res.ok) {
+            loadContacts();
+        }
+    } catch (err) { console.error('Error pinning contact:', err); }
+};
+
+window.blockContact = async function(partnerId) {
+    try {
+        const res = await fetch(`${API_URL}/api/chat/block/${partnerId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+            if (typeof showToast === 'function') showToast(data.message);
+            else alert(data.message);
+            loadContacts();
+        }
+    } catch (err) { console.error('Error blocking contact:', err); }
+};
+
+window.deleteContact = async function(partnerId) {
+    if (!confirm('Bạn có chắc chắn muốn ẩn cuộc trò chuyện này?')) return;
+    try {
+        const res = await fetch(`${API_URL}/api/chat/delete/${partnerId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+        if (res.ok) {
+            loadContacts();
+            if (currentPartnerId == partnerId) {
+                document.getElementById('chat-back-btn')?.click();
+            }
+        }
+    } catch (err) { console.error('Error deleting contact:', err); }
+};

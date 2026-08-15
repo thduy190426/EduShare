@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sortSelect = document.getElementById('sortSelect');
     const levelSelect = document.getElementById('levelSelect');
     const subjectSelect = document.getElementById('subjectSelect');
+    const ratingSelect = document.getElementById('ratingSelect');
     const fileTypeCheckboxes = document.querySelectorAll('input[name="loaiFile"]');
     const officialOnly = document.getElementById('officialOnly');
     const fromDate = document.getElementById('fromDate');
@@ -114,11 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) {
         searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
+                clearTimeout(debounceTimer);
                 currentPage = 1;
                 fetchDocuments(1);
             }
         });
-        searchInput.addEventListener('input', checkFilterState);
+        searchInput.addEventListener('input', () => {
+            checkFilterState();
+            handleDebouncedFilterChange();
+        });
     }
 
     function checkFilterState() {
@@ -130,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sortSelect && sortSelect.value !== 'MoiNhat') isDefault = false;
         if (levelSelect && levelSelect.value !== '') isDefault = false;
         if (subjectSelect && subjectSelect.value !== '') isDefault = false;
+        if (ratingSelect && ratingSelect.value !== '') isDefault = false;
         if (officialOnly && officialOnly.checked) isDefault = false;
         if (fromDate && fromDate.value !== '') isDefault = false;
         if (toDate && toDate.value !== '') isDefault = false;
@@ -162,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (sortSelect) sortSelect.addEventListener('change', handleFilterChange);
+    if (ratingSelect) ratingSelect.addEventListener('change', handleFilterChange);
     if (levelSelect) levelSelect.addEventListener('change', handleFilterChange);
 
     fileTypeCheckboxes.forEach(cb => cb.addEventListener('change', handleFilterChange));
@@ -182,6 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sortSelect) sortSelect.value = 'MoiNhat';
             if (levelSelect) levelSelect.value = '';
             if (subjectSelect) subjectSelect.value = '';
+            if (ratingSelect) ratingSelect.value = '';
             if (officialOnly) officialOnly.checked = false;
             if (fromDate) fromDate.value = '';
             if (toDate) toDate.value = '';
@@ -198,6 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (subjectSelect && subjectSelect.value) {
             const label = subjectSelect.options[subjectSelect.selectedIndex].text;
             chips.push({ type: 'subject', value: subjectSelect.value, label });
+        }
+        if (ratingSelect && ratingSelect.value) {
+            const label = ratingSelect.options[ratingSelect.selectedIndex].text;
+            chips.push({ type: 'rating', value: ratingSelect.value, label });
         }
 
         Array.from(fileTypeCheckboxes).filter(cb => cb.checked).forEach(cb => {
@@ -230,6 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (type === 'subject') {
                 if (subjectSelect) subjectSelect.value = '';
+            } else if (type === 'rating') {
+                if (ratingSelect) ratingSelect.value = '';
             } else if (type === 'file') {
                 const checkbox = Array.from(fileTypeCheckboxes).find(cb => cb.value === value);
                 if (checkbox) checkbox.checked = false;
@@ -324,6 +338,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (subjectSelect && subjectSelect.value) {
             queryParams.append('maMonHoc', subjectSelect.value);
+        }
+        if (ratingSelect && ratingSelect.value) {
+            queryParams.append('danhGia', ratingSelect.value);
         }
 
         const selectedFiles = Array.from(fileTypeCheckboxes).filter(cb => cb.checked).map(cb => cb.value);

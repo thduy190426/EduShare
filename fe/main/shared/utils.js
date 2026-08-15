@@ -396,3 +396,94 @@ export const renderGroupSkeleton = (count = 6) => {
     }
     return html;
 };
+
+export const renderCommentSkeleton = (count = 3) => {
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="skeleton-comment">
+                <div class="skeleton-avatar skeleton-box"></div>
+                <div class="skeleton-comment-content">
+                    <div class="skeleton-name skeleton-box"></div>
+                    <div class="skeleton-text-line skeleton-box"></div>
+                    <div class="skeleton-text-line short skeleton-box"></div>
+                </div>
+            </div>
+        `;
+    }
+    return html;
+};
+
+
+// --- TOAST INTERCEPTOR SYSTEM ---
+// Globally override alert() and simple Swal.fire() calls to use Toast notifications.
+if (typeof window !== 'undefined') {
+    window.alert = function(msg) {
+        if (typeof Swal !== 'undefined') {
+            Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true }).fire({ icon: 'info', title: msg });
+        } else {
+            console.log("ALERT:", msg);
+        }
+    };
+
+    if (window.Swal) {
+        const originalFire = window.Swal.fire;
+        window.Swal.fire = function(...args) {
+            let isSimpleAlert = false;
+            let icon = 'info';
+            let title = '';
+            let text = '';
+            
+            if (args.length === 1 && typeof args[0] === 'string') {
+                isSimpleAlert = true;
+                title = args[0];
+            } else if (args.length >= 2 && typeof args[0] === 'string') {
+                isSimpleAlert = true;
+                title = args[0];
+                text = args[1] || '';
+                icon = args[2] || 'info';
+                if (icon === 'question') isSimpleAlert = false;
+            } else if (args.length === 1 && typeof args[0] === 'object') {
+                const opt = args[0];
+                if (!opt.showCancelButton && !opt.input && !opt.showDenyButton && !opt.html && !opt.toast) {
+                    if (opt.didOpen && opt.showConfirmButton === false && !opt.timer) {
+                        isSimpleAlert = false; // Loading modal
+                    } else if (opt.title === 'Đang đăng xuất...' || opt.title === 'Đang tải...') {
+                        isSimpleAlert = false; // Explicit loading titles
+                    } else {
+                        isSimpleAlert = true;
+                        icon = opt.icon || 'info';
+                        title = opt.title || '';
+                        text = opt.text || '';
+                    }
+                }
+            }
+            
+            if (isSimpleAlert) {
+                const Toast = window.Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', window.Swal.stopTimer)
+                        toast.addEventListener('mouseleave', window.Swal.resumeTimer)
+                    }
+                });
+                let finalTitle = title;
+                if (text && text !== title) {
+                    finalTitle = finalTitle ? `${finalTitle}: ${text}` : text;
+                }
+                // Strip HTML tags for clean toast
+                if (typeof finalTitle === 'string') {
+                   finalTitle = finalTitle.replace(/<[^>]*>?/gm, '');
+                }
+                return Toast.fire({ icon, title: finalTitle, toast: true });
+            }
+            
+            return originalFire.apply(this, args);
+        };
+    }
+}
+// --------------------------------

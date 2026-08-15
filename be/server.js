@@ -163,7 +163,7 @@ app.use(helmet({
     frameguard: false
 }));
 app.use(cors({
-    origin: ['http://localhost:8080', 'http://127.0.0.1:8080', 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: ['http://localhost:8080', 'http://127.0.0.1:8080', 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://127.0.0.1:3002', 'http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true
 }));
 app.use(cookieParser());
@@ -372,24 +372,43 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
             logger.success(`New user registered via Google - id: ${result.insertId}`);
         }
 
-        const token = jwt.sign(
+        const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
             process.env.JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '15m' }
         );
 
-        res.cookie('token', token, {
+        const refreshToken = crypto.randomBytes(40).toString('hex');
+        const expiresDays = 30;
+        const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
+        const deviceInfo = req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 250) : 'Unknown Device';
+        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown IP';
+
+        await pool.execute(
+            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt, DeviceInfo, IPAddress) VALUES (?, ?, ?, ?, ?)',
+            [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
+        );
+
+        res.cookie('token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: expiresDays * 24 * 60 * 60 * 1000
         });
 
         logger.success(`Google Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
 
         res.json({
             message: 'Đăng nhập thành công',
-            token,
+            token: accessToken,
+            refreshToken: refreshToken,
             user: {
                 MaND: user.MaND,
                 HoTen: user.HoTen,
@@ -450,24 +469,43 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
             logger.success(`New user registered via Facebook - id: ${result.insertId}`);
         }
 
-        const token = jwt.sign(
+        const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
             process.env.JWT_SECRET,
-            { expiresIn: '7d' }
+            { expiresIn: '15m' }
         );
 
-        res.cookie('token', token, {
+        const refreshToken = crypto.randomBytes(40).toString('hex');
+        const expiresDays = 30;
+        const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
+        const deviceInfo = req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 250) : 'Unknown Device';
+        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown IP';
+
+        await pool.execute(
+            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt, DeviceInfo, IPAddress) VALUES (?, ?, ?, ?, ?)',
+            [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
+        );
+
+        res.cookie('token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: expiresDays * 24 * 60 * 60 * 1000
         });
 
         logger.success(`Facebook Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
 
         res.json({
             message: 'Đăng nhập thành công',
-            token,
+            token: accessToken,
+            refreshToken: refreshToken,
             user: {
                 MaND: user.MaND,
                 HoTen: user.HoTen,
@@ -526,9 +564,12 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
         const expiresDays = rememberLogin ? 30 : 7;
         const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
 
+        const deviceInfo = req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 250) : 'Unknown Device';
+        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown IP';
+
         await pool.execute(
-            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt) VALUES (?, ?, ?)',
-            [user.MaND, refreshToken, expiresAt]
+            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt, DeviceInfo, IPAddress) VALUES (?, ?, ?, ?, ?)',
+            [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
         );
 
         res.cookie('token', accessToken, {
@@ -592,9 +633,12 @@ app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), as
         const expiresDays = decoded.rememberLogin ? 30 : 7;
         const expiresAt = new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000);
 
+        const deviceInfo = req.headers['user-agent'] ? req.headers['user-agent'].substring(0, 250) : 'Unknown Device';
+        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown IP';
+
         await pool.execute(
-            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt) VALUES (?, ?, ?)',
-            [user.MaND, refreshToken, expiresAt]
+            'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt, DeviceInfo, IPAddress) VALUES (?, ?, ?, ?, ?)',
+            [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
         );
 
         res.cookie('token', accessToken, {
@@ -731,6 +775,50 @@ app.post('/api/refresh-token', async (req, res) => {
 
     } catch (err) {
         logger.error('Refresh token failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.get('/api/users/sessions', authMiddleware, async (req, res) => {
+    try {
+        const currentRefreshToken = (req.cookies && req.cookies.refreshToken) || req.headers['x-refresh-token'];
+        
+        const [rows] = await pool.execute(
+            'SELECT Id, DeviceInfo, IPAddress, CreatedAt, ExpiresAt, Token FROM REFRESH_TOKENS WHERE MaND = ? AND Revoked = FALSE ORDER BY CreatedAt DESC',
+            [req.user.MaND]
+        );
+        
+        const sessions = rows.map(r => ({
+            id: r.Id,
+            deviceInfo: r.DeviceInfo || 'Unknown Device',
+            ipAddress: r.IPAddress || 'Unknown IP',
+            createdAt: r.CreatedAt,
+            expiresAt: r.ExpiresAt,
+            isCurrent: r.Token === currentRefreshToken
+        }));
+        
+        res.status(200).json(sessions);
+    } catch (err) {
+        logger.error('Get sessions failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.delete('/api/users/sessions/:id', authMiddleware, async (req, res) => {
+    try {
+        const sessionId = req.params.id;
+        const [result] = await pool.execute(
+            'UPDATE REFRESH_TOKENS SET Revoked = TRUE WHERE Id = ? AND MaND = ?',
+            [sessionId, req.user.MaND]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Phiên đăng nhập không tồn tại hoặc đã bị thu hồi.' });
+        }
+        
+        res.status(200).json({ message: 'Đã thu hồi phiên đăng nhập.' });
+    } catch (err) {
+        logger.error('Revoke session failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

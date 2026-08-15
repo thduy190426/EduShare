@@ -104,7 +104,11 @@ async function initGroupList() {
     const searchInput = document.getElementById('search-group');
     const filterMemberCount = document.getElementById('filter-member-count');
     const filterPrivacy = document.getElementById('filter-privacy');
-    if (searchInput) searchInput.addEventListener('input', () => applyFilters());
+    let groupSearchTimer = null;
+    if (searchInput) searchInput.addEventListener('input', () => {
+        clearTimeout(groupSearchTimer);
+        groupSearchTimer = setTimeout(() => applyFilters(), 500);
+    });
     if (filterMemberCount) filterMemberCount.addEventListener('change', () => applyFilters());
     if (filterPrivacy) filterPrivacy.addEventListener('change', () => applyFilters());
     const tabExplore = document.getElementById('tab-all-groups');
@@ -1411,8 +1415,12 @@ async function fetchGroupMembers() {
         renderMembers();
         const searchInput = document.getElementById('search-member');
         if (searchInput) {
+            let memberSearchTimer = null;
             searchInput.addEventListener('input', (e) => {
-                renderMembers(e.target.value.trim());
+                clearTimeout(memberSearchTimer);
+                memberSearchTimer = setTimeout(() => {
+                    renderMembers(e.target.value.trim());
+                }, 500);
             });
         }
     } catch (err) {
@@ -1687,8 +1695,8 @@ async function fetchGroupDocuments() {
         const searchInput = document.getElementById('search-group-doc');
         if (searchInput && !searchInput.dataset.hasListener) {
             searchInput.dataset.hasListener = 'true';
-            searchInput.addEventListener('input', (e) => {
-                if (window.renderGroupDocs) {
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && window.renderGroupDocs) {
                     window.renderGroupDocs(e.target.value.trim());
                 }
             });
@@ -1810,6 +1818,7 @@ async function loadMyDocumentsForShare() {
 document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.includes('groupDetails.html')) {
         setupTabs();
+        if (typeof window.setupGroupChat === 'function') window.setupGroupChat();
         setupCoverUpload();
         setupMemberSearch();
         setupDocumentSearch();
@@ -1842,11 +1851,19 @@ function setupTabs() {
             const targetId = tab.dataset.target;
             if (targetId) {
                 const targetContent = document.getElementById(targetId);
-                targetContent.style.display = 'block';
+                targetContent.style.display = targetId === 'chat-tab' ? 'flex' : 'block';
                 void targetContent.offsetWidth;
                 targetContent.classList.add('fade-in');
                 if (targetId === 'discussions-tab') {
                     fetchGroupPosts(true);
+                } else if (targetId === 'chat-tab') {
+                    if (!window.groupChatLoaded) {
+                        if (typeof window.fetchGroupChatMessages === 'function') window.fetchGroupChatMessages();
+                        window.groupChatLoaded = true;
+                    } else {
+                        const msgList = document.getElementById('group-chat-messages');
+                        if (msgList) msgList.scrollTop = msgList.scrollHeight;
+                    }
                 }
             }
         });
@@ -2406,7 +2423,7 @@ window.toggleComments = async (postId) => {
         return;
     }
     section.classList.add('show');
-    list.innerHTML = '<div style="text-align: center; color: var(--text-secondary); font-size: 12px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>';
+    list.innerHTML = renderGroupSkeleton(4);
     try {
         const res = await fetch(`${API_URL}/groups/${currentGroupId}/posts/${postId}/comments`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -2532,7 +2549,7 @@ window.initTribute = function(element) {
 window.loadRequestsList = async function() {
     const listEl = document.getElementById('requests-list');
     if (!listEl) return;
-    listEl.innerHTML = '<div style="text-align:center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải...</div>';
+    listEl.innerHTML = renderGroupSkeleton(6);
     try {
         const res = await fetch(`${API_URL}/groups/${currentGroupId}/requests`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -2602,3 +2619,351 @@ window.handleRequest = async function(targetId, action, btn) {
         btn.innerText = originalText;
     }
 };
+
+
+window.getAuthHeaders = () => ({ 'Authorization': `Bearer ${token}` });
+
+let currentGroupReplyTo = null;
+let currentGroupEditMsgId = null;
+
+window.setupGroupChat = function() {
+    const chatForm = document.getElementById('group-chat-form');
+    const chatInput = document.getElementById('group-chat-input');
+    const fileInput = document.getElementById('group-chat-file-upload');
+    const socket = getSocket();
+
+    if (chatForm && chatInput && socket) {
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const res = await fetch(`${API_URL}/api/chat/upload`, {
+                        method: 'POST',
+                        headers: window.getAuthHeaders(),
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        socket.emit('send_group_message', {
+                            groupId: currentGroupId,
+                            text: data.fileUrl,
+                            type: data.type,
+                            replyToId: currentGroupReplyTo?.MaTN || null,
+                            replyToName: currentGroupReplyTo?.HoTen || null,
+                            replyToText: currentGroupReplyTo?.NoiDung || null,
+                            replyToType: currentGroupReplyTo?.LoaiTinNhan || null
+                        });
+                        cancelGroupReply();
+                    } else {
+                        showToast(data.message || 'Lỗi tải file', 'error');
+                    }
+                } catch (err) { console.error('Upload error', err); }
+                fileInput.value = '';
+            });
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = chatInput.value.trim();
+            if (!text) return;
+            
+            if (currentGroupEditMsgId) {
+                try {
+                    const res = await fetch(`${API_URL}/groups/${currentGroupId}/messages/${currentGroupEditMsgId}/edit`, {
+                        method: 'PUT',
+                        headers: Object.assign({}, window.getAuthHeaders(), { 'Content-Type': 'application/json' }),
+                        body: JSON.stringify({ text })
+                    });
+                    if (res.ok) {
+                        socket.emit('group_message_edited', { groupId: currentGroupId, messageId: currentGroupEditMsgId, text });
+                        cancelGroupReply(); 
+                        window.fetchGroupChatMessages(); 
+                    }
+                } catch (err) { console.error(err); }
+            } else {
+                socket.emit('send_group_message', {
+                    groupId: currentGroupId,
+                    text: text,
+                    type: 'text',
+                    replyToId: currentGroupReplyTo?.MaTN || null,
+                    replyToName: currentGroupReplyTo?.HoTen || null,
+                    replyToText: currentGroupReplyTo?.NoiDung || null,
+                    replyToType: currentGroupReplyTo?.LoaiTinNhan || null
+                });
+                cancelGroupReply();
+            }
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+        });
+
+        socket.on('receive_group_message', (msg) => {
+            if (String(msg.MaNhom) !== String(currentGroupId)) return;
+            window.appendGroupChatMessage(msg);
+        });
+
+        socket.on('group_message_unsent', (data) => {
+            if (String(data.groupId) === String(currentGroupId)) {
+                const textEl = document.getElementById(`gmsg-text-${data.messageId}`);
+                if (textEl) {
+                    textEl.innerHTML = '<i style="color: #94a3b8;">Tin nhắn đã bị thu hồi</i>';
+                    textEl.style.fontStyle = 'italic';
+                    const actions = document.getElementById(`gmsg-actions-${data.messageId}`);
+                    if (actions) actions.style.display = 'none';
+                }
+            }
+        });
+
+        socket.on('group_message_edited', (data) => {
+            if (String(data.groupId) === String(currentGroupId)) {
+                window.fetchGroupChatMessages(); 
+            }
+        });
+
+        socket.on('group_message_reacted', (data) => {
+            if (String(data.groupId) === String(currentGroupId)) {
+                window.fetchGroupChatMessages();
+            }
+        });
+    }
+};
+
+window.fetchGroupChatMessages = async function() {
+    const msgList = document.getElementById('group-chat-messages');
+    if (!msgList) return;
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/messages?limit=100`, {
+            headers: window.getAuthHeaders()
+        });
+        const data = await res.json();
+        if (res.ok) {
+            msgList.innerHTML = '';
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => window.appendGroupChatMessage(msg, true));
+            } else {
+                msgList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); font-size: 13px; margin-top: auto; margin-bottom: 20px;">Hãy gửi lời chào đến mọi người trong nhóm!</div>';
+            }
+            msgList.scrollTop = msgList.scrollHeight;
+        }
+    } catch (err) { console.error('Lỗi tải tin nhắn nhóm:', err); }
+};
+
+window.appendGroupChatMessage = function(msg, isInitial = false) {
+    const msgList = document.getElementById('group-chat-messages');
+    if (!msgList) return;
+    if (msgList.innerHTML.includes('Hãy gửi lời chào')) {
+        msgList.innerHTML = '';
+    }
+
+    const isMe = String(msg.MaND_Gui) === String(currentUserId);
+    const dateObj = new Date(msg.NgayGui);
+    const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+    let fallbackChar = '?';
+    if (msg.HoTen) fallbackChar = escapeHTML(msg.HoTen.charAt(0).toUpperCase());
+
+    const avatarHtml = msg.AvatarURL 
+        ? `<img src="${escapeHTML(getAssetUrl(msg.AvatarURL))}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
+        : `<div style="width: 32px; height: 32px; border-radius: 50%; background: ${isMe ? '#e0e7ff' : '#f3f4f6'}; color: ${isMe ? '#4f46e5' : '#6b7280'}; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">${fallbackChar}</div>`;
+
+    const msgDiv = document.createElement('div');
+    msgDiv.style.display = 'flex';
+    msgDiv.style.gap = '8px';
+    msgDiv.style.marginBottom = '12px';
+    msgDiv.style.flexDirection = isMe ? 'row-reverse' : 'row';
+    msgDiv.style.alignItems = 'flex-end';
+    msgDiv.className = 'group-msg-item';
+    msgDiv.id = `group-msg-${msg.MaTN}`;
+
+    let contentHtml = '';
+    if (msg.DaThuHoi) {
+        contentHtml = `<div id="gmsg-text-${msg.MaTN}" style="padding: 10px 14px; border-radius: 18px; border: 1px solid var(--border); background: #f8fafc; color: #94a3b8; font-style: italic; font-size: 14px;">Tin nhắn đã bị thu hồi</div>`;
+    } else {
+        let innerMedia = '';
+        if (msg.LoaiTinNhan === 'text') {
+            innerMedia = escapeHTML(msg.NoiDung);
+        } else if (msg.LoaiTinNhan === 'image') {
+            innerMedia = `<img src="${getAssetUrl(msg.NoiDung)}" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="window.open(this.src)">`;
+        } else if (msg.LoaiTinNhan === 'file') {
+            innerMedia = `<a href="${getAssetUrl(msg.NoiDung)}" target="_blank" style="color: inherit; text-decoration: underline;"><i class="fa-solid fa-file"></i> Tải xuống tệp đính kèm</a>`;
+        }
+        
+        let editedLabel = msg.DaChinhSua ? `<span style="font-size: 10px; opacity: 0.7; margin-left: 6px;">(Đã chỉnh sửa)</span>` : '';
+        contentHtml = `<div id="gmsg-text-${msg.MaTN}" style="padding: 10px 14px; border-radius: 18px; ${isMe ? 'border-bottom-right-radius: 4px; background: var(--primary); color: white;' : 'border-bottom-left-radius: 4px; background: white; border: 1px solid var(--border); color: var(--text-primary);'} font-size: 14.5px; line-height: 1.5; max-width: 100%; word-break: break-word;">${innerMedia}${editedLabel}</div>`;
+    }
+
+    let replyHtml = '';
+    if (msg.TraLoiCho_MaTN && !msg.DaThuHoi) {
+        const repName = msg.TraLoi_HoTen || 'Ai đó';
+        let repText = msg.TraLoi_NoiDung || 'Tin nhắn';
+        if (msg.TraLoi_LoaiTinNhan === 'image') repText = 'Hình ảnh đính kèm';
+        else if (msg.TraLoi_LoaiTinNhan === 'file') repText = 'Tệp đính kèm';
+        replyHtml = `<div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; padding: 6px 10px; background: rgba(0,0,0,0.06); border-radius: 6px; display: inline-block; cursor: pointer; max-width: 100%; border-left: 3px solid var(--primary);" onclick="document.getElementById('group-msg-${msg.TraLoiCho_MaTN}')?.scrollIntoView({behavior:'smooth'})"><i class="fa-solid fa-reply"></i> <b>${escapeHTML(repName)}</b>: ${escapeHTML(repText)}</div>`;
+    }
+
+    let reactionsHtml = '';
+    if (msg.Reactions && !msg.DaThuHoi) {
+        let rObj = {};
+        try { rObj = typeof msg.Reactions === 'string' ? JSON.parse(msg.Reactions) : msg.Reactions; } catch(e) {}
+        const count = Object.keys(rObj).length;
+        if (count > 0) {
+            const rList = Object.values(rObj);
+            const emojiCounts = {};
+            rList.forEach(e => emojiCounts[e] = (emojiCounts[e] || 0) + 1);
+            const topEmojis = Object.entries(emojiCounts).sort((a,b) => b[1] - a[1]).slice(0, 3).map(e => e[0]).join('');
+            reactionsHtml = `<div style="position: absolute; bottom: -12px; ${isMe ? 'right: 4px;' : 'left: 4px;'} background: white; border: 1px solid var(--border); border-radius: 12px; padding: 2px 6px; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 5;">
+                <span style="font-size: 12px;">${topEmojis}</span>
+                ${count > 1 ? `<span style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">${count}</span>` : ''}
+            </div>`;
+        }
+    }
+
+    let actionsMenu = '';
+    if (!msg.DaThuHoi) {
+        actionsMenu = `
+            <div id="gmsg-actions-${msg.MaTN}" class="gmsg-actions" style="display: none; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px;">
+                <i class="fa-solid fa-reply" style="cursor: pointer; padding: 4px;" title="Trả lời" onclick="startGroupReply(${msg.MaTN}, '${escapeHTML(msg.HoTen)}', '${escapeHTML(msg.LoaiTinNhan === 'text' ? msg.NoiDung : 'File đính kèm')}', '${msg.LoaiTinNhan}')"></i>
+                <div class="group-react-wrapper">
+                    <i class="fa-regular fa-face-smile" style="cursor: pointer; padding: 4px;" title="Thả cảm xúc"></i>
+                    <div class="group-emoji-picker">
+                        <span onclick="reactGroupMessage(${msg.MaTN}, '👍')">👍</span>
+                        <span onclick="reactGroupMessage(${msg.MaTN}, '❤️')">❤️</span>
+                        <span onclick="reactGroupMessage(${msg.MaTN}, '😂')">😂</span>
+                        <span onclick="reactGroupMessage(${msg.MaTN}, '😮')">😮</span>
+                        <span onclick="reactGroupMessage(${msg.MaTN}, '😢')">😢</span>
+                        <span onclick="reactGroupMessage(${msg.MaTN}, '😡')">😡</span>
+                    </div>
+                </div>
+                ${isMe && msg.LoaiTinNhan === 'text' ? `<i class="fa-solid fa-pen" style="cursor: pointer; padding: 4px;" title="Chỉnh sửa" onclick="startGroupEdit(${msg.MaTN}, '${escapeHTML(msg.NoiDung)}')"></i>` : ''}
+                <i class="fa-solid fa-trash" style="cursor: pointer; padding: 4px; color: var(--danger);" title="Gỡ tin nhắn" onclick="openRemoveGroupMsgModal(${msg.MaTN}, ${isMe})"></i>
+            </div>
+        `;
+    }
+
+    msgDiv.innerHTML = `
+        <div style="flex-shrink: 0;" title="${escapeHTML(msg.HoTen)}">${avatarHtml}</div>
+        <div style="max-width: 75%; display: flex; flex-direction: column; align-items: ${isMe ? 'flex-end' : 'flex-start'}; gap: 2px; position: relative;" onmouseenter="this.querySelector('.gmsg-actions')?.style.setProperty('display', 'flex')" onmouseleave="this.querySelector('.gmsg-actions')?.style.setProperty('display', 'none')">
+            ${!isMe ? `<span style="font-size: 12px; color: var(--text-secondary); margin-left: 4px; font-weight: 500;">${escapeHTML(msg.HoTen)}</span>` : ''}
+            <div style="display: flex; gap: 8px; align-items: center; flex-direction: ${isMe ? 'row-reverse' : 'row'};">
+                <div style="position: relative;">
+                    ${replyHtml}
+                    ${contentHtml}
+                    ${reactionsHtml}
+                </div>
+                ${actionsMenu}
+            </div>
+            <span style="font-size: 11px; color: #9ca3af; margin: 0 4px; margin-top: ${reactionsHtml ? '8px' : '0'};">${timeStr}</span>
+        </div>
+    `;
+
+    msgList.appendChild(msgDiv);
+    
+    if (isMe || isInitial || (msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 150)) {
+        msgList.scrollTop = msgList.scrollHeight;
+    }
+};
+
+window.startGroupReply = function(msgId, name, text, type = 'text') {
+    currentGroupReplyTo = { MaTN: msgId, HoTen: name, NoiDung: text, LoaiTinNhan: type };
+    currentGroupEditMsgId = null;
+    document.getElementById('group-chat-reply-name').innerText = `Đang trả lời ${name}`;
+    document.getElementById('group-chat-reply-text').innerText = text;
+    document.getElementById('group-chat-reply-preview').style.display = 'block';
+    document.getElementById('group-chat-input').focus();
+};
+
+window.startGroupEdit = function(msgId, text) {
+    currentGroupEditMsgId = msgId;
+    currentGroupReplyTo = null;
+    document.getElementById('group-chat-reply-name').innerText = `Đang chỉnh sửa tin nhắn`;
+    document.getElementById('group-chat-reply-text').innerText = text;
+    document.getElementById('group-chat-reply-preview').style.display = 'block';
+    
+    const input = document.getElementById('group-chat-input');
+    input.value = text;
+    input.focus();
+};
+
+window.cancelGroupReply = function() {
+    currentGroupReplyTo = null;
+    currentGroupEditMsgId = null;
+    document.getElementById('group-chat-reply-preview').style.display = 'none';
+    const input = document.getElementById('group-chat-input');
+    if (input.value && currentGroupEditMsgId) input.value = ''; 
+};
+
+window.openRemoveGroupMsgModal = function(msgId, isMe) {
+    const modal = document.getElementById('removeGroupMsgModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    setTimeout(() => { modal.style.opacity = '1'; modal.querySelector('.modal-content').style.transform = 'scale(1)'; }, 10);
+    
+    const btnUnsend = document.getElementById('btn-unsend-everyone');
+    const btnDelete = document.getElementById('btn-delete-for-me');
+    const btnCancel = document.getElementById('btn-cancel-remove-gmsg');
+    const btnClose = document.getElementById('btn-close-remove-gmsg');
+    
+    btnUnsend.style.display = isMe ? 'flex' : 'none';
+    
+    const closeModal = () => {
+        modal.style.opacity = '0';
+        modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    };
+    
+    btnCancel.onclick = closeModal;
+    btnClose.onclick = closeModal;
+    
+    btnUnsend.onclick = () => {
+        window.unsendGroupMessage(msgId);
+        closeModal();
+    };
+    
+    btnDelete.onclick = () => {
+        window.deleteGroupMessage(msgId);
+        closeModal();
+    };
+};
+
+window.unsendGroupMessage = async function(msgId) {
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/messages/${msgId}/unsend`, {
+            method: 'PUT', headers: window.getAuthHeaders()
+        });
+        if (res.ok) {
+            getSocket().emit('group_message_unsent', { groupId: currentGroupId, messageId: msgId });
+        }
+    } catch (err) { console.error(err); }
+};
+
+window.deleteGroupMessage = async function(msgId) {
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/messages/${msgId}/delete`, {
+            method: 'PUT', headers: window.getAuthHeaders()
+        });
+        if (res.ok) {
+            const msgEl = document.getElementById(`group-msg-${msgId}`);
+            if (msgEl) msgEl.remove();
+        }
+    } catch (err) { console.error(err); }
+};
+
+window.reactGroupMessage = async function(msgId, reaction) {
+    try {
+        const res = await fetch(`${API_URL}/groups/${currentGroupId}/messages/${msgId}/react`, {
+            method: 'PUT', headers: Object.assign({}, window.getAuthHeaders(), { 'Content-Type': 'application/json' }), body: JSON.stringify({ reaction })
+        });
+        if (res.ok) {
+            getSocket().emit('group_message_reacted', { groupId: currentGroupId, messageId: msgId, reaction });
+        }
+    } catch (err) { console.error(err); }
+};
+

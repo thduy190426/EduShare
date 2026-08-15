@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl , renderCommentSkeleton} from '../shared/utils.js';
 import { updateSEO } from '../shared/seo.js';
 import { getSocket } from '../shared/socketClient.js';
 
@@ -7,6 +7,7 @@ let currentMaTL = null;
 const token = getToken();
 let hasSubmittedRating = false;
 let currentUserMaND = null;
+let currentUserRole = null;
 let allComments = [];
 let documentOwnerId = null;
 
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = decodeJWT(token);
             if (payload) {
                 currentUserMaND = payload.MaND;
+                currentUserRole = payload.VaiTro;
                 if (payload.VaiTro === 'GiaoVien' || payload.VaiTro === 'Admin') {
                     const btnVerify = document.getElementById('btn-verify');
                     if (btnVerify) btnVerify.style.display = 'flex';
@@ -121,8 +123,10 @@ async function fetchDocumentDetails() {
         const ratingHint = document.querySelector('.rating-count');
         if (data.hasRated) {
             lockRatingUI('Cảm ơn bạn đã đánh giá');
-        } else if (token && !data.hasDownloaded && ratingHint) {
-            ratingHint.textContent = 'Tải tài liệu xuống trước khi đánh giá';
+        } else if (token && currentUserRole === 'SinhVien' && currentUserMaND !== data.document.MaND_NguoiDang && ratingHint) {
+            ratingHint.textContent = 'Vui lòng đánh giá trước khi tải xuống';
+        } else if (token && ratingHint) {
+            ratingHint.textContent = 'Bấm vào sao để đánh giá';
         }
     } catch (error) {
         console.error(error);
@@ -134,7 +138,7 @@ async function fetchRelatedDocuments() {
     const listEl = document.getElementById('related-docs-list');
     if (!listEl) return;
 
-    listEl.innerHTML = '<div class="related-state">Đang tải tải liệu có liên quan...</div>';
+    listEl.innerHTML = renderDocumentSkeleton(3);
 
     try {
         const response = await fetch(`${API_URL}/documents/${currentMaTL}/related?limit=5`);
@@ -1065,6 +1069,16 @@ async function handleDownload() {
         Swal.fire('Vui lòng đăng nhập để tải tài liệu.');
         return;
     }
+
+    if (currentUserRole === 'SinhVien' && !hasSubmittedRating && currentUserMaND !== documentOwnerId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Yêu cầu đánh giá',
+            text: 'Theo quy định, bạn cần đánh giá tài liệu (bấm vào các ngôi sao bên phải) trước khi tải xuống.'
+        });
+        return;
+    }
+
     try {
         const res = await fetch(`${API_URL}/documents/${currentMaTL}/download`, {
             headers: { 'Authorization': `Bearer ${token}` }

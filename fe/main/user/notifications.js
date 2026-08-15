@@ -1,5 +1,6 @@
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
+import { getSocket } from '../shared/socketClient.js';
 
 let currentPage = 1;
 const LIMIT = 20;
@@ -7,6 +8,7 @@ const LIMIT = 20;
 document.addEventListener('DOMContentLoaded', () => {
     loadUserProfileNav();
     fetchNotifications(currentPage);
+    setupSocketListener();
 
     const btnMarkAll = document.getElementById('btn-mark-all-read');
     if (btnMarkAll) {
@@ -331,4 +333,14 @@ async function markAllAsRead() {
         console.error('Lỗi khi đánh dấu tất cả đã đọc:', error);
         Swal.fire('Lỗi', 'Không thể đánh dấu đã đọc.', 'error');
     }
+}
+
+function setupSocketListener() {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.on('notification', () => {
+        currentPage = 1;
+        fetchNotifications(1);
+    });
 }

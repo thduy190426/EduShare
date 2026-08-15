@@ -185,8 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
   searchInput.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-      currentPage = 1;
-      fetchLogs();
+        currentPage = 1;
+        fetchLogs();
     }, 500);
   });
 

@@ -252,6 +252,27 @@
         </div>
       </div>
 
+      <div class="form-card" id="sessions-section" style="border-left: 4px solid #3b82f6;">
+        <div class="collapsible-header" id="btn-toggle-sessions" style="cursor: pointer;">
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-desktop" style="color: #3b82f6;"></i> Quản lý thiết bị</h2>
+          <span class="toggle-status"
+            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+            <span class="toggle-text">Mở rộng</span>
+            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+          </span>
+        </div>
+
+        <div class="collapsible-content" id="sessions-content">
+          <div style="padding: 10px 0;">
+            <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Quản lý các thiết bị và trình duyệt đang đăng nhập vào tài khoản của bạn. Đăng xuất các phiên lạ để bảo vệ tài khoản.</p>
+            <div id="sessions-list" style="display: flex; flex-direction: column; gap: 12px;">
+              <p>Đang tải danh sách thiết bị...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
       <div class="form-card" id="upgrade-teacher-section" style="display: none; border-left: 4px solid var(--primary);">
         <div class="collapsible-header" id="upgrade-teacher-header" style="cursor: pointer;">
           <div>

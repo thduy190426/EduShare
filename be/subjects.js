@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const { authMiddleware } = require('./middlewares/auth');
+const { sendNotificationToUser } = require('./services/socket');
 
 const parseId = (value) => {
     const id = Number.parseInt(value, 10);
@@ -121,6 +122,7 @@ router.post('/suggestions', authMiddleware, async (req, res) => {
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [admin.MaND, 'HeThong', `Giáo viên vừa đề xuất môn học mới: "${tenMonHoc}".`, '../admin/adminSubjects.html']
             );
+            sendNotificationToUser(admin.MaND, 'new_notification', { message: `Giáo viên vừa đề xuất môn học mới: "${tenMonHoc}".`, link: '../admin/adminSubjects.html' });
         }
 
         res.status(201).json({ message: 'Đã gửi đề xuất môn học. Vui lòng chờ Admin duyệt.', id: result.insertId });

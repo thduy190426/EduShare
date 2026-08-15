@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { authMiddleware } = require('./middlewares/auth');
 const { moderationMiddleware } = require('./middlewares/moderation');
+const { sendNotificationToUser } = require('./services/socket');
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -220,6 +221,7 @@ router.post('/:maNhom/join', authMiddleware, async (req, res) => {
             'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
             [groupCheck[0].MaND_QuanTri, 'HeThong', thongBaoMsg, linkDich]
         );
+        sendNotificationToUser(groupCheck[0].MaND_QuanTri, 'new_notification', { message: thongBaoMsg, link: linkDich });
 
         res.status(200).json({ message: 'Đã gửi yêu cầu tham gia. Vui lòng chờ phê duyệt.' });
     } catch (error) {
@@ -614,6 +616,7 @@ router.put('/:maNhom/documents/:maTL/toggle-status', authMiddleware, async (req,
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [nguoiDangId, 'HeThong', thongBaoMsg, linkDich]
                 );
+                sendNotificationToUser(nguoiDangId, 'new_notification', { message: thongBaoMsg, link: linkDich });
             }
         }
 
@@ -750,6 +753,7 @@ router.delete('/:maNhom/documents/:maTL', authMiddleware, async (req, res) => {
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [nguoiDangId, 'HeThong', thongBaoMsg, linkDich]
                 );
+                sendNotificationToUser(nguoiDangId, 'new_notification', { message: thongBaoMsg, link: linkDich });
             }
         }
 
@@ -1072,6 +1076,7 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddlew
                         'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                         [taggedMaND, 'NhacDen', `${currentUserHoTen} đã nhắc đến bạn trong nhóm.`, `../group/groupDetails.html?id=${maNhom}`]
                     );
+                    sendNotificationToUser(taggedMaND, 'new_notification', { message: `${currentUserHoTen} đã nhắc đến bạn trong nhóm.`, link: `../group/groupDetails.html?id=${maNhom}` });
                 }
             }
         }
@@ -1097,6 +1102,134 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddlew
         res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId, comment: newCommentRows[0] });
     } catch (error) {
         console.error('Lỗi API POST /groups/:maNhom/posts/:postId/comments:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/:maNhom/messages', authMiddleware, async (req, res) => {
+    const maNhom = req.params.maNhom;
+    const maND = req.user.MaND;
+
+    try {
+        const pool = req.app.locals.pool;
+
+        const [memberCheck] = await pool.execute('SELECT 1 FROM THANHVIEN_NHOM WHERE MaNhom = ? AND MaND = ?', [maNhom, maND]);
+        if (memberCheck.length === 0) {
+            return res.status(403).json({ message: 'Bạn không phải là thành viên nhóm này.' });
+        }
+
+        const limit = parseInt(req.query.limit, 10) || 50;
+        const page = parseInt(req.query.page, 10) || 1;
+        const offset = (page - 1) * limit;
+
+        const [rows] = await pool.execute(`
+            SELECT TN.*, ND.HoTen, ND.AvatarURL,
+                   R_TN.NoiDung AS TraLoi_NoiDung, R_ND.HoTen AS TraLoi_HoTen, R_TN.LoaiTinNhan AS TraLoi_LoaiTinNhan
+            FROM TINNHAN_NHOM TN
+            JOIN NGUOIDUNG ND ON TN.MaND_Gui = ND.MaND
+            LEFT JOIN TINNHAN_NHOM R_TN ON TN.TraLoiCho_MaTN = R_TN.MaTN
+            LEFT JOIN NGUOIDUNG R_ND ON R_TN.MaND_Gui = R_ND.MaND
+            WHERE TN.MaNhom = ? AND TN.MaTN NOT IN (SELECT MaTN FROM TINNHAN_NHOM_DA_XOA WHERE MaND = ?)
+            ORDER BY TN.NgayGui DESC
+            LIMIT ? OFFSET ?
+        `, [maNhom, maND, String(limit), String(offset)]);
+
+        rows.reverse();
+
+        res.status(200).json({ messages: rows });
+    } catch (error) {
+        console.error('Lỗi API GET /groups/:maNhom/messages:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/messages/:messageId/unsend', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const { maNhom, messageId } = req.params;
+        const pool = req.app.locals.pool;
+
+        const [result] = await pool.execute(
+            'UPDATE TINNHAN_NHOM SET DaThuHoi = TRUE WHERE MaTN = ? AND MaNhom = ? AND MaND_Gui = ?',
+            [messageId, maNhom, userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(403).json({ message: 'Không thể thu hồi tin nhắn này.' });
+        }
+        res.status(200).json({ message: 'Thu hồi thành công.' });
+    } catch (error) {
+        console.error('Lỗi khi thu hồi tin nhắn nhóm:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/messages/:messageId/edit', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const { maNhom, messageId } = req.params;
+        const { text } = req.body;
+        const pool = req.app.locals.pool;
+
+        if (!text || !text.trim()) return res.status(400).json({ message: 'Nội dung không hợp lệ.' });
+
+        const [result] = await pool.execute(
+            "UPDATE TINNHAN_NHOM SET NoiDung = ?, DaChinhSua = TRUE WHERE MaTN = ? AND MaNhom = ? AND MaND_Gui = ? AND LoaiTinNhan = 'text' AND DaThuHoi = FALSE",
+            [text.trim(), messageId, maNhom, userId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(403).json({ message: 'Không thể sửa tin nhắn này.' });
+        }
+        res.status(200).json({ message: 'Sửa thành công.' });
+    } catch (error) {
+        console.error('Lỗi khi sửa tin nhắn nhóm:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/messages/:messageId/react', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const { maNhom, messageId } = req.params;
+        const { reaction } = req.body;
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute('SELECT Reactions FROM TINNHAN_NHOM WHERE MaTN = ? AND MaNhom = ?', [messageId, maNhom]);
+        if (rows.length === 0) return res.status(404).json({ message: 'Tin nhắn không tồn tại.' });
+
+        let reactionsObj = {};
+        if (rows[0].Reactions) {
+            try { reactionsObj = typeof rows[0].Reactions === 'string' ? JSON.parse(rows[0].Reactions) : rows[0].Reactions; } catch(e) {}
+        }
+
+        if (reaction) {
+            reactionsObj[userId] = reaction;
+        } else {
+            delete reactionsObj[userId];
+        }
+
+        const newReactionsStr = JSON.stringify(reactionsObj);
+        await pool.execute('UPDATE TINNHAN_NHOM SET Reactions = ? WHERE MaTN = ?', [newReactionsStr, messageId]);
+
+        res.status(200).json({ message: 'Cập nhật cảm xúc thành công', reactions: reactionsObj });
+    } catch (error) {
+        console.error('Lỗi khi thả cảm xúc tin nhắn nhóm:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/messages/:messageId/delete', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const { messageId } = req.params;
+        const pool = req.app.locals.pool;
+        const [msgCheck] = await pool.execute('SELECT MaTN FROM TINNHAN_NHOM WHERE MaTN = ?', [messageId]);
+        if (msgCheck.length === 0) return res.status(404).json({ message: 'Không tìm thấy tin nhắn.' });
+        await pool.execute('INSERT IGNORE INTO TINNHAN_NHOM_DA_XOA (MaTN, MaND) VALUES (?, ?)', [messageId, userId]);
+        res.json({ message: 'Xóa tin nhắn thành công (chỉ gỡ ở phía bạn).' });
+    } catch (error) {
+        console.error('Lỗi khi xóa tin nhắn nhóm:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

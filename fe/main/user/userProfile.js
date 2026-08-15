@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFollowers();
     initDocuments();
     setupEventListeners();
+    loadActiveSessions();
 });
 
 let followersList = [];
@@ -1213,6 +1214,26 @@ function setupEventListeners() {
     const btnChangePw = document.getElementById('btn-change-pw');
     btnChangePw.addEventListener('click', changePassword);
 
+    const btnToggleSessions = document.getElementById('btn-toggle-sessions');
+    if (btnToggleSessions) {
+        btnToggleSessions.addEventListener('click', () => {
+            const content = document.getElementById('sessions-content');
+            const icon = btnToggleSessions.querySelector('.toggle-icon');
+            const text = btnToggleSessions.querySelector('.toggle-text');
+            const isExpanded = content.classList.contains('expanded');
+
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                btnToggleSessions.classList.remove('expanded');
+                text.textContent = 'Mở rộng';
+            } else {
+                content.classList.add('expanded');
+                btnToggleSessions.classList.add('expanded');
+                text.textContent = 'Thu gọn';
+            }
+        });
+    }
+
     const btnToggle2Fa = document.getElementById('btn-toggle-2fa');
     if (btnToggle2Fa) {
         btnToggle2Fa.addEventListener('click', () => {
@@ -1776,4 +1797,153 @@ async function handleDisable2FA() {
             Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
         }
     }
+}
+
+async function loadActiveSessions() {
+    try {
+        const res = await fetch(`${API_URL}/users/sessions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const sessions = await res.json();
+        const listContainer = document.getElementById('sessions-list');
+        if (!listContainer) return;
+        
+        if (sessions.length === 0) {
+            listContainer.innerHTML = '<p>Không có phiên đăng nhập nào.</p>';
+            return;
+        }
+        
+        let isShowingAll = false;
+        
+        function renderSessions() {
+            let html = '';
+            const displaySessions = isShowingAll ? sessions : sessions.slice(0, 3);
+            
+            displaySessions.forEach(s => {
+                const d = new Date(s.createdAt);
+                const pad = (n) => n.toString().padStart(2, '0');
+                const date = `${pad(d.getHours())}:${pad(d.getMinutes())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+                
+                const isMobile = s.deviceInfo.toLowerCase().includes('mobile') || s.deviceInfo.toLowerCase().includes('android') || s.deviceInfo.toLowerCase().includes('iphone');
+                const icon = isMobile ? 'fa-mobile-screen' : 'fa-laptop';
+                const deviceName = parseDeviceInfo(s.deviceInfo);
+                
+                let displayIp = s.ipAddress;
+                if (displayIp === '::1' || displayIp === '127.0.0.1' || displayIp === '::ffff:127.0.0.1') {
+                    displayIp = 'Localhost (Máy cá nhân)';
+                }
+                
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="font-size: 24px; color: ${s.isCurrent ? 'var(--primary)' : 'var(--text-secondary)'};">
+                                <i class="fa-solid ${icon}"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary);">${deviceName} ${s.isCurrent ? '<span style="font-size: 11px; padding: 2px 6px; background: var(--primary); color: white; border-radius: 10px; margin-left: 6px;">Hiện tại</span>' : ''}</div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">IP: ${displayIp} &bull; Đăng nhập: ${date}</div>
+                            </div>
+                        </div>
+                        ${!s.isCurrent ? `
+                        <button class="btn-secondary btn-revoke-session" data-id="${s.id}" style="padding: 6px 12px; border-radius: 6px; color: #ef4444; border-color: #ef4444; cursor: pointer; display: flex; align-items: center; gap: 6px; background: transparent;">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất
+                        </button>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            if (!isShowingAll && sessions.length > 3) {
+                html += `
+                    <button id="btn-show-all-sessions" style="margin-top: 4px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                        Xem thêm ${sessions.length - 3} thiết bị khác <i class="fa-solid fa-chevron-down" style="margin-left: 4px;"></i>
+                    </button>
+                `;
+            } else if (isShowingAll && sessions.length > 3) {
+                html += `
+                    <button id="btn-hide-sessions" style="margin-top: 4px; padding: 10px; border: 1px dashed var(--border); border-radius: 8px; background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 500; transition: all 0.2s;">
+                        Thu gọn danh sách <i class="fa-solid fa-chevron-up" style="margin-left: 4px;"></i>
+                    </button>
+                `;
+            }
+            
+            listContainer.innerHTML = html;
+            
+            document.querySelectorAll('.btn-revoke-session').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const result = await Swal.fire({
+                        title: 'Xác nhận đăng xuất',
+                        text: 'Bạn có chắc chắn muốn đăng xuất khỏi thiết bị này?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Đăng xuất',
+                        cancelButtonText: 'Hủy'
+                    });
+                    
+                    if (result.isConfirmed) {
+                        try {
+                            const revokeRes = await fetch(`${API_URL}/users/sessions/${id}`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                            });
+                            if (revokeRes.ok) {
+                                Toast.fire({ icon: 'success', title: 'Đã đăng xuất thiết bị.' });
+                                loadActiveSessions();
+                            } else {
+                                const errorData = await revokeRes.json();
+                                Swal.fire('Lỗi', errorData.message || 'Không thể đăng xuất', 'error');
+                            }
+                        } catch (err) {
+                            Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
+                        }
+                    }
+                });
+            });
+
+            const btnShowAll = document.getElementById('btn-show-all-sessions');
+            if (btnShowAll) {
+                btnShowAll.addEventListener('click', () => {
+                    isShowingAll = true;
+                    renderSessions();
+                });
+            }
+
+            const btnHide = document.getElementById('btn-hide-sessions');
+            if (btnHide) {
+                btnHide.addEventListener('click', () => {
+                    isShowingAll = false;
+                    renderSessions();
+                });
+            }
+        }
+        
+        renderSessions();
+        
+    } catch (err) {
+        console.error('Failed to load active sessions:', err);
+    }
+}
+
+function parseDeviceInfo(ua) {
+    if (!ua || ua === 'Unknown Device') return ua;
+    let browser = "Trình duyệt không xác định";
+    if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("SamsungBrowser")) browser = "Samsung Internet";
+    else if (ua.includes("Opera") || ua.includes("OPR")) browser = "Opera";
+    else if (ua.includes("Trident")) browser = "Internet Explorer";
+    else if (ua.includes("Edge") || ua.includes("Edg")) browser = "Edge";
+    else if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Safari")) browser = "Safari";
+    
+    let os = "OS không xác định";
+    if (ua.includes("Win")) os = "Windows";
+    else if (ua.includes("Mac")) os = "MacOS";
+    else if (ua.includes("X11")) os = "UNIX";
+    else if (ua.includes("Linux")) os = "Linux";
+    if (ua.includes("Android")) os = "Android";
+    if (ua.includes("like Mac")) os = "iOS";
+
+    return `${browser} trên ${os}`;
 }

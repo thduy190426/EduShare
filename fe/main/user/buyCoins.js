@@ -8,7 +8,72 @@ let currentPackages = [];
 document.addEventListener("DOMContentLoaded", () => {
     fetchPackages();
     setupPromoCode();
+    fetchFlashSale();
 });
+
+async function fetchFlashSale() {
+    try {
+        const response = await fetch(`${API_URL}/payment/flash-sale`);
+        if (response.ok) {
+            const data = await response.json();
+            if (data) {
+                const bannerEl = document.getElementById('fomo-banner');
+                if (bannerEl) bannerEl.style.display = 'flex';
+                
+                const codeEl = document.getElementById('fomo-promo-code');
+                if (codeEl) codeEl.textContent = data.Code;
+                
+                const discountEl = document.getElementById('fomo-promo-discount');
+                if (discountEl) discountEl.textContent = data.DiscountPercent;
+                
+                if (data.NgayHetHan) {
+                    startFomoTimer(new Date(data.NgayHetHan).getTime());
+                }
+            } else {
+                const bannerEl = document.getElementById('fomo-banner');
+                if (bannerEl) bannerEl.style.display = 'none';
+            }
+        }
+    } catch (err) {
+        console.error('Error fetching flash sale:', err);
+    }
+}
+
+function startFomoTimer(targetTime) {
+    const hoursEl = document.getElementById('fomo-hours');
+    const minutesEl = document.getElementById('fomo-minutes');
+    const secondsEl = document.getElementById('fomo-seconds');
+    const bannerEl = document.getElementById('fomo-banner');
+
+    if (!hoursEl || !minutesEl || !secondsEl) return;
+
+    if (window.fomoInterval) clearInterval(window.fomoInterval);
+
+    const updateTimer = () => {
+        const currentTime = new Date().getTime();
+        const diff = parseInt(targetTime) - currentTime;
+
+        if (diff <= 0) {
+            hoursEl.textContent = '00';
+            minutesEl.textContent = '00';
+            secondsEl.textContent = '00';
+            if (bannerEl) bannerEl.style.opacity = '0.5';
+            if (window.fomoInterval) clearInterval(window.fomoInterval);
+            return;
+        }
+
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        hoursEl.textContent = hours.toString().padStart(2, '0');
+        minutesEl.textContent = minutes.toString().padStart(2, '0');
+        secondsEl.textContent = seconds.toString().padStart(2, '0');
+    };
+
+    updateTimer();
+    window.fomoInterval = setInterval(updateTimer, 1000);
+}
 
 function setupPromoCode() {
     const btnApply = document.getElementById("btn-apply-promo");

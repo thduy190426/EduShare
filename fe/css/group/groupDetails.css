@@ -40,7 +40,7 @@
     ul { list-style: none; }
     
     
-    .navbar { background: var(--white); border-bottom: 1px solid var(--border); position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); z-index: 100; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
+    .navbar { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); position: fixed; top: 0; left: 0; right: 0; height: var(--header-height); z-index: 100; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
     .logo { font-size: 24px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; width: var(--sidebar-width); }
     .nav-actions { display: flex; align-items: center; gap: 20px; }
     .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 8px; border-radius: 30px; transition: background 0.2s; }
@@ -138,7 +138,7 @@
     @keyframes modalSlideDown { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(20px) scale(0.96); } }
     
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center; padding: 16px; animation: modalFadeIn 0.25s ease-out; backdrop-filter: blur(3px); }
-    .modal-content { background: var(--white); width: 100%; max-width: 480px; border-radius: var(--radius-card); padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.12), 0 10px 10px -5px rgba(0,0,0,0.06); animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    .modal-content { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); width: 100%; max-width: 480px; border-radius: var(--radius-card); padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.12), 0 10px 10px -5px rgba(0,0,0,0.06); animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
     
     .modal-overlay.closing { animation: modalFadeOut 0.25s ease-in forwards; }
     .modal-overlay.closing .modal-content { animation: modalSlideDown 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards; }

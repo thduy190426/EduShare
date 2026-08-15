@@ -39,7 +39,9 @@ router.get('/contacts', authMiddleware, async (req, res) => {
                 M.LoaiTinNhan as LatestMessageType,
                 M.DaThuHoi as LatestMessageUnsent,
                 M.DaChinhSua as LatestMessageEdited,
-                (SELECT COUNT(*) FROM TINNHAN WHERE NguoiGui = ND.MaND AND NguoiNhan = ? AND DaDoc = FALSE) as UnreadCount
+                IFNULL(C.DaGhim, 0) as IsPinned,
+                IFNULL(C.DaChan, 0) as IsBlocked,
+                (SELECT COUNT(*) FROM TINNHAN WHERE NguoiGui = ND.MaND AND NguoiNhan = ? AND DaDoc = FALSE AND (C.NgayXoa IS NULL OR NgayGui > C.NgayXoa)) as UnreadCount
             FROM NGUOIDUNG ND
             INNER JOIN (
                 SELECT 
@@ -50,10 +52,12 @@ router.get('/contacts', authMiddleware, async (req, res) => {
                 GROUP BY PartnerId
             ) as LastMsg ON ND.MaND = LastMsg.PartnerId
             INNER JOIN TINNHAN M ON LastMsg.MaxMaTN = M.MaTN
-            ORDER BY M.NgayGui DESC
+            LEFT JOIN CAIDAT_CHAT C ON C.MaND = ? AND C.MaND_DoiTac = ND.MaND
+            WHERE C.NgayXoa IS NULL OR M.NgayGui > C.NgayXoa
+            ORDER BY IsPinned DESC, M.NgayGui DESC
         `;
 
-        const [contacts] = await pool.execute(sql, [userId, userId, userId, userId]);
+        const [contacts] = await pool.execute(sql, [userId, userId, userId, userId, userId]);
         res.status(200).json({ contacts });
     } catch (error) {
         console.error('Lỗi khi lấy danh sách liên hệ chat:', error);
@@ -73,7 +77,9 @@ router.get('/history/:partnerId', authMiddleware, async (req, res) => {
             FROM (
                 SELECT MaTN, NguoiGui, NguoiNhan, NoiDung, DaDoc, NgayGui, LoaiTinNhan, DaThuHoi, Reactions, DaChinhSua, DaNhan, TraLoiCho_MaTN
                 FROM TINNHAN
-                WHERE (NguoiGui = ? AND NguoiNhan = ?) OR (NguoiGui = ? AND NguoiNhan = ?)
+                LEFT JOIN CAIDAT_CHAT C ON C.MaND = ? AND C.MaND_DoiTac = ?
+                WHERE ((NguoiGui = ? AND NguoiNhan = ?) OR (NguoiGui = ? AND NguoiNhan = ?))
+                  AND (C.NgayXoa IS NULL OR NgayGui > C.NgayXoa)
                 ORDER BY NgayGui DESC
                 LIMIT ?
             ) sub
@@ -81,7 +87,7 @@ router.get('/history/:partnerId', authMiddleware, async (req, res) => {
             ORDER BY sub.NgayGui ASC
         `;
 
-        const [messages] = await pool.execute(sql, [userId, partnerId, partnerId, userId, limit.toString()]);
+        const [messages] = await pool.execute(sql, [userId, partnerId, userId, partnerId, partnerId, userId, limit.toString()]);
         await pool.execute(
             'UPDATE TINNHAN SET DaDoc = TRUE WHERE NguoiGui = ? AND NguoiNhan = ? AND DaDoc = FALSE',
             [partnerId, userId]
@@ -132,6 +138,73 @@ router.get('/search-users', authMiddleware, async (req, res) => {
         res.status(200).json({ users });
     } catch (error) {
         console.error('Lỗi khi tìm kiếm người dùng:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/pin/:partnerId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const partnerId = req.params.partnerId;
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute('SELECT DaGhim FROM CAIDAT_CHAT WHERE MaND = ? AND MaND_DoiTac = ?', [userId, partnerId]);
+        
+        let newStatus = true;
+        if (rows.length === 0) {
+            await pool.execute('INSERT INTO CAIDAT_CHAT (MaND, MaND_DoiTac, DaGhim) VALUES (?, ?, TRUE)', [userId, partnerId]);
+        } else {
+            newStatus = !rows[0].DaGhim;
+            await pool.execute('UPDATE CAIDAT_CHAT SET DaGhim = ? WHERE MaND = ? AND MaND_DoiTac = ?', [newStatus, userId, partnerId]);
+        }
+        
+        res.status(200).json({ message: newStatus ? 'Đã ghim.' : 'Đã bỏ ghim.', isPinned: newStatus });
+    } catch (error) {
+        console.error('Lỗi khi ghim:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/block/:partnerId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const partnerId = req.params.partnerId;
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute('SELECT DaChan FROM CAIDAT_CHAT WHERE MaND = ? AND MaND_DoiTac = ?', [userId, partnerId]);
+        
+        let newStatus = true;
+        if (rows.length === 0) {
+            await pool.execute('INSERT INTO CAIDAT_CHAT (MaND, MaND_DoiTac, DaChan) VALUES (?, ?, TRUE)', [userId, partnerId]);
+        } else {
+            newStatus = !rows[0].DaChan;
+            await pool.execute('UPDATE CAIDAT_CHAT SET DaChan = ? WHERE MaND = ? AND MaND_DoiTac = ?', [newStatus, userId, partnerId]);
+        }
+        
+        res.status(200).json({ message: newStatus ? 'Đã chặn người dùng này.' : 'Đã bỏ chặn người dùng này.', isBlocked: newStatus });
+    } catch (error) {
+        console.error('Lỗi khi chặn:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/delete/:partnerId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const partnerId = req.params.partnerId;
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute('SELECT NgayXoa FROM CAIDAT_CHAT WHERE MaND = ? AND MaND_DoiTac = ?', [userId, partnerId]);
+        
+        if (rows.length === 0) {
+            await pool.execute('INSERT INTO CAIDAT_CHAT (MaND, MaND_DoiTac, NgayXoa) VALUES (?, ?, CURRENT_TIMESTAMP)', [userId, partnerId]);
+        } else {
+            await pool.execute('UPDATE CAIDAT_CHAT SET NgayXoa = CURRENT_TIMESTAMP WHERE MaND = ? AND MaND_DoiTac = ?', [userId, partnerId]);
+        }
+        
+        res.status(200).json({ message: 'Đã xóa đoạn chat này khỏi danh sách.' });
+    } catch (error) {
+        console.error('Lỗi khi xóa đoạn chat:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

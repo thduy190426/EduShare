@@ -53,9 +53,15 @@ function renderPromos() {
         return `
             <tr>
                 <td style="text-align: center; font-weight: bold; color: var(--text-secondary);" data-label="STT">${index + 1}</td>
-                <td style="font-weight: 600; color: var(--primary);" data-label="Mã giảm giá">${escapeHTML(promo.Code)}</td>
+                <td style="font-weight: 600; color: var(--primary);" data-label="Mã giảm giá">
+                    ${escapeHTML(promo.Code)}
+                    ${promo.IsFlashSale ? '<br><span style="background: #FEF3C7; color: #D97706; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#D97706" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Flash Sale</span>' : ''}
+                </td>
                 <td data-label="Tỉ lệ (%)">+${promo.DiscountPercent}%</td>
-                <td style="color: var(--text-secondary); font-size: 14px;" data-label="Mô tả">${escapeHTML(promo.Description || '')}</td>
+                <td style="color: var(--text-secondary); font-size: 14px;" data-label="Mô tả">
+                    ${escapeHTML(promo.Description || '')}
+                    ${promo.IsFlashSale && promo.NgayHetHan ? `<br><small style="color: #ef4444;"><i class="fa-regular fa-clock"></i> Kết thúc: ${new Date(promo.NgayHetHan).toLocaleString('vi-VN')}</small>` : ''}
+                </td>
                 <td data-label="Trạng thái">
                     <span class="status-badge ${promo.IsActive ? 'active' : 'inactive'}" style="display: inline-flex; align-items: center; color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; font-size: 13px; font-weight: 500;">
                         <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background-color: ${promo.IsActive ? '#16a34a' : '#ea580c'}; margin-right: 6px;"></span>
@@ -100,6 +106,23 @@ function setupCreateModal() {
     const inputDiscount = document.getElementById('custom-promo-discount');
     const inputDesc = document.getElementById('custom-promo-desc');
     const modalTitle = document.getElementById('promo-modal-title');
+    const checkboxFlashSale = document.getElementById('custom-promo-flashsale');
+    const inputEndDate = document.getElementById('custom-promo-enddate');
+    const dateGroup = document.getElementById('flashsale-date-group');
+
+    if (checkboxFlashSale) {
+        checkboxFlashSale.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                dateGroup.style.display = 'block';
+                inputEndDate.required = true;
+            } else {
+                dateGroup.style.display = 'none';
+                inputEndDate.required = false;
+                inputEndDate.value = '';
+            }
+            validateForm();
+        });
+    }
 
     if (!btnShow || !modal) return;
 
@@ -111,11 +134,26 @@ function setupCreateModal() {
         originalPromoData = {
             Code: promo.Code,
             DiscountPercent: promo.DiscountPercent,
-            Description: promo.Description || ''
+            Description: promo.Description || '',
+            IsFlashSale: !!promo.IsFlashSale,
+            NgayHetHan: promo.NgayHetHan || ''
         };
         inputCode.value = promo.Code;
         inputDiscount.value = promo.DiscountPercent;
         inputDesc.value = promo.Description || '';
+        if (checkboxFlashSale) {
+            checkboxFlashSale.checked = !!promo.IsFlashSale;
+            dateGroup.style.display = checkboxFlashSale.checked ? 'block' : 'none';
+            inputEndDate.required = checkboxFlashSale.checked;
+        }
+        if (inputEndDate && promo.NgayHetHan) {
+            const dt = new Date(promo.NgayHetHan);
+            const tzOffset = dt.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(dt - tzOffset)).toISOString().slice(0, 16);
+            inputEndDate.value = localISOTime;
+        } else if (inputEndDate) {
+            inputEndDate.value = '';
+        }
 
         modalTitle.innerHTML = '<i class="fa-solid fa-pen"></i> Chỉnh sửa mã ưu đãi';
         btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Lưu thay đổi';
@@ -138,15 +176,27 @@ function setupCreateModal() {
         const isValidCode = code.length > 0 && /^[A-Z0-9_]+$/.test(code);
 
         const isValidDiscount = !isNaN(discount) && discount >= 1 && discount <= 100;
+        
+        const isFlashSale = checkboxFlashSale ? checkboxFlashSale.checked : false;
+        const endDateVal = inputEndDate ? inputEndDate.value : '';
+        const isValidDate = isFlashSale ? !!endDateVal : true;
 
         let isChanged = true;
         if (currentEditingId && originalPromoData) {
+            let originalDateVal = '';
+            if (originalPromoData.NgayHetHan) {
+                const dt = new Date(originalPromoData.NgayHetHan);
+                const tzOffset = dt.getTimezoneOffset() * 60000;
+                originalDateVal = (new Date(dt - tzOffset)).toISOString().slice(0, 16);
+            }
             isChanged = (code !== originalPromoData.Code) ||
                 (discount !== originalPromoData.DiscountPercent) ||
-                (description !== originalPromoData.Description);
+                (description !== originalPromoData.Description) ||
+                (isFlashSale !== originalPromoData.IsFlashSale) ||
+                (endDateVal !== originalDateVal);
         }
 
-        btnSubmit.disabled = !(isValidCode && isValidDiscount && isChanged);
+        btnSubmit.disabled = !(isValidCode && isValidDiscount && isValidDate && isChanged);
     }
 
     inputCode.addEventListener('input', validateForm);
@@ -159,6 +209,13 @@ function setupCreateModal() {
         inputCode.value = '';
         inputDiscount.value = '20';
         inputDesc.value = '';
+        
+        if (checkboxFlashSale) {
+            checkboxFlashSale.checked = false;
+            dateGroup.style.display = 'none';
+            inputEndDate.required = false;
+            inputEndDate.value = '';
+        }
 
         modalTitle.innerHTML = '<i class="fa-solid fa-gift"></i> Tạo mã ưu đãi mới';
         btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Tạo mã';
@@ -182,7 +239,18 @@ function setupCreateModal() {
         const discount = inputDiscount.value;
         const description = inputDesc.value.trim();
 
-        if (!code || !discount) {
+        const isFlashSale = checkboxFlashSale ? checkboxFlashSale.checked : false;
+        const endDateVal = inputEndDate ? inputEndDate.value : null;
+
+        const payload = { 
+            Code: code, 
+            DiscountPercent: parseInt(discount), 
+            Description: description,
+            IsFlashSale: isFlashSale,
+            NgayHetHan: endDateVal ? new Date(endDateVal).toISOString() : null
+        };
+
+        if (!code || !discount || (isFlashSale && !endDateVal)) {
             showToast('error', 'Vui lòng điền đủ thông tin');
             return;
         }
@@ -207,7 +275,7 @@ function setupCreateModal() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ Code: code, DiscountPercent: parseInt(discount), Description: description })
+                body: JSON.stringify(payload)
             });
 
             const data = await res.json();

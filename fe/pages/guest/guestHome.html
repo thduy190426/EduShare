@@ -35,6 +35,16 @@
     <div class="container">
       <h1>Chia sẻ tri thức<br>Kết nối học tập</h1>
       <p>Nền tảng chia sẻ tài liệu học tập lớn nhất dành cho học sinh, sinh viên và giảng viên tại Việt Nam. Tìm kiếm, đóng góp và cùng nhau học tốt hơn.</p>
+      
+      <div class="hero-search-container">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input type="text" id="guestSearchInput" placeholder="Tìm kiếm tài liệu, môn học, giáo trình..." autocomplete="off">
+          <button id="btnGuestSearch" class="btn btn-primary">Tìm kiếm</button>
+        </div>
+        <div id="searchSuggestions" class="suggestions-dropdown hidden"></div>
+      </div>
+
       <div class="hero-actions">
         <a href="../auth/register.html" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Tạo tài khoản miễn phí</a>
         <a href="#documents" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Khám phá tài liệu</a>
@@ -126,6 +136,25 @@
 
   <script type="module" src="../../main/guest/home.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Preview Modal -->
+  <div id="previewModal" class="modal hidden">
+    <div class="modal-content preview-modal-content">
+      <span class="close-modal" id="closePreviewModal">&times;</span>
+      <h2 style="margin-top: 0; margin-bottom: 15px; font-size: 20px;">Xem trước tài liệu <span class="badge-premium" style="font-size: 12px; margin-left: 10px;">PREVIEW</span></h2>
+      <div class="preview-container">
+        <div id="previewLoading" class="preview-loading">
+          <div class="spinner"></div>
+          <p>Đang chuẩn bị bản xem trước...</p>
+        </div>
+        <iframe id="previewIframe" src="" class="hidden"></iframe>
+      </div>
+      <div class="preview-footer">
+        <p>Đăng nhập để xem toàn bộ nội dung và tải xuống tài liệu này.</p>
+        <a href="../auth/login.html" class="btn btn-primary">Đăng nhập ngay</a>
+      </div>
+    </div>
+  </div>
+
   <script>
     function requireLogin(event) {
       event.preventDefault();

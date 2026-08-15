@@ -43,12 +43,14 @@
             <div class="input-wrapper">
               <input type="email" id="loginEmail" class="form-control" placeholder="Nhập địa chỉ email" required>
             </div>
+            <div id="emailError" class="validation-message" style="color: var(--danger); font-size: 12px; margin-top: 4px; display: none;">Email không hợp lệ.</div>
           </div>
 
           <div class="form-group">
             <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu:</label>
             <div class="input-wrapper">
-              <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
+              <input type="text" id="loginPasswordVisual" class="form-control" placeholder="Nhập mật khẩu" autocomplete="off" required>
+              <input type="password" id="loginPassword" style="display:none;" autocomplete="current-password">
               <span class="toggle-password" id="toggleLoginPassword">
                 <i class="fa-solid fa-eye" id="toggleLoginIcon"></i>
               </span>
@@ -108,6 +110,101 @@
       window.isCaptchaSolved = false;
       if (window.validateLoginForm) window.validateLoginForm();
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const visualInput = document.getElementById('loginPasswordVisual');
+      const realInput = document.getElementById('loginPassword');
+      const toggleBtn = document.getElementById('toggleLoginPassword');
+      
+      let realValue = "";
+      let isVisible = false;
+      let maskTimeout = null;
+
+      if (!visualInput || !realInput) return;
+
+      visualInput.addEventListener('input', (e) => {
+        const visualValue = visualInput.value;
+        const cursor = visualInput.selectionStart;
+        
+        if (isVisible) {
+          realValue = visualValue;
+        } else {
+          if (visualValue.length > realValue.length) {
+            const diff = visualValue.length - realValue.length;
+            const added = visualValue.substring(cursor - diff, cursor);
+            realValue = realValue.substring(0, cursor - diff) + added + realValue.substring(cursor - diff);
+          } else if (visualValue.length < realValue.length) {
+            const diff = realValue.length - visualValue.length;
+            realValue = realValue.substring(0, cursor) + realValue.substring(cursor + diff);
+          } else {
+             const lastChar = visualValue.substring(cursor - 1, cursor);
+             if (lastChar !== '•') {
+                 realValue = realValue.substring(0, cursor - 1) + lastChar + realValue.substring(cursor);
+             }
+          }
+        }
+        
+        realInput.value = realValue;
+        realInput.dispatchEvent(new Event('input', { bubbles: true }));
+        
+        if (!isVisible) {
+          let masked = "";
+          for(let i = 0; i < realValue.length; i++) {
+              if (i === cursor - 1) {
+                  masked += realValue[i];
+              } else {
+                  masked += '•';
+              }
+          }
+          visualInput.value = masked;
+          visualInput.setSelectionRange(cursor, cursor);
+          
+          clearTimeout(maskTimeout);
+          maskTimeout = setTimeout(() => {
+            if (!isVisible) {
+               const cur = visualInput.selectionStart;
+               visualInput.value = '•'.repeat(realValue.length);
+               if (document.activeElement === visualInput) {
+                   visualInput.setSelectionRange(cur, cur);
+               }
+            }
+          }, 300);
+        }
+      });
+
+      visualInput.addEventListener('paste', (e) => {
+         e.preventDefault();
+         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+         const cursor = visualInput.selectionStart;
+         const cursorEnd = visualInput.selectionEnd;
+         
+         realValue = realValue.substring(0, cursor) + text + realValue.substring(cursorEnd);
+         realInput.value = realValue;
+         realInput.dispatchEvent(new Event('input', { bubbles: true }));
+         
+         if (isVisible) {
+             visualInput.value = realValue;
+         } else {
+             visualInput.value = '•'.repeat(realValue.length);
+         }
+         
+         const newCursor = cursor + text.length;
+         visualInput.setSelectionRange(newCursor, newCursor);
+      });
+
+      if (toggleBtn) {
+          toggleBtn.addEventListener('click', () => {
+             setTimeout(() => {
+                 isVisible = (realInput.getAttribute('type') === 'text');
+                 if (isVisible) {
+                     visualInput.value = realValue;
+                 } else {
+                     visualInput.value = '•'.repeat(realValue.length);
+                 }
+             }, 10);
+          });
+      }
+    });
   </script>
 </body>
 </html>

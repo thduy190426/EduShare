@@ -35,12 +35,16 @@
             <p>Nhập mã OTP gồm 6 chữ số vừa được gửi đến email <strong id="displayEmail"></strong></p>
           </div>
           <form id="verifyRegisterOtpForm">
-            <div class="form-group">
-              <label class="form-label">Mã OTP:</label>
-              <div class="input-wrapper">
-                <span class="input-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                <input type="text" id="otpCode" class="form-control" placeholder="Nhập mã OTP 6 số" pattern="[0-9]{6}" maxlength="6" required>
+            <div class="form-group" style="text-align: center;">
+              <div class="otp-inputs" style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;">
+                <input type="text" class="otp-box form-control" maxlength="1" pattern="[0-9]" style="width: 54px; height: 54px; text-align: center; font-size: 24px; font-weight: bold; padding: 0; border-radius: 12px;" required autofocus>
+                <input type="text" class="otp-box form-control" maxlength="1" pattern="[0-9]" style="width: 54px; height: 54px; text-align: center; font-size: 24px; font-weight: bold; padding: 0; border-radius: 12px;" required>
+                <input type="text" class="otp-box form-control" maxlength="1" pattern="[0-9]" style="width: 54px; height: 54px; text-align: center; font-size: 24px; font-weight: bold; padding: 0; border-radius: 12px;" required>
+                <input type="text" class="otp-box form-control" maxlength="1" pattern="[0-9]" style="width: 54px; height: 54px; text-align: center; font-size: 24px; font-weight: bold; padding: 0; border-radius: 12px;" required>
+                <input type="text" class="otp-box form-control" maxlength="1" pattern="[0-9]" style="width: 54px; height: 54px; text-align: center; font-size: 24px; font-weight: bold; padding: 0; border-radius: 12px;" required>
+                <input type="text" class="otp-box form-control" maxlength="1" pattern="[0-9]" style="width: 54px; height: 54px; text-align: center; font-size: 24px; font-weight: bold; padding: 0; border-radius: 12px;" required>
               </div>
+              <input type="hidden" id="otpCode" name="otpCode">
             </div>
             <button type="submit" class="btn btn-primary" id="btnVerifyOTP">Xác nhận Đăng ký</button>
             <div class="auth-footer" style="margin-top: 16px;">

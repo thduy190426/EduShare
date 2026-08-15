@@ -6,8 +6,9 @@
   <title>Trung tâm trợ giúp — EduShare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/guest/guestHome.css">
-  <link rel="stylesheet" href="../../css/guest/policy.css">
+  <link rel="stylesheet" href="../../css/guest/helpCenter.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
 <body>
@@ -18,10 +19,10 @@
         <i class="fa-solid fa-book"></i> EduShare
       </a>
       <div class="nav-links">
-        <a href="guestHome.html">Trang chủ</a>
-        <a href="../document/searchResults.html">Tài liệu</a>
-        <a href="../group/groupList.html">Nhóm học tập</a>
-        <a href="#">Hướng dẫn</a>
+        <a href="guestHome.html" onclick="requireLogin(event)">Trang chủ</a>
+        <a href="../document/searchResults.html" onclick="requireLogin(event)">Tài liệu</a>
+        <a href="../group/groupList.html" onclick="requireLogin(event)">Nhóm học tập</a>
+        <a href="#" onclick="requireLogin(event)">Hướng dẫn</a>
       </div>
       <div class="nav-actions">
         <a href="../auth/login.html" class="btn btn-ghost">Đăng nhập</a>
@@ -30,20 +31,98 @@
     </div>
   </nav>
 
-  <header class="policy-header">
-    <div class="container">
-      <h1>Trung tâm trợ giúp</h1>
-      <p>Trang này đang được xây dựng.</p>
+  <header class="help-hero">
+    <div class="container text-center">
+      <h1>Xin chào, chúng tôi có thể giúp gì cho bạn?</h1>
+      <p>Tìm kiếm câu hỏi thường gặp hoặc gửi yêu cầu hỗ trợ cho đội ngũ của chúng tôi</p>
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="help-search-input" placeholder="Nhập từ khóa tìm kiếm (VD: nạp xu, mật khẩu, đăng tài liệu...)">
+      </div>
     </div>
   </header>
 
-  <main class="policy-container" style="min-height: 400px; display: flex; align-items: center; justify-content: center;">
-    <div class="policy-content" style="text-align: center;">
-      <i class="fa-solid fa-circle-question" style="font-size: 4rem; color: #64748b; margin-bottom: 20px;"></i>
-      <h2>Nội dung đang được cập nhật</h2>
-      <p>Chúng tôi đang nỗ lực hoàn thiện nội dung cho trang này. Vui lòng quay lại sau.</p>
-      <a href="guestHome.html" class="btn btn-primary" style="margin-top: 20px; display: inline-block;">Về trang chủ</a>
-    </div>
+  <main class="help-container container">
+    <section class="help-categories">
+      <div class="category-card" data-category="account">
+        <div class="icon-wrap"><i class="fa-solid fa-user-shield"></i></div>
+        <h3>Tài khoản & Bảo mật</h3>
+        <p>Đăng nhập, bảo mật, hồ sơ</p>
+      </div>
+      <div class="category-card" data-category="document">
+        <div class="icon-wrap"><i class="fa-solid fa-file-arrow-up"></i></div>
+        <h3>Tài liệu học tập</h3>
+        <p>Quy trình đăng và tải tài liệu</p>
+      </div>
+      <div class="category-card" data-category="coin">
+        <div class="icon-wrap"><i class="fa-solid fa-coins"></i></div>
+        <h3>Giao dịch & EduCoin</h3>
+        <p>Nạp/Rút Xu, thanh toán</p>
+      </div>
+      <div class="category-card" data-category="group">
+        <div class="icon-wrap"><i class="fa-solid fa-users-rectangle"></i></div>
+        <h3>Nhóm & Cộng đồng</h3>
+        <p>Quản lý nhóm, diễn đàn</p>
+      </div>
+      <div class="category-card" data-category="policy">
+        <div class="icon-wrap"><i class="fa-solid fa-scale-balanced"></i></div>
+        <h3>Chính sách & Bản quyền</h3>
+        <p>Quy định, xử lý vi phạm</p>
+      </div>
+    </section>
+
+    <section class="help-faq">
+      <h2 class="section-title">Câu hỏi thường gặp</h2>
+      <div class="faq-list" id="faq-list">
+      </div>
+      <div id="no-faq-msg" style="display:none; text-align:center; padding: 3rem; color: #64748b; background: white; border-radius: 12px; margin-top: 1rem;">
+        <i class="fa-solid fa-ghost" style="font-size: 3rem; margin-bottom: 1rem; color: #cbd5e1;"></i>
+        <p style="font-size: 1.1rem;">Không tìm thấy câu hỏi phù hợp với từ khóa của bạn.</p>
+        <p>Vui lòng thử từ khóa khác hoặc gửi yêu cầu phía dưới.</p>
+      </div>
+    </section>
+
+    <section class="help-contact">
+      <div class="contact-box">
+        <div class="contact-box-header">
+          <i class="fa-solid fa-headset"></i>
+          <div>
+            <h2>Bạn vẫn cần hỗ trợ?</h2>
+            <p>Đừng lo lắng, hãy gửi yêu cầu cho chúng tôi. Đội ngũ hỗ trợ sẽ phản hồi trong vòng 24h.</p>
+          </div>
+        </div>
+        <form id="support-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Họ và tên</label>
+              <input type="text" id="contact-name" placeholder="Nhập họ và tên" required>
+            </div>
+            <div class="form-group">
+              <label>Địa chỉ Email</label>
+              <input type="email" id="contact-email" placeholder="Nhập email của bạn" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Chủ đề</label>
+            <select id="contact-topic" required>
+              <option value="" disabled selected>Chọn chủ đề cần hỗ trợ</option>
+              <option value="Tài khoản">Tài khoản & Đăng nhập</option>
+              <option value="Tài liệu">Lỗi đăng/tải tài liệu</option>
+              <option value="Giao dịch">Nạp xu & Thanh toán</option>
+              <option value="Bản quyền">Báo cáo vi phạm bản quyền</option>
+              <option value="Khác">Vấn đề khác</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nội dung chi tiết</label>
+            <textarea id="contact-message" rows="5" placeholder="Mô tả chi tiết vấn đề bạn đang gặp phải..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-submit-support">
+            <i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu hỗ trợ
+          </button>
+        </form>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
@@ -87,5 +166,23 @@
     </div>
   </footer>
 
+  <script type="module" src="../../main/guest/helpCenter.js"></script>
+  <script>
+    function requireLogin(event) {
+      event.preventDefault();
+      Swal.fire({
+        icon: 'info',
+        title: 'Yêu cầu đăng nhập',
+        text: 'Vui lòng đăng nhập để tiếp tục sử dụng tính năng này!',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1500,
+        timerProgressBar: true
+      }).then(() => {
+        window.location.href = '../auth/login.html';
+      });
+    }
+  </script>
 </body>
 </html>

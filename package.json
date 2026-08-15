@@ -1,0 +1,12 @@
+{
+  "name": "edushare",
+  "version": "1.0.0",
+  "description": "EduShare root project",
+  "scripts": {
+    "install:all": "npm install --prefix be && npm install --prefix fe",
+    "dev": "concurrently \"npm run dev --prefix be\" \"npm run dev --prefix fe\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

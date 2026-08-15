@@ -12,6 +12,7 @@ const { authMiddleware } = require('./middlewares/auth');
 const { validate } = require('./middlewares/validate');
 const { updateProfileSchema } = require('./schemas/userSchemas');
 const cloudinary = require('./config/cloudinary');
+const { sendNotificationToUser } = require('./services/socket');
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -692,6 +693,7 @@ router.post('/:maND/follow', authMiddleware, async (req, res) => {
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [maND_DuocTheoDoi, 'HeThong', `${tenNguoiTheoDoi} đã bắt đầu theo dõi bạn.`, `../user/otherUserProfile.html?id=${maND_TheoDoi}`]
             );
+            sendNotificationToUser(maND_DuocTheoDoi, 'new_notification', { message: `${tenNguoiTheoDoi} đã bắt đầu theo dõi bạn.` });
             return res.status(200).json({ message: 'Theo dõi thành công.', isFollowing: true });
         }
     } catch (error) {
