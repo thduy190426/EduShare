@@ -4,7 +4,8 @@ const loginSchema = z.object({
     email: z.string().email('Email không hợp lệ'),
     matKhau: z.string().min(1, 'Mật khẩu không được để trống'),
     rememberLogin: z.boolean().optional(),
-    recaptchaToken: z.string().optional()
+    recaptchaToken: z.string().optional(),
+    trustedDeviceToken: z.string().nullable().optional()
 });
 
 const registerSchema = z.object({

@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
 
@@ -8,6 +9,8 @@ let downloadedDocs = [];
 let subjects = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Tài liệu của tôi' }]);
+
     loadUserProfileNav();
     setupTabs();
 

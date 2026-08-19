@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 
 let io;
 const userSockets = new Map();
+const chatCooldowns = new Map();
 
 const initSocket = (server, app) => {
     io = socketIo(server, {
@@ -111,6 +112,14 @@ const initSocket = (server, app) => {
             const senderId = socket.user.MaND;
             const messageType = type || 'text';
             if (!groupId || !text || !text.trim()) return;
+
+            const now = Date.now();
+            const lastMsgTime = chatCooldowns.get(senderId);
+            if (lastMsgTime && now - lastMsgTime < 1500) {
+                socket.emit('spam_warning', { message: 'Bạn đang nhắn tin quá nhanh. Vui lòng chờ 1.5 giây giữa các tin nhắn.' });
+                return;
+            }
+            chatCooldowns.set(senderId, now);
 
             try {
                 const pool = app.locals.pool;

@@ -1,7 +1,9 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl , renderCommentSkeleton} from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderCommentSkeleton, renderDocumentSkeleton } from '../shared/utils.js';
 import { updateSEO } from '../shared/seo.js';
 import { getSocket } from '../shared/socketClient.js';
+import { loadQuillAndTribute } from '../shared/lazyLoad.js';
 
 let currentMaTL = null;
 const token = getToken();
@@ -12,6 +14,8 @@ let allComments = [];
 let documentOwnerId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Chi tiết tài liệu' }]);
+
     const urlParams = new URLSearchParams(window.location.search);
     currentMaTL = urlParams.get('id');
 
@@ -106,6 +110,15 @@ async function fetchDocumentDetails() {
                 const exists = allComments.find(c => c.MaBL === comment.MaBL);
                 if (!exists) {
                     allComments.push(comment);
+                    renderComments(allComments, documentOwnerId);
+                }
+            });
+            socket.off('document_comment_edited');
+            socket.on('document_comment_edited', (data) => {
+                const comment = allComments.find(c => c.MaBL === data.maBL);
+                if (comment) {
+                    comment.NoiDung = data.noiDung;
+                    comment.DaChinhSua = true;
                     renderComments(allComments, documentOwnerId);
                 }
             });
@@ -334,13 +347,13 @@ function renderDocumentInfo(doc, hasPurchased) {
     }
 
     let isAuthor = false;
-    let isPrivileged = false; 
+    let isPrivileged = false;
     if (token) {
         try {
             const payload = decodeJWT(token);
             if (payload && payload.MaND === doc.MaND_NguoiDang) isAuthor = true;
             if (payload && (payload.VaiTro === 'Admin' || payload.VaiTro === 'GiaoVien')) isPrivileged = true;
-        } catch(e) {}
+        } catch (e) { }
     }
 
     if (doc.LaTaiLieuDocQuyen) {
@@ -383,7 +396,7 @@ function renderDocumentInfo(doc, hasPurchased) {
                             const buyData = await res.json();
                             if (res.ok) {
                                 Swal.fire('Thành công', 'Đã mở khoá tài liệu!', 'success');
-                                fetchDocumentDetails(); 
+                                fetchDocumentDetails();
                             } else {
                                 Swal.fire('Thất bại', buyData.message, 'error');
                             }
@@ -420,13 +433,13 @@ function renderDocumentInfo(doc, hasPurchased) {
     if (btnVerify && btnVerify.style.display !== 'none') {
         const verifyIcon = document.getElementById('verify-icon');
         if (doc.LaTaiLieuChinhThuc) {
-            btnVerify.style.backgroundColor = '#D1FAE5'; 
-            btnVerify.style.color = '#065F46'; 
+            btnVerify.style.backgroundColor = '#D1FAE5';
+            btnVerify.style.color = '#065F46';
             btnVerify.style.borderColor = '#34D399';
             document.getElementById('verify-text').textContent = 'Đã xác thực';
             if (verifyIcon) verifyIcon.className = 'fa-solid fa-circle-check';
         } else {
-            btnVerify.style.backgroundColor = '#F3F4F6'; 
+            btnVerify.style.backgroundColor = '#F3F4F6';
             btnVerify.style.color = '#374151';
             btnVerify.style.borderColor = '#D1D5DB';
             document.getElementById('verify-text').textContent = 'Xác thực';
@@ -466,6 +479,51 @@ function lockRatingUI(message = 'Cảm ơn bạn đã đánh giá') {
 }
 
 function setupEventListeners() {
+    
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+    
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener('click', () => {
+            if (currentZoom < 3.0) {
+                currentZoom += 0.25;
+                applyZoom();
+            }
+        });
+    }
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener('click', () => {
+            if (currentZoom > 0.5) {
+                currentZoom -= 0.25;
+                applyZoom();
+            }
+        });
+    }
+    if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', () => {
+            const container = document.querySelector('.preview-container');
+            if (!container) return;
+            if (!document.fullscreenElement) {
+                container.style.backgroundColor = '#f8fafc';
+                container.style.overflowY = 'auto';
+                container.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        
+        document.addEventListener('fullscreenchange', () => {
+            const container = document.querySelector('.preview-container');
+            if (!document.fullscreenElement && container) {
+                container.style.backgroundColor = '';
+                container.style.overflowY = '';
+                if (currentPdfUrl) renderPdfToCanvas(currentPdfUrl, document.querySelector('.preview-pages'), true);
+            } else if (document.fullscreenElement && container && currentPdfUrl) {
+                renderPdfToCanvas(currentPdfUrl, document.querySelector('.preview-pages'), true);
+            }
+        });
+    }
 
     const btnVerify = document.getElementById('btn-verify');
     if (btnVerify) {
@@ -479,7 +537,7 @@ function setupEventListeners() {
                 const data = await res.json();
                 if (res.ok) {
                     Swal.fire(data.message);
-                    fetchDocumentDetails(); 
+                    fetchDocumentDetails();
                 } else {
                     Swal.fire(data.message);
                 }
@@ -642,41 +700,97 @@ function setupEventListeners() {
 
     const btnSubmitComment = document.getElementById('btn-submit-comment');
 
-    let commentEditor;
-    if (typeof Quill !== 'undefined' && document.getElementById('comment-editor')) {
-        commentEditor = new Quill('#comment-editor', {
-            theme: 'snow',
-            placeholder: 'Viết bình luận hoặc đặt câu hỏi về tài liệu này...',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link'],
-                    ['clean']
-                ]
+    window.commentEditor = null;
+    const placeholder = document.getElementById('comment-placeholder');
+
+    if (placeholder) {
+        placeholder.addEventListener('click', async () => {
+            placeholder.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải trình soạn thảo...';
+            
+            await loadQuillAndTribute();
+
+            const container = document.getElementById('comment-editor-container');
+            container.innerHTML = '<div id="comment-editor" style="background: white; font-family: inherit; font-size: 14px; min-height: 80px; border-bottom: none;"></div>';
+            
+            window.commentEditor = new Quill('#comment-editor', {
+                theme: 'snow',
+                placeholder: 'Viết bình luận hoặc đặt câu hỏi về tài liệu này...',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['link'],
+                        ['clean']
+                    ],
+                    keyboard: {
+                        bindings: {
+                            submit: {
+                                key: 'Enter',
+                                shiftKey: false,
+                                handler: function () {
+                                    const val = window.commentEditor.getText().trim();
+                                    if (val.length > 0 && val.length <= 1000) {
+                                        submitComment(window.commentEditor.root.innerHTML, null);
+                                    }
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            initTribute(window.commentEditor.root);
+
+            window.commentEditor.on('text-change', () => {
+                const val = window.commentEditor.getText().trim();
+                if (val.length > 0 && val.length <= 1000) {
+                    btnSubmitComment.disabled = false;
+                    btnSubmitComment.style.opacity = '1';
+                    btnSubmitComment.style.cursor = 'pointer';
+                } else {
+                    btnSubmitComment.disabled = true;
+                    btnSubmitComment.style.opacity = '0.5';
+                    btnSubmitComment.style.cursor = 'not-allowed';
+                }
+                if (currentMaTL) {
+                    localStorage.setItem(`draft_comment_${currentMaTL}`, window.commentEditor.root.innerHTML);
+                }
+            });
+
+            if (currentMaTL) {
+                const draftKey = `draft_comment_${currentMaTL}`;
+                const draftComment = localStorage.getItem(draftKey);
+                if (draftComment) {
+                    Swal.fire({
+                        title: 'Khôi phục bản nháp?',
+                        text: 'Bạn có một bình luận chưa gửi. Bạn có muốn khôi phục không?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Có, khôi phục',
+                        cancelButtonText: 'Không, bỏ qua'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.commentEditor.root.innerHTML = draftComment;
+                            const val = window.commentEditor.getText().trim();
+                            if (val.length > 0) {
+                                btnSubmitComment.disabled = false;
+                                btnSubmitComment.style.opacity = '1';
+                                btnSubmitComment.style.cursor = 'pointer';
+                            }
+                        } else {
+                            localStorage.removeItem(draftKey);
+                        }
+                    });
+                }
             }
-        });
 
-        btnSubmitComment.disabled = true;
-        btnSubmitComment.style.opacity = '0.5';
-        btnSubmitComment.style.cursor = 'not-allowed';
+            btnSubmitComment.addEventListener('click', () => {
+                const noiDung = window.commentEditor.root.innerHTML;
+                submitComment(noiDung, null);
+            });
 
-        commentEditor.on('text-change', () => {
-            const val = commentEditor.getText().trim();
-            if (val.length > 0 && val.length <= 1000) {
-                btnSubmitComment.disabled = false;
-                btnSubmitComment.style.opacity = '1';
-                btnSubmitComment.style.cursor = 'pointer';
-            } else {
-                btnSubmitComment.disabled = true;
-                btnSubmitComment.style.opacity = '0.5';
-                btnSubmitComment.style.cursor = 'not-allowed';
-            }
-        });
-
-        btnSubmitComment.addEventListener('click', () => {
-            const noiDung = commentEditor.root.innerHTML;
-            submitComment(noiDung, null);
+            window.commentEditor.focus();
         });
     }
 }
@@ -710,7 +824,7 @@ function renderRelatedGroups(groups) {
     const listEl = document.getElementById('related-groups-list');
 
     listEl.innerHTML = groups.map(group => {
-        const avatarHtml = group.AnhBia 
+        const avatarHtml = group.AnhBia
             ? `<img src="${getAssetUrl(group.AnhBia)}" alt="${escapeHTML(group.TenNhom)}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: cover;">`
             : `<div style="width: 48px; height: 48px; border-radius: 8px; background: var(--primary-light); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px;">${escapeHTML(group.TenNhom.charAt(0).toUpperCase())}</div>`;
 
@@ -796,6 +910,22 @@ async function submitComment(noiDung, maBL_Cha) {
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
     }
 
+    const payload = decodeJWT(token);
+    const tempMaBL = 'temp-' + Date.now();
+    const tempComment = {
+        MaBL: tempMaBL,
+        MaBL_Cha: maBL_Cha,
+        TenNguoiBinhLuan: payload ? (payload.HoTen || 'Bạn') : 'Bạn',
+        MaND: currentUserMaND,
+        AvatarURL: getAvatar() !== 'null' ? getAvatar() : null,
+        NoiDung: noiDung,
+        NgayBinhLuan: new Date().toISOString(),
+        DaGhim: 0,
+        isOptimistic: true
+    };
+    allComments.push(tempComment);
+    renderComments(allComments, documentOwnerId);
+
     try {
         const res = await fetch(`${API_URL}/documents/${currentMaTL}/comments`, {
             method: 'POST',
@@ -808,12 +938,17 @@ async function submitComment(noiDung, maBL_Cha) {
 
         if (res.ok) {
             lastCommentTime = Date.now();
+            if (currentMaTL) {
+                localStorage.removeItem(`draft_comment_${currentMaTL}`);
+            }
             if (typeof Quill !== 'undefined' && document.getElementById('comment-editor')) {
                 const qInstance = Quill.find(document.getElementById('comment-editor'));
                 if (qInstance) qInstance.setText('');
             }
-            fetchDocumentDetails(); 
+            fetchDocumentDetails();
         } else {
+            allComments = allComments.filter(c => c.MaBL !== tempMaBL);
+            renderComments(allComments, documentOwnerId);
             const data = await res.json();
             if (res.status === 429) {
                 Swal.fire('Quá tải', data.message || 'Bạn đã bình luận quá nhiều lần. Vui lòng thử lại sau.', 'warning');
@@ -823,6 +958,8 @@ async function submitComment(noiDung, maBL_Cha) {
         }
     } catch (err) {
         console.error(err);
+        allComments = allComments.filter(c => c.MaBL !== tempMaBL);
+        renderComments(allComments, documentOwnerId);
         Swal.fire('Lỗi', 'Không thể kết nối đến máy chủ.', 'error');
     } finally {
         if (btn) {
@@ -856,7 +993,11 @@ function renderComments(comments, documentOwnerId) {
         const item = document.createElement('div');
         item.className = `comment-item ${depth > 0 ? 'reply' : ''}`;
         if (depth > 0) {
-            item.style.marginLeft = `${depth * 40}px`; 
+            item.style.marginLeft = `${depth * 40}px`;
+        }
+        if (comment.isOptimistic) {
+            item.style.opacity = '0.5';
+            item.style.pointerEvents = 'none';
         }
 
         const dateObj = new Date(comment.NgayBinhLuan);
@@ -878,8 +1019,10 @@ function renderComments(comments, documentOwnerId) {
 
         const authorSuffix = isAuthor ? ' (Tác giả)' : '';
         const pinnedBadge = comment.DaGhim ? `<span style="font-size: 11px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i class="fa-solid fa-thumbtack" style="margin-right: 4px;"></i> Đã ghim</span>` : '';
+        const editedBadge = comment.DaChinhSua ? `<span style="font-size: 11px; color: #6B7280; margin-left: 8px;">(Đã chỉnh sửa)</span>` : '';
 
         const deleteBtnHtml = canDelete ? `<span class="comment-action delete-btn" data-id="${comment.MaBL}" style="color: #EF4444; margin-left: 12px;"><i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Xóa</span>` : '';
+        const editBtnHtml = isCommentOwner ? `<span class="comment-action edit-btn" data-id="${comment.MaBL}" style="color: #3B82F6; margin-left: 12px;"><i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Chỉnh sửa</span>` : '';
 
         let pinBtnHtml = '';
         if (isDocOwner) {
@@ -889,18 +1032,27 @@ function renderComments(comments, documentOwnerId) {
 
         item.innerHTML = `
             ${avatarHtml}
-            <div class="comment-content" ${comment.DaGhim ? 'style="border-left: 3px solid #FCD34D; padding-left: 8px;"' : ''}>
+            <div class="comment-content" ${comment.DaGhim ? 'style="border-left: 3px solid #FCD34D; padding-left: 8px;"' : ''} id="comment-content-${comment.MaBL}">
               <div class="comment-header">
                 <span class="comment-author">${escapeHTML(comment.TenNguoiBinhLuan)}${authorSuffix}</span>
                 ${pinnedBadge}
+                ${editedBadge}
                 <span class="comment-time">${dateHtml}</span>
               </div>
-              <div class="comment-text">${DOMPurify.sanitize(comment.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
+              <div class="comment-text" id="comment-text-${comment.MaBL}">${DOMPurify.sanitize(comment.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
               <div class="comment-actions">
                 <span class="comment-action reply-btn" data-id="${comment.MaBL}"><i class="fa-solid fa-reply" style="margin-right: 4px;"></i> Phản hồi</span>
+                ${editBtnHtml}
                 ${deleteBtnHtml}
                 ${pinBtnHtml}
               </div>
+            </div>
+            <div class="comment-edit-form" id="comment-edit-form-${comment.MaBL}" style="display: none; flex: 1; flex-direction: column;">
+                <div class="quill-editor" id="quill-edit-${comment.MaBL}" style="min-height: 80px; background: #fff; border-radius: 8px;"></div>
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+                    <button class="btn btn-secondary btn-sm" onclick="cancelEditComment(${comment.MaBL})"><i class="fa-solid fa-xmark" style="margin-right: 4px;"></i> Hủy</button>
+                    <button id="btn-submit-edit-${comment.MaBL}" class="btn btn-primary btn-sm" onclick="submitEditComment(${comment.MaBL})" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fa-solid fa-check" style="margin-right: 4px;"></i> Lưu</button>
+                </div>
             </div>
         `;
 
@@ -915,7 +1067,8 @@ function renderComments(comments, documentOwnerId) {
 
     const replyBtns = listEl.querySelectorAll('.reply-btn');
     replyBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
+            await loadQuillAndTribute();
             const parentId = e.currentTarget.getAttribute('data-id');
             const commentContent = e.currentTarget.closest('.comment-content');
 
@@ -958,10 +1111,25 @@ function renderComments(comments, documentOwnerId) {
                     modules: {
                         toolbar: [
                             ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                             ['link'],
                             ['clean']
-                        ]
+                        ],
+                        keyboard: {
+                            bindings: {
+                                submit: {
+                                    key: 'Enter',
+                                    shiftKey: false,
+                                    handler: function () {
+                                        const val = replyEditor.getText().trim();
+                                        if (val.length > 0 && val.length <= 1000) {
+                                            submitComment(replyEditor.root.innerHTML, parentId);
+                                        }
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
                     }
                 });
 
@@ -1062,7 +1230,108 @@ function renderComments(comments, documentOwnerId) {
             }
         });
     });
+
+    const editBtns = listEl.querySelectorAll('.edit-btn');
+    editBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            await loadQuillAndTribute();
+            const commentId = e.currentTarget.getAttribute('data-id');
+            const contentDiv = document.getElementById(`comment-content-${commentId}`);
+            const editFormDiv = document.getElementById(`comment-edit-form-${commentId}`);
+            const textDiv = document.getElementById(`comment-text-${commentId}`);
+
+            contentDiv.style.display = 'none';
+            editFormDiv.style.display = 'flex';
+
+            if (!window.editCommentEditors) window.editCommentEditors = {};
+
+            if (!window.editCommentEditors[commentId]) {
+                const editor = new Quill(`#quill-edit-${commentId}`, {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                            ['link'],
+                            ['clean']
+                        ]
+                    }
+                });
+                window.editCommentEditors[commentId] = editor;
+
+                editor.on('text-change', () => {
+                    const btn = document.getElementById(`btn-submit-edit-${commentId}`);
+                    if (!btn) return;
+                    const val = editor.getText().trim();
+                    const html = editor.root.innerHTML.trim();
+                    const isChanged = html !== editor.originalHtml;
+                    if (val.length > 0 && val.length <= 1000 && isChanged) {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    } else {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.5';
+                        btn.style.cursor = 'not-allowed';
+                    }
+                });
+            }
+
+            const editor = window.editCommentEditors[commentId];
+            editor.root.innerHTML = textDiv.innerHTML;
+            editor.originalHtml = editor.root.innerHTML.trim();
+
+            const btn = document.getElementById(`btn-submit-edit-${commentId}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            }
+        });
+    });
 }
+
+window.cancelEditComment = function (commentId) {
+    const contentDiv = document.getElementById(`comment-content-${commentId}`);
+    const editFormDiv = document.getElementById(`comment-edit-form-${commentId}`);
+    if (contentDiv && editFormDiv) {
+        contentDiv.style.display = 'block';
+        editFormDiv.style.display = 'none';
+    }
+};
+
+window.submitEditComment = async function (commentId) {
+    const editor = window.editCommentEditors && window.editCommentEditors[commentId];
+    if (!editor) return;
+
+    const noiDung = editor.root.innerHTML.trim();
+    if (!noiDung || editor.getText().trim() === '') {
+        Swal.fire('Lỗi', 'Nội dung bình luận không được để trống', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/documents/comments/${commentId}/edit`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ text: noiDung })
+        });
+        if (res.ok) {
+            cancelEditComment(commentId);
+            const textDiv = document.getElementById(`comment-text-${commentId}`);
+            if (textDiv) textDiv.innerHTML = DOMPurify.sanitize(noiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/userProfile.html?id=$2" class="tagged-user">@$1</a>');
+        } else {
+            const data = await res.json();
+            Swal.fire('Lỗi', data.message, 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Lỗi', 'Không thể chỉnh sửa bình luận.', 'error');
+    }
+};
 
 async function handleDownload() {
     if (!token) {
@@ -1098,7 +1367,7 @@ async function handleDownload() {
             if (!downloadFileName && disposition && disposition.indexOf('filename=') !== -1) {
                 const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                 const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) { 
+                if (matches != null && matches[1]) {
                     fileName = matches[1].replace(/['"]/g, '');
                 }
             }
@@ -1124,37 +1393,86 @@ async function handleDownload() {
     }
 }
 
-async function renderPdfToCanvas(url, container) {
-    container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang tải và xử lý tài liệu (PDF.js)...</div>';
+let currentPdf = null;
+let currentZoom = 1.0;
+let currentPdfUrl = null;
+let isRendering = false;
+
+function updateZoomText() {
+    const zoomText = document.getElementById('zoom-level-text');
+    if (zoomText) zoomText.textContent = Math.round(currentZoom * 100) + '%';
+}
+
+function applyZoom() {
+    updateZoomText();
+    const canvases = document.querySelectorAll('.pdf-page-canvas');
+    canvases.forEach(canvas => {
+        const baseWidth = parseFloat(canvas.getAttribute('data-base-width'));
+        if (baseWidth) {
+            canvas.style.width = `${baseWidth * currentZoom}px`;
+            canvas.style.maxWidth = 'none';
+        }
+    });
+}
+
+async function renderPdfToCanvas(url, container, reRender = false) {
+    if (isRendering) return;
+    isRendering = true;
+
+    if (!reRender) {
+        container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang tải và xử lý tài liệu (PDF.js)...</div>';
+        currentZoom = 1.0;
+        currentPdfUrl = url;
+        currentPdf = null;
+        updateZoomText();
+    } else {
+        container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang cập nhật...</div>';
+        updateZoomText();
+    }
+
     try {
         if (!window.pdfjsLib) {
             console.error('PDF.js library is not loaded');
             container.innerHTML = '<div style="margin:auto; color:red;">Lỗi tải thư viện đọc PDF.</div>';
+            isRendering = false;
             return;
         }
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        const loadingTask = pdfjsLib.getDocument(url);
-        const pdf = await loadingTask.promise;
-        container.innerHTML = ''; 
+        if (!currentPdf) {
+            const loadingTask = pdfjsLib.getDocument(url);
+            currentPdf = await loadingTask.promise;
+        }
 
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
+        container.innerHTML = '';
+
+        for (let pageNum = 1; pageNum <= currentPdf.numPages; pageNum++) {
+            const page = await currentPdf.getPage(pageNum);
 
             const containerWidth = container.clientWidth - 40;
             const unscaledViewport = page.getViewport({ scale: 1.0 });
-            let scale = containerWidth / unscaledViewport.width;
-            if (scale > 1.5) scale = 1.5;
-            if (scale < 0.5) scale = 1.0;
+            let baseScale = containerWidth / unscaledViewport.width;
+            
+            if (!document.fullscreenElement) {
+                if (baseScale > 1.5) baseScale = 1.5;
+                if (baseScale < 0.5) baseScale = 1.0;
+            } else {
+                if (baseScale > 2.5) baseScale = 2.5;
+            }
 
-            const viewport = page.getViewport({ scale });
+            const renderScale = baseScale * 1.5;
+            const viewport = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
             canvas.className = 'pdf-page-canvas';
             canvas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
             canvas.style.marginBottom = '10px';
-            canvas.style.maxWidth = '100%';
+            
+            const baseCssWidth = unscaledViewport.width * baseScale;
+            canvas.setAttribute('data-base-width', baseCssWidth);
+            canvas.style.width = `${baseCssWidth * currentZoom}px`;
+            canvas.style.maxWidth = 'none';
 
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
@@ -1168,6 +1486,10 @@ async function renderPdfToCanvas(url, container) {
             };
 
             await page.render(renderContext).promise;
+
+            if (pageNum === 1 && !reRender) {
+                container.scrollTop = 0;
+            }
         }
 
         container.oncontextmenu = e => { e.preventDefault(); return false; };
@@ -1177,6 +1499,8 @@ async function renderPdfToCanvas(url, container) {
     } catch (err) {
         console.error('Error rendering PDF:', err);
         container.innerHTML = '<div style="margin:auto; padding:20px; color:#EF4444;">Không thể hiển thị bản xem trước. Bạn có thể tải tài liệu để xem toàn bộ.</div>';
+    } finally {
+        isRendering = false;
     }
 }
 

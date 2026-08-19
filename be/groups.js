@@ -4,7 +4,9 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const { authMiddleware } = require('./middlewares/auth');
 const { moderationMiddleware } = require('./middlewares/moderation');
+const { groupPostLimiter, commentLimiter } = require('./middlewares/rateLimit');
 const { sendNotificationToUser } = require('./services/socket');
+const { updateQuestProgress } = require('./services/questService');
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -935,7 +937,7 @@ router.get('/:maNhom/posts', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/:maNhom/posts', authMiddleware, moderationMiddleware(['noiDung']), async (req, res) => {
+router.post('/:maNhom/posts', authMiddleware, groupPostLimiter, moderationMiddleware(['noiDung']), async (req, res) => {
     const maNhom = req.params.maNhom;
     const { noiDung } = req.body;
     const maND = req.user.MaND;
@@ -1040,7 +1042,7 @@ router.get('/:maNhom/posts/:postId/comments', authMiddleware, async (req, res) =
     }
 });
 
-router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddleware(['noiDung']), async (req, res) => {
+router.post('/:maNhom/posts/:postId/comments', authMiddleware, commentLimiter, moderationMiddleware(['noiDung']), async (req, res) => {
     const { maNhom, postId } = req.params;
     const { noiDung } = req.body;
     const maND = req.user.MaND;
@@ -1058,6 +1060,8 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddlew
             'INSERT INTO BINHLUAN_BAIVIET (MaBaiViet, MaND, NoiDung) VALUES (?, ?, ?)',
             [postId, maND, noiDung.trim()]
         );
+        
+        await updateQuestProgress(maND, 'BinhLuanNhom', 1, pool);
 
         const mentionRegex = /@\[(.*?)\]\((\d+)\)/g;
         let match;
@@ -1102,6 +1106,47 @@ router.post('/:maNhom/posts/:postId/comments', authMiddleware, moderationMiddlew
         res.status(201).json({ message: 'Bình luận thành công.', maBL: result.insertId, comment: newCommentRows[0] });
     } catch (error) {
         console.error('Lỗi API POST /groups/:maNhom/posts/:postId/comments:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/:maNhom/posts/:postId/comments/:commentId', authMiddleware, moderationMiddleware(['noiDung']), async (req, res) => {
+    const { commentId } = req.params;
+    const { noiDung } = req.body;
+    const maND = req.user.MaND;
+    try {
+        const pool = req.app.locals.pool;
+        const [comment] = await pool.execute('SELECT MaND FROM BINHLUAN_BAIVIET WHERE MaBL = ?', [commentId]);
+        if (comment.length === 0) return res.status(404).json({ message: 'Bình luận không tồn tại.' });
+        if (String(comment[0].MaND) !== String(maND)) return res.status(403).json({ message: 'Không có quyền chỉnh sửa bình luận này.' });
+        
+        await pool.execute('UPDATE BINHLUAN_BAIVIET SET NoiDung = ? WHERE MaBL = ?', [noiDung.trim(), commentId]);
+        res.status(200).json({ message: 'Chỉnh sửa bình luận thành công.' });
+    } catch (error) {
+        console.error('Lỗi API PUT comment:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/:maNhom/posts/:postId/comments/:commentId', authMiddleware, async (req, res) => {
+    const { commentId, maNhom } = req.params;
+    const maND = req.user.MaND;
+    try {
+        const pool = req.app.locals.pool;
+        const [comment] = await pool.execute('SELECT MaND FROM BINHLUAN_BAIVIET WHERE MaBL = ?', [commentId]);
+        if (comment.length === 0) return res.status(404).json({ message: 'Bình luận không tồn tại.' });
+        
+        const [group] = await pool.execute('SELECT MaND_QuanTri FROM NHOM WHERE MaNhom = ?', [maNhom]);
+        const isGroupAdmin = group.length > 0 && String(group[0].MaND_QuanTri) === String(maND);
+        
+        if (String(comment[0].MaND) !== String(maND) && !isGroupAdmin) {
+            return res.status(403).json({ message: 'Không có quyền xóa bình luận này.' });
+        }
+        
+        await pool.execute('DELETE FROM BINHLUAN_BAIVIET WHERE MaBL = ?', [commentId]);
+        res.status(200).json({ message: 'Đã xóa bình luận.' });
+    } catch (error) {
+        console.error('Lỗi API DELETE comment:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

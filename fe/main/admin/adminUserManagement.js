@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { escapeHTML, getAssetUrl, getToken, showToast, renderPagination } from '../shared/utils.js';
 
@@ -9,6 +10,8 @@ let allBadges = [];
 let currentAssigningUserId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Người dùng' }]);
+
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
         window.location.href = '../guest/guestHome.html';

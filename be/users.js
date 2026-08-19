@@ -13,6 +13,7 @@ const { validate } = require('./middlewares/validate');
 const { updateProfileSchema } = require('./schemas/userSchemas');
 const cloudinary = require('./config/cloudinary');
 const { sendNotificationToUser } = require('./services/socket');
+const { updateQuestProgress } = require('./services/questService');
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -284,16 +285,23 @@ router.put('/profile', authMiddleware, validate(updateProfileSchema), async (req
                 [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, hienThiLichSuTai, hienThiDanhGia, maND]
             );
         }
+        await updateQuestProgress(maND, 'CapNhatHoSo', 1, pool);
+        let jwtExpiryDays = 30;
+        try {
+            const [cfg] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "JWT_EXPIRY_DAYS"');
+            if (cfg.length > 0) jwtExpiryDays = parseInt(cfg[0].GiaTri) || 30;
+        } catch(e) {}
+        
         const newToken = jwt.sign(
             { MaND: maND, VaiTro: req.user.VaiTro, HoTen: normalizedHoTen },
             process.env.JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: jwtExpiryDays + 'd' }
         );
         res.cookie('token', newToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 30 * 24 * 60 * 60 * 1000
+            maxAge: jwtExpiryDays * 24 * 60 * 60 * 1000
         });
         res.status(200).json({ message: 'Cập nhật hồ sơ thành công.', token: newToken });
     } catch (error) {

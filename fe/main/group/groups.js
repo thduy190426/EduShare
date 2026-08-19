@@ -1,6 +1,7 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderGroupSkeleton } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderGroupSkeleton, validateMessage } from '../shared/utils.js';
 import { getSocket } from '../shared/socketClient.js';
+import { loadQuillAndTribute } from '../shared/lazyLoad.js';
 const token = getToken();
 window.closeModalWithAnimation = (modal) => {
     if (!modal) return;
@@ -2201,81 +2202,112 @@ function setupDiscussions() {
         }
     }
     const btnCreate = document.getElementById('btn-create-post');
-    let postEditor;
-    if (typeof Quill !== 'undefined' && document.getElementById('post-editor')) {
-        postEditor = new Quill('#post-editor', {
-            theme: 'snow',
-            placeholder: 'Bạn muốn thảo luận gì trong nhóm này?',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['link'],
-                    ['clean']
-                ]
-            }
-        });
-    }
+    const placeholder = document.getElementById('post-placeholder');
+    window.postEditor = null;
+
     if (btnCreate) {
         btnCreate.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi bài';
         btnCreate.disabled = true;
         btnCreate.style.opacity = '0.6';
         btnCreate.style.cursor = 'not-allowed';
-        if (postEditor) {
-            postEditor.on('text-change', () => {
-                if (postEditor.getText().trim().length > 0) {
-                    btnCreate.disabled = false;
-                    btnCreate.style.opacity = '1';
-                    btnCreate.style.cursor = 'pointer';
-                } else {
-                    btnCreate.disabled = true;
-                    btnCreate.style.opacity = '0.6';
-                    btnCreate.style.cursor = 'not-allowed';
+    }
+
+    if (placeholder) {
+        placeholder.addEventListener('click', async () => {
+            placeholder.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải trình soạn thảo...';
+            
+            await loadQuillAndTribute();
+
+            const container = document.getElementById('post-editor-container');
+            container.innerHTML = '<div id="post-editor" style="background: #F3F4F6; font-family: inherit; font-size: 15px; min-height: 80px; border: none;"></div>';
+            
+            window.postEditor = new Quill('#post-editor', {
+                theme: 'snow',
+                placeholder: 'Bạn muốn thảo luận gì trong nhóm này?',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        ['link'],
+                        ['clean']
+                    ]
                 }
             });
-        }
-        btnCreate.addEventListener('click', async () => {
-            const content = postEditor ? postEditor.root.innerHTML : '';
-            if (!postEditor || postEditor.getText().trim().length === 0) return;
-            const lastPost = localStorage.getItem(`lastGroupPost_${currentGroupId}`);
-            if (lastPost && Date.now() - parseInt(lastPost) < 30000) {
-                const remaining = Math.ceil((30000 - (Date.now() - parseInt(lastPost))) / 1000);
-                Swal.fire('Thao tác quá nhanh', `Vui lòng chờ ${remaining} giây trước khi gửi bài viết tiếp theo.`, 'warning');
-                return;
+
+            if (window.initTribute) {
+                window.initTribute(window.postEditor.root);
             }
-            btnCreate.disabled = true;
-            btnCreate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            btnCreate.style.opacity = '0.6';
-            btnCreate.style.cursor = 'not-allowed';
-            try {
-                const res = await fetch(`${API_URL}/groups/${currentGroupId}/posts`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ noiDung: content })
-                });
-                if (res.ok) {
-                    localStorage.setItem(`lastGroupPost_${currentGroupId}`, Date.now().toString());
-                    if (postEditor) {
-                        postEditor.setText('');
+
+            if (btnCreate) {
+                window.postEditor.on('text-change', () => {
+                    if (window.postEditor.getText().trim().length > 0) {
+                        btnCreate.disabled = false;
+                        btnCreate.style.opacity = '1';
+                        btnCreate.style.cursor = 'pointer';
+                    } else {
+                        btnCreate.disabled = true;
+                        btnCreate.style.opacity = '0.6';
+                        btnCreate.style.cursor = 'not-allowed';
                     }
-                    btnCreate.disabled = true;
-                    btnCreate.style.opacity = '0.6';
-                    btnCreate.style.cursor = 'not-allowed';
-                    fetchGroupPosts(true);
-                } else {
-                    const data = await res.json();
-                    Swal.fire('Lỗi', data.message, 'error');
+                });
+
+                let currentBtn = document.getElementById('btn-create-post');
+                if (!currentBtn) return;
+                const newBtnCreate = currentBtn.cloneNode(true);
+                if (currentBtn.parentNode) {
+                    currentBtn.parentNode.replaceChild(newBtnCreate, currentBtn);
                 }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                btnCreate.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi bình luận';
-                if (inputContent.value.trim().length > 0) {
-                    btnCreate.disabled = false;
-                    btnCreate.style.opacity = '1';
-                    btnCreate.style.cursor = 'pointer';
-                }
+
+                newBtnCreate.addEventListener('click', async () => {
+                    const content = window.postEditor ? window.postEditor.root.innerHTML : '';
+                    if (!window.postEditor || window.postEditor.getText().trim().length === 0) return;
+                    
+                    const lastPost = localStorage.getItem(`lastGroupPost_${currentGroupId}`);
+                    if (lastPost && Date.now() - parseInt(lastPost) < 20000) {
+                        const remaining = Math.ceil((20000 - (Date.now() - parseInt(lastPost))) / 1000);
+                        Swal.fire('Thao tác quá nhanh', `Vui lòng chờ ${remaining} giây trước khi gửi bài viết tiếp theo.`, 'warning');
+                        return;
+                    }
+                    
+                    newBtnCreate.disabled = true;
+                    newBtnCreate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    newBtnCreate.style.opacity = '0.6';
+                    newBtnCreate.style.cursor = 'not-allowed';
+                    
+                    try {
+                        const res = await fetch(`${API_URL}/groups/${currentGroupId}/posts`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ noiDung: content })
+                        });
+                        
+                        if (res.ok) {
+                            localStorage.setItem(`lastGroupPost_${currentGroupId}`, Date.now().toString());
+                            if (window.postEditor) {
+                                window.postEditor.setText('');
+                            }
+                            newBtnCreate.disabled = true;
+                            newBtnCreate.style.opacity = '0.6';
+                            newBtnCreate.style.cursor = 'not-allowed';
+                            fetchGroupPosts(true);
+                        } else {
+                            const data = await res.json();
+                            Swal.fire('Lỗi', data.message, 'error');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    } finally {
+                        newBtnCreate.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi bài';
+                        if (window.postEditor && window.postEditor.getText().trim().length > 0) {
+                            newBtnCreate.disabled = false;
+                            newBtnCreate.style.opacity = '1';
+                            newBtnCreate.style.cursor = 'pointer';
+                        }
+                    }
+                });
             }
+            
+            window.postEditor.focus();
         });
     }
 }
@@ -2437,14 +2469,29 @@ window.toggleComments = async (postId) => {
                 const avatarHtml = cmt.AvatarURL 
                     ? `<img src="${escapeHTML(getAssetUrl(cmt.AvatarURL))}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
                     : `<div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">${escapeHTML(cmt.HoTen.charAt(0).toUpperCase())}</div>`;
+                
+                const isCommentAuthor = String(cmt.MaND) === String(currentUserId);
+                const isGroupAdmin = currentGroupInfo && String(currentUserId) === String(currentGroupInfo.MaND_QuanTri);
+                
+                let actionHtml = '';
+                if (isCommentAuthor || isGroupAdmin) {
+                    actionHtml = `<div class="comment-actions" style="position: absolute; right: -8px; top: -14px;">`;
+                    if (isCommentAuthor) {
+                        actionHtml += `<button class="comment-action-btn edit-btn" title="Sửa" onclick="window.editGroupComment(${postId}, ${cmt.MaBL}, \`${escapeHTML(cmt.NoiDung).replace(/`/g, '\\`')}\`)"><i class="fa-solid fa-pen"></i></button>`;
+                    }
+                    actionHtml += `<button class="comment-action-btn delete-btn" title="Xóa" onclick="window.deleteGroupComment(${postId}, ${cmt.MaBL})"><i class="fa-solid fa-trash"></i></button>`;
+                    actionHtml += `</div>`;
+                }
+
                 const cmtDiv = document.createElement('div');
                 cmtDiv.className = 'comment-item';
                 cmtDiv.innerHTML = `
                     ${avatarHtml}
-                    <div class="comment-bubble">
-                        <div class="comment-author-name">${escapeHTML(cmt.HoTen)}</div>
+                    <div class="comment-bubble" style="position: relative;">
+                        <div class="comment-author-name" style="padding-right: 40px;">${escapeHTML(cmt.HoTen)}</div>
                         <div class="comment-content">${DOMPurify.sanitize(cmt.NoiDung).replace(/@\[(.*?)\]\((\d+)\)/g, '<a href="../user/otherUserProfile.html?id=$2" class="tagged-user">@$1</a>')}</div>
                         <span class="comment-time"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i>${dateStr}</span>
+                        ${actionHtml}
                     </div>
                 `;
                 list.appendChild(cmtDiv);
@@ -2455,6 +2502,82 @@ window.toggleComments = async (postId) => {
         list.innerHTML = '<div style="color: var(--danger); font-size: 13px;">Lỗi tải bình luận.</div>';
     }
 };
+
+window.editGroupComment = async (postId, commentId, currentContent) => {
+    const { value: newContent } = await Swal.fire({
+        title: 'Chỉnh sửa bình luận',
+        input: 'textarea',
+        inputValue: currentContent,
+        showCancelButton: true,
+        confirmButtonText: 'Lưu',
+        cancelButtonText: 'Hủy',
+        inputValidator: (value) => {
+            const trimmed = value.trim();
+            if (!trimmed) {
+                return 'Bình luận không được để trống!';
+            }
+            if (trimmed.length < 2) {
+                return 'Bình luận quá ngắn (tối thiểu 2 ký tự).';
+            }
+            if (trimmed.length > 2000) {
+                return `Bình luận quá dài (${trimmed.length}/2000 ký tự).`;
+            }
+        }
+    });
+
+    if (newContent && newContent.trim() !== currentContent) {
+        try {
+            const res = await fetch(`${API_URL}/groups/${currentGroupId}/posts/${postId}/comments/${commentId}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ noiDung: newContent.trim() })
+            });
+            if (res.ok) {
+                const section = document.getElementById(`comments-${postId}`);
+                section.classList.remove('show');
+                window.toggleComments(postId);
+            } else {
+                const data = await res.json();
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Lỗi', 'Không thể chỉnh sửa bình luận', 'error');
+        }
+    }
+};
+
+window.deleteGroupComment = async (postId, commentId) => {
+    const confirm = await Swal.fire({
+        title: 'Xóa bình luận?',
+        text: 'Bạn có chắc muốn xóa bình luận này không?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+    });
+    if (confirm.isConfirmed) {
+        try {
+            const res = await fetch(`${API_URL}/groups/${currentGroupId}/posts/${postId}/comments/${commentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const section = document.getElementById(`comments-${postId}`);
+                section.classList.remove('show');
+                window.toggleComments(postId);
+                fetchGroupPosts(true); 
+            } else {
+                const data = await res.json();
+                Swal.fire('Lỗi', data.message, 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Lỗi', 'Không thể xóa bình luận', 'error');
+        }
+    }
+};
+
 window.validateCommentInput = (postId) => {
     const input = document.getElementById(`comment-input-${postId}`);
     const btn = document.getElementById(`btn-submit-comment-${postId}`);
@@ -2472,8 +2595,17 @@ window.validateCommentInput = (postId) => {
 };
 window.submitComment = async (postId) => {
     const input = document.getElementById(`comment-input-${postId}`);
+    const btn = document.getElementById(`btn-submit-comment-${postId}`);
     const content = input.value.trim();
     if (!content) return;
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+    }
+
     try {
         const res = await fetch(`${API_URL}/groups/${currentGroupId}/posts/${postId}/comments`, {
             method: 'POST',
@@ -2486,9 +2618,22 @@ window.submitComment = async (postId) => {
             section.classList.remove('show');
             toggleComments(postId);
             fetchGroupPosts(true); 
+        } else if (res.status === 429) {
+            const data = await res.json();
+            Swal.fire('Thao tác quá nhanh', data.message || 'Bạn bình luận quá nhanh. Vui lòng thử lại sau.', 'warning');
+        } else {
+            const data = await res.json();
+            Swal.fire('Lỗi', data.message || 'Lỗi gửi bình luận', 'error');
         }
     } catch (err) {
         console.error(err);
+    } finally {
+        if (btn) {
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-regular fa-paper-plane"></i>';
+                window.validateCommentInput(postId);
+            }, 1500);
+        }
     }
 };
 document.addEventListener('DOMContentLoaded', () => {
@@ -2515,17 +2660,16 @@ document.addEventListener('DOMContentLoaded', () => {
 window.initTribute = function(element) {
     if (!window.Tribute) return;
     const tribute = new Tribute({
-        values: async function (text, cb) {
-            try {
-                const res = await fetch(`${API_URL}/users/search?q=${text}`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-                });
-                if (!res.ok) return cb([]);
-                const users = await res.json();
-                cb(users);
-            } catch (err) {
-                cb([]);
+        values: function (text, cb) {
+            if (typeof allMembers === 'undefined' || !allMembers.length) {
+                return cb([]);
             }
+            
+            const filtered = allMembers.filter(m => 
+                m.HoTen && m.HoTen.toLowerCase().includes(text.toLowerCase())
+            );
+            
+            cb(filtered);
         },
         lookup: 'HoTen',
         fillAttr: 'HoTen',
@@ -2630,13 +2774,33 @@ window.setupGroupChat = function() {
     const chatForm = document.getElementById('group-chat-form');
     const chatInput = document.getElementById('group-chat-input');
     const fileInput = document.getElementById('group-chat-file-upload');
+    const btnSubmit = chatForm ? chatForm.querySelector('button[type="submit"]') : null;
     const socket = getSocket();
 
-    if (chatForm && chatInput && socket) {
+    if (chatForm && chatInput && socket && btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.style.opacity = '0.5';
+        btnSubmit.style.cursor = 'not-allowed';
+
+        chatInput.addEventListener('input', () => {
+            const validation = validateMessage(chatInput.value);
+            if (validation.isValid) {
+                btnSubmit.disabled = false;
+                btnSubmit.style.opacity = '1';
+                btnSubmit.style.cursor = 'pointer';
+            } else {
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.5';
+                btnSubmit.style.cursor = 'not-allowed';
+            }
+        });
+
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                chatForm.dispatchEvent(new Event('submit'));
+                if (!btnSubmit.disabled) {
+                    chatForm.dispatchEvent(new Event('submit'));
+                }
             }
         });
 
@@ -2675,7 +2839,31 @@ window.setupGroupChat = function() {
         chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = chatInput.value.trim();
-            if (!text) return;
+            const validation = validateMessage(text);
+            
+            if (!validation.isValid) {
+                if (validation.reason === 'sensitive') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Vi phạm tiêu chuẩn cộng đồng',
+                        text: `Tin nhắn của bạn chứa từ ngữ không phù hợp: "${validation.word}"`,
+                        confirmButtonText: 'Đã hiểu'
+                    });
+                }
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.style.opacity = '0.5';
+            btnSubmit.style.cursor = 'not-allowed';
+            
+            setTimeout(() => {
+                if (chatInput.value.trim().length > 0) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                    btnSubmit.style.cursor = 'pointer';
+                }
+            }, 1500);
             
             if (currentGroupEditMsgId) {
                 try {
@@ -2703,12 +2891,25 @@ window.setupGroupChat = function() {
                 cancelGroupReply();
             }
             chatInput.value = '';
+            chatInput.dispatchEvent(new Event('input'));
             chatInput.style.height = 'auto';
         });
 
         socket.on('receive_group_message', (msg) => {
             if (String(msg.MaNhom) !== String(currentGroupId)) return;
             window.appendGroupChatMessage(msg);
+        });
+
+        socket.on('spam_warning', (data) => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Thao tác quá nhanh',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
         });
 
         socket.on('group_message_unsent', (data) => {

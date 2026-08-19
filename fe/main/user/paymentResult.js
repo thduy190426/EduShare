@@ -1,5 +1,8 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Kết quả thanh toán' }]);
+
 
     const urlParams = new URLSearchParams(window.location.search);
 

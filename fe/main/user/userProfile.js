@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML } from '../shared/utils.js';
 
@@ -16,6 +17,8 @@ const Toast = Swal.mixin({
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Hồ sơ của tôi' }]);
+
     if (!token) {
         Toast.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để xem hồ sơ.' });
         window.location.href = '../guest/guestHome.html';
@@ -243,6 +246,13 @@ async function initProfile() {
         document.getElementById('input-diachi').value = profile.DiaChi || '';
         document.getElementById('input-truonghoc').value = profile.TruongHoc || '';
         document.getElementById('input-khoanganh').value = profile.KhoaNganh || '';
+        
+        if (profile.VaiTro === 'Admin') {
+            const schoolInput = document.getElementById('input-truonghoc');
+            if (schoolInput && schoolInput.closest('.form-row')) {
+                schoolInput.closest('.form-row').style.display = 'none';
+            }
+        }
         document.getElementById('input-privacy-downloads').checked = profile.HienThiLichSuTai !== 0;
         document.getElementById('input-privacy-ratings').checked = profile.HienThiDanhGia !== 0;
 

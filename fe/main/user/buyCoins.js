@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from "../shared/config.js";
 import { getToken, showToast } from "../shared/utils.js";
 
@@ -6,6 +7,8 @@ let promoDiscount = 0;
 let currentPackages = [];
 
 document.addEventListener("DOMContentLoaded", () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Nạp xu' }]);
+
     fetchPackages();
     setupPromoCode();
     fetchFlashSale();
@@ -260,3 +263,4 @@ async function handleBuy(packageId, cardElement) {
         cardElement.classList.remove("loading");
     }
 }
+

@@ -1,10 +1,15 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { escapeHTML, formatRatingSummary, getAssetUrl, renderDocumentSkeleton } from '../shared/utils.js';
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ' }]);
+
     fetchFeaturedDocuments();
     fetchSubjects();
     fetchStats();
     initGlobalSearch();
+    initTypingEffect();
+    initScrollAnimations();
 });
 
 function initGlobalSearch() {
@@ -146,20 +151,141 @@ async function fetchStats() {
         const response = await fetch(`${API_URL}/documents/stats/platform`);
         if (!response.ok) return;
         const data = await response.json();
+        
         const docElem = document.getElementById('stat-documents');
         const userElem = document.getElementById('stat-users');
         const dlElem = document.getElementById('stat-downloads');
-        const formatNum = (num) => {
-            if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M+';
-            if (num > 1000) return Math.floor(num / 1000) + '.000+';
-            return num + '+';
+        
+        const updateAndAnimate = (elem, value) => {
+            if (!elem) return;
+            elem.setAttribute('data-target', value);
+            if (elem.closest('.stat-item').classList.contains('is-visible')) {
+                elem.classList.add('counted');
+                animateValue(elem, 0, value, 2000);
+            }
         };
-        if (docElem) docElem.textContent = formatNum(data.documents);
-        if (userElem) userElem.textContent = formatNum(data.users);
-        if (dlElem) dlElem.textContent = formatNum(data.downloads);
+
+        updateAndAnimate(docElem, data.documents);
+        updateAndAnimate(userElem, data.users);
+        updateAndAnimate(dlElem, data.downloads);
     } catch (error) {
         console.error('Lỗi khi tải thống kê:', error);
     }
+}
+
+function initTypingEffect() {
+    const titleElement = document.getElementById('heroTitle');
+    if (!titleElement) return;
+    
+    const text1 = "Chia sẻ tri thức";
+    const text2 = "Kết nối học tập";
+    
+    function startTyping() {
+        titleElement.innerHTML = '';
+        titleElement.classList.add('cursor-blink');
+        
+        let i = 0;
+        let isLine2 = false;
+        
+        function type() {
+            if (!isLine2) {
+                if (i < text1.length) {
+                    titleElement.innerHTML = text1.substring(0, i + 1);
+                    i++;
+                    setTimeout(type, 80);
+                } else {
+                    isLine2 = true;
+                    i = 0;
+                    titleElement.innerHTML += '<br>';
+                    setTimeout(type, 300);
+                }
+            } else {
+                if (i < text2.length) {
+                    titleElement.innerHTML = text1 + '<br>' + text2.substring(0, i + 1);
+                    i++;
+                    setTimeout(type, 80);
+                } else {
+                    setTimeout(erase, 3000);
+                }
+            }
+        }
+        
+        function erase() {
+            let currentText = titleElement.innerHTML;
+            if (currentText.endsWith('<br>')) {
+                currentText = currentText.substring(0, currentText.length - 4);
+                titleElement.innerHTML = currentText;
+                setTimeout(erase, 30);
+                return;
+            }
+            
+            if (currentText.length > 0) {
+                titleElement.innerHTML = currentText.substring(0, currentText.length - 1);
+                setTimeout(erase, 30);
+            } else {
+                setTimeout(startTyping, 500);
+            }
+        }
+        
+        setTimeout(type, 300);
+    }
+    
+    startTyping();
+}
+
+function initScrollAnimations() {
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.15
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                
+                if (entry.target.classList.contains('stat-item')) {
+                    const h3 = entry.target.querySelector('h3');
+                    if (h3 && !h3.classList.contains('counted')) {
+                        const target = parseInt(h3.getAttribute('data-target') || 0);
+                        if (target > 0) { 
+                            h3.classList.add('counted');
+                            animateValue(h3, 0, target, 2000);
+                        }
+                    }
+                }
+                
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    const elements = document.querySelectorAll('.reveal-on-scroll');
+    elements.forEach(el => observer.observe(el));
+}
+
+function animateValue(obj, start, end, duration) {
+    let startTimestamp = null;
+    const formatNum = (num) => {
+        if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M+';
+        if (num >= 1000) return Math.floor(num / 1000) + '.000+';
+        return num + '+';
+    };
+    
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const easeProgress = 1 - Math.pow(1 - progress, 4);
+        const current = Math.floor(easeProgress * (end - start) + start);
+        obj.innerHTML = formatNum(current);
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        } else {
+            obj.innerHTML = formatNum(end);
+        }
+    };
+    window.requestAnimationFrame(step);
 }
 async function fetchSubjects() {
     const grid = document.getElementById('homeSubjectGrid');

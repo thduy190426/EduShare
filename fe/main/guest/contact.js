@@ -1,6 +1,8 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL, fetchAppConfig } from "../shared/config.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'guestHome.html' }, { name: 'Liên hệ' }]);
     const config = await fetchAppConfig();
 
     window.onRecaptchaLoad = function() {
@@ -121,3 +123,5 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 });
+
+renderBreadcrumb([{ name: 'Trang chủ', url: 'guestHome.html' }, { name: 'Liên hệ' }]);

@@ -82,6 +82,14 @@ const paymentLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const groupPostLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, 
+    max: isTest ? 1000 : 3, 
+    message: { message: 'Bạn đăng bài quá nhanh (giới hạn 3 bài/phút). Vui lòng thử lại sau 1 phút.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
 module.exports = {
     uploadLimiter,
     rateLimiter,
@@ -92,5 +100,6 @@ module.exports = {
     otpLimiter,
     downloadLimiter,
     commentLimiter,
-    paymentLimiter
+    paymentLimiter,
+    groupPostLimiter
 };

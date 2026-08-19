@@ -1,7 +1,10 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, escapeHTML, stripHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderDocumentSkeleton } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Tìm kiếm' }]);
+
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     const levelSelect = document.getElementById('levelSelect');
@@ -29,6 +32,44 @@ document.addEventListener('DOMContentLoaded', () => {
         if (queryParam) {
             searchInput.value = queryParam;
         }
+    }
+    
+    if (sortSelect) {
+        const initialSort = initialParams.get('sapXep');
+        if (initialSort) sortSelect.value = initialSort;
+    }
+    
+    if (ratingSelect) {
+        const initialRating = initialParams.get('danhGia');
+        if (initialRating) ratingSelect.value = initialRating;
+    }
+    
+    const initialLoaiFile = initialParams.get('loaiFile');
+    if (initialLoaiFile) {
+        const files = initialLoaiFile.split(',');
+        fileTypeCheckboxes.forEach(cb => {
+            if (files.includes(cb.value)) cb.checked = true;
+        });
+    }
+    
+    if (officialOnly) {
+        const initialChinhThuc = initialParams.get('chinhThuc');
+        if (initialChinhThuc === 'true') officialOnly.checked = true;
+    }
+    
+    if (fromDate) {
+        const initialTuNgay = initialParams.get('tuNgay');
+        if (initialTuNgay) fromDate.value = initialTuNgay;
+    }
+    
+    if (toDate) {
+        const initialDenNgay = initialParams.get('denNgay');
+        if (initialDenNgay) toDate.value = initialDenNgay;
+    }
+    
+    if (authorInput) {
+        const initialNguoiDang = initialParams.get('nguoiDang');
+        if (initialNguoiDang) authorInput.value = initialNguoiDang;
     }
 
     let currentPage = 1;
@@ -366,6 +407,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         queryParams.append('trang', page);
         renderActiveFilters();
+
+        const urlParams = new URLSearchParams(queryParams);
+        if (urlParams.has('tuKhoa')) {
+            urlParams.set('q', urlParams.get('tuKhoa'));
+            urlParams.delete('tuKhoa');
+        }
+        if (urlParams.get('trang') === '1') {
+            urlParams.delete('trang');
+        }
+        
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({ path: newUrl }, '', newUrl);
 
         try {
             const response = await fetch(`${API_URL}/documents/search?${queryParams.toString()}`);

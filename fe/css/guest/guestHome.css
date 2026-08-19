@@ -132,12 +132,70 @@
       .section-header { flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 48px; }
       .footer { padding: 40px 0 20px; margin-top: 48px; }
     }
+
+    @keyframes blob-bounce {
+      0% { transform: translate(0px, 0px) scale(1); }
+      33% { transform: translate(30px, -50px) scale(1.1); }
+      66% { transform: translate(-20px, 20px) scale(0.9); }
+      100% { transform: translate(0px, 0px) scale(1); }
+    }
+
+    .hero-blob {
+      position: absolute;
+      filter: blur(80px);
+      z-index: 0;
+      opacity: 0.6;
+      animation: blob-bounce 10s infinite alternate ease-in-out;
+      pointer-events: none;
+    }
+    .hero-blob.blob-1 {
+      top: -100px;
+      left: -100px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(79,70,229,0.35) 0%, rgba(79,70,229,0) 70%);
+      animation-delay: 0s;
+    }
+    .hero-blob.blob-2 {
+      bottom: -150px;
+      right: -50px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(6,182,212,0.3) 0%, rgba(6,182,212,0) 70%);
+      animation-delay: -2s;
+    }
+
+    .hero .container {
+      position: relative;
+      z-index: 2;
+    }
+
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    .reveal-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .cursor-blink::after {
+      content: '|';
+      color: var(--primary);
+      font-weight: 400;
+      animation: blink-caret 0.75s step-end infinite;
+    }
+    @keyframes blink-caret {
+      from, to { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
 body { -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: auto; user-select: auto; }
 
 *:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
 
-/* Global Search CSS */
 .hero-search-container {
     position: relative;
     max-width: 600px;
@@ -233,7 +291,6 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
     margin-top: 2px;
 }
 
-/* Modal CSS */
 .modal {
     position: fixed;
     top: 0;

@@ -1,7 +1,10 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { getToken, escapeHTML, getAssetUrl } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Nhật ký hệ thống' }]);
+
   const tableBody = document.getElementById('log-table-body');
   const searchInput = document.getElementById('input-search');
   const filterAction = document.getElementById('filter-action');

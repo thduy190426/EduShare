@@ -1,5 +1,6 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast, escapeHTML, renderPagination } from "../shared/utils.js";
+import { getToken, showToast, escapeHTML, renderPagination, showUndoToast } from "../shared/utils.js";
 
 let currentRejectId = null;
 let currentBulkRejectIds = [];
@@ -10,6 +11,8 @@ let currentSortBy = 'NgayDang';
 let currentOrder = 'DESC';
 
 document.addEventListener("DOMContentLoaded", () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Kiểm duyệt' }]);
+
   fetchDocuments(currentTabStatus);
 
   const tabs = document.querySelectorAll('.tab-item');
@@ -107,10 +110,38 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       if (currentBulkRejectIds && currentBulkRejectIds.length > 0) {
-        reviewBulkDocuments(currentBulkRejectIds, "TuChoi", reason);
+        const ids = [...currentBulkRejectIds];
+        
+        ids.forEach(id => {
+            const row = document.querySelector(`.btn-reject[data-id="${id}"]`)?.closest('tr');
+            if (row) row.style.display = 'none';
+        });
+
+        showUndoToast(`Đang từ chối ${ids.length} tài liệu...`, () => {
+            reviewBulkDocuments(ids, "TuChoi", reason);
+        }, () => {
+            ids.forEach(id => {
+                const row = document.querySelector(`.btn-reject[data-id="${id}"]`)?.closest('tr');
+                if (row) row.style.display = '';
+            });
+            showToast("info", "Đã hoàn tác thao tác từ chối.");
+        });
+
         closeModal();
       } else if (currentRejectId) {
-        reviewDocument(currentRejectId, "TuChoi", reason);
+        const id = currentRejectId;
+        const title = document.getElementById("reject-doc-title").textContent;
+        
+        const row = document.querySelector(`.btn-reject[data-id="${id}"]`)?.closest('tr');
+        if (row) row.style.display = 'none';
+
+        showUndoToast(`Đang từ chối tài liệu: ${escapeHTML(title)}`, () => {
+            reviewDocument(id, "TuChoi", reason);
+        }, () => {
+            if (row) row.style.display = '';
+            showToast("info", "Đã hoàn tác thao tác từ chối.");
+        });
+
         closeModal();
       }
     });
@@ -592,3 +623,4 @@ async function toggleDocumentVisibility(maTL) {
     showToast("error", "Lỗi hệ thống.");
   }
 }
+

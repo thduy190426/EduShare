@@ -1,47 +1,65 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast, getAssetUrl, escapeHTML, renderPagination } from "../shared/utils.js";
+import { getToken, showToast, getAssetUrl, escapeHTML, renderPagination, showExportColumnPicker } from "../shared/utils.js";
 
 let currentStatus = 'ChoDuyet';
 let currentPage = 1;
 const limit = 10;
 
 document.addEventListener("DOMContentLoaded", () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Thanh toán' }]);
+
     setupTabs();
     fetchCounts();
     fetchTransactions();
 
     const btnExport = document.getElementById('btn-export-csv');
     if (btnExport) {
-        btnExport.addEventListener('click', async () => {
-            const token = getToken();
-            try {
-                btnExport.disabled = true;
-                btnExport.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang xuất...';
+        btnExport.addEventListener('click', () => {
+            const columnsDef = [
+                { id: 'MaGD', label: 'Mã GD' },
+                { id: 'NguoiDung', label: 'Người Dùng' },
+                { id: 'Email', label: 'Email' },
+                { id: 'SoTien', label: 'Số Tiền (VNĐ)' },
+                { id: 'SoXu', label: 'Số Xu' },
+                { id: 'KhuyenMai', label: 'Khuyến Mãi' },
+                { id: 'NgayTao', label: 'Ngày Tạo' },
+                { id: 'NgayDuyet', label: 'Ngày Duyệt' },
+                { id: 'TrangThai', label: 'Trạng Thái' }
+            ];
 
-                const response = await fetch(`${API_URL}/payment/export/history`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+            showExportColumnPicker(columnsDef, async (selectedCols) => {
+                const token = getToken();
+                try {
+                    btnExport.disabled = true;
+                    btnExport.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang xuất...';
 
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.message || 'Lỗi khi tải báo cáo');
+                    const colsParam = selectedCols.join(',');
+                    const response = await fetch(`${API_URL}/payment/export/history?cols=${colsParam}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.message || 'Lỗi khi tải báo cáo');
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'lich-su-nap-xu.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    showToast(err.message, 'error');
+                } finally {
+                    btnExport.disabled = false;
+                    btnExport.innerHTML = '<i class="fa-solid fa-file-csv" style="margin-right: 6px;"></i> Xuất CSV';
                 }
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'lich-su-nap-xu.csv';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-            } catch (err) {
-                showToast(err.message, 'error');
-            } finally {
-                btnExport.disabled = false;
-                btnExport.innerHTML = '<i class="fa-solid fa-file-csv" style="margin-right: 6px;"></i> Xuất CSV';
-            }
+            });
         });
     }
 });
@@ -267,3 +285,4 @@ async function handleDelete(id) {
         showToast("error", "Lỗi kết nối.");
     }
 }
+

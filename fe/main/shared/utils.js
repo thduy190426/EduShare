@@ -228,7 +228,7 @@ function redirectToLogin() {
             Swal.fire({
                 icon: 'warning',
                 title: 'Phiên đăng nhập hết hạn',
-                text: 'Phiên đăng nhập của bạn đã hết hạn, vui lòng đăng nhập lại để tiếp tục.',
+                text: 'Vui lòng đăng nhập lại để tiếp tục.',
                 confirmButtonText: 'Đăng nhập',
                 allowOutsideClick: false
             }).then(() => {
@@ -414,9 +414,6 @@ export const renderCommentSkeleton = (count = 3) => {
     return html;
 };
 
-
-// --- TOAST INTERCEPTOR SYSTEM ---
-// Globally override alert() and simple Swal.fire() calls to use Toast notifications.
 if (typeof window !== 'undefined') {
     window.alert = function(msg) {
         if (typeof Swal !== 'undefined') {
@@ -447,9 +444,9 @@ if (typeof window !== 'undefined') {
                 const opt = args[0];
                 if (!opt.showCancelButton && !opt.input && !opt.showDenyButton && !opt.html && !opt.toast) {
                     if (opt.didOpen && opt.showConfirmButton === false && !opt.timer) {
-                        isSimpleAlert = false; // Loading modal
+                        isSimpleAlert = false; 
                     } else if (opt.title === 'Đang đăng xuất...' || opt.title === 'Đang tải...') {
-                        isSimpleAlert = false; // Explicit loading titles
+                        isSimpleAlert = false;
                     } else {
                         isSimpleAlert = true;
                         icon = opt.icon || 'info';
@@ -475,7 +472,7 @@ if (typeof window !== 'undefined') {
                 if (text && text !== title) {
                     finalTitle = finalTitle ? `${finalTitle}: ${text}` : text;
                 }
-                // Strip HTML tags for clean toast
+
                 if (typeof finalTitle === 'string') {
                    finalTitle = finalTitle.replace(/<[^>]*>?/gm, '');
                 }
@@ -486,4 +483,183 @@ if (typeof window !== 'undefined') {
         };
     }
 }
-// --------------------------------
+
+export function renderBreadcrumb(paths) {
+    const container = document.getElementById('breadcrumb-container');
+    if (!container) return;
+
+    let html = '<nav class="breadcrumb" aria-label="Breadcrumb"><ol>';
+    paths.forEach((item, index) => {
+        const isLast = index === paths.length - 1;
+        html += `<li class="breadcrumb-item ${isLast ? 'active' : ''}">`;
+        
+        let iconHtml = '';
+        if (index === 0 && item.name.includes('Trang chủ')) {
+             iconHtml = `<i class="fa-solid fa-house breadcrumb-icon"></i>`;
+        }
+
+        if (item.url && !isLast) {
+            html += `<a href="${item.url}">${iconHtml}${item.name}</a>`;
+        } else {
+            html += `<span aria-current="page">${iconHtml}${item.name}</span>`;
+        }
+        
+        html += `</li>`;
+        
+        if (!isLast) {
+            html += `<li class="breadcrumb-separator"><i class="fa-solid fa-chevron-right"></i></li>`;
+        }
+    });
+    html += '</ol></nav>';
+    container.innerHTML = html;
+}
+
+export function showExportColumnPicker(columns, onConfirm) {
+    let checkboxesHtml = columns.map(col => `
+        <label style="display: flex; align-items: center; margin-bottom: 8px; cursor: pointer;">
+            <input type="checkbox" class="export-col-checkbox" value="${col.id}" checked style="margin-right: 10px; width: 16px; height: 16px;">
+            <span style="font-size: 15px;">${col.label}</span>
+        </label>
+    `).join('');
+
+    Swal.fire({
+        title: 'Tùy chỉnh Cột Xuất CSV',
+        html: `
+            <div style="text-align: left; max-height: 300px; overflow-y: auto; padding: 10px;">
+                <p style="margin-bottom: 15px; font-size: 14px; color: #666;">Vui lòng chọn các cột dữ liệu bạn muốn xuất ra file CSV:</p>
+                ${checkboxesHtml}
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa-solid fa-file-export"></i> Xuất File',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: 'var(--primary)',
+        preConfirm: () => {
+            const checkedBoxes = document.querySelectorAll('.export-col-checkbox:checked');
+            const selectedCols = Array.from(checkedBoxes).map(cb => cb.value);
+            if (selectedCols.length === 0) {
+                Swal.showValidationMessage('Bạn phải chọn ít nhất một cột để xuất báo cáo.');
+                return false;
+            }
+            return selectedCols;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            onConfirm(result.value);
+        }
+    });
+}
+
+export function showUndoToast(message, onConfirm, onUndo, duration = 5000) {
+    if (!document.getElementById('undo-toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'undo-toast-styles';
+        style.innerHTML = `
+            .undo-toast-container {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                background: #1e293b;
+                color: white;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                z-index: 9999;
+                transform: translateY(100px);
+                opacity: 0;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+                overflow: hidden;
+            }
+            .undo-toast-container.show {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            .undo-toast-message {
+                font-size: 14px;
+                font-weight: 500;
+            }
+            .undo-toast-btn {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #60a5fa;
+                font-weight: 600;
+                padding: 8px 14px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .undo-toast-btn:hover {
+                background: rgba(255, 255, 255, 0.2);
+                color: #93c5fd;
+            }
+            .undo-toast-progress {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                height: 4px;
+                background: #3b82f6;
+                width: 100%;
+                transform-origin: left;
+                animation: shrinkProgress linear forwards;
+            }
+            @keyframes shrinkProgress {
+                from { transform: scaleX(1); }
+                to { transform: scaleX(0); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'undo-toast-container';
+    
+    toast.innerHTML = `
+        <div class="undo-toast-message">${message}</div>
+        <button class="undo-toast-btn"><i class="fa-solid fa-rotate-left"></i> Hoàn tác</button>
+        <div class="undo-toast-progress" style="animation-duration: ${duration}ms;"></div>
+    `;
+    
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    let isUndone = false;
+    
+    const timeoutId = setTimeout(() => {
+        if (!isUndone) {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+            if (onConfirm) onConfirm();
+        }
+    }, duration);
+    
+    const undoBtn = toast.querySelector('.undo-toast-btn');
+    undoBtn.addEventListener('click', () => {
+        isUndone = true;
+        clearTimeout(timeoutId);
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+        if (onUndo) onUndo();
+    });
+}
+export const validateMessage = (text) => {
+    if (!text || text.trim().length === 0) return { isValid: false, reason: 'empty' };
+    
+    const sensitiveWords = ['dm', 'vcl', 'lon', 'cac', 'buoi', 'fuck', 'shit', 'bitch', 'dm', 'vkl'];
+    const lowerText = text.toLowerCase();
+    for (const word of sensitiveWords) {
+        if (lowerText.includes(word)) {
+            return { isValid: false, reason: 'sensitive', word: word };
+        }
+    }
+    
+    return { isValid: true };
+};
+

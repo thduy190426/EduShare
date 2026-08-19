@@ -12,6 +12,7 @@ const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const { sendNotificationToUser } = require('./services/socket');
+const { updateQuestProgress } = require('./services/questService');
 async function extractTextFromFile(filePath, mimeType) {
     try {
         let text = '';
@@ -239,7 +240,7 @@ router.get('/levels', async (req, res) => {
 router.get('/generate-signature', authMiddleware, (req, res) => {
     try {
         const timestamp = Math.round((new Date).getTime() / 1000);
-        const folder = 'documents'; 
+        const folder = 'documents';
         const signature = cloudinary.utils.api_sign_request({
             timestamp: timestamp,
             folder: folder
@@ -291,7 +292,7 @@ router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationM
     if (!cloudinaryUrl) {
         return res.status(400).json({ message: 'Lỗi: Không tìm thấy đường dẫn file từ Cloudinary.' });
     }
-    const tempFilePath = path.join(os.tmpdir(), `temp_${Date.now()}_${publicId.replace(/\\//g, '_')}`);
+    const tempFilePath = path.join(os.tmpdir(), `temp_${Date.now()}_${publicId.replace(/\//g, '_')}`);
     try {
         await downloadFile(cloudinaryUrl, tempFilePath);
         const fileHash = await getFileHash(tempFilePath);
@@ -362,6 +363,7 @@ router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationM
             '../admin/adminModeration.html',
             req.user.MaND
         );
+        await updateQuestProgress(req.user.MaND, 'UpTaiLieu', 1, pool);
         res.status(200).json({ message: 'Tải lên tài liệu thành công.', fileURL });
     } catch (dbErr) {
         if (fs.existsSync(tempFilePath)) {
@@ -763,31 +765,31 @@ router.get('/:maTL/preview-pdf', async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT FileURL, LoaiFile, PreviewURL FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND IsDeleted = FALSE', [maTL]);
-        
+
         if (rows.length === 0) {
             return res.status(404).send('Không tìm thấy tài liệu.');
         }
-        
+
         const doc = rows[0];
-        
+
         if (doc.PreviewURL) {
             return res.redirect(doc.PreviewURL);
         }
-        
+
         if (doc.LoaiFile !== 'pdf' || !doc.FileURL) {
             return res.status(400).send('Định dạng không hỗ trợ xem trước hoặc không có file gốc.');
         }
 
         const tempFilePath = path.join(os.tmpdir(), `preview_${Date.now()}_${maTL}.pdf`);
         await downloadFile(doc.FileURL, tempFilePath);
-        
+
         const fileBuffer = fs.readFileSync(tempFilePath);
         const previewBuffer = await generatePreviewPdf(fileBuffer);
-        
+
         if (fs.existsSync(tempFilePath)) {
             fs.unlinkSync(tempFilePath);
         }
-        
+
         if (previewBuffer) {
             res.contentType('application/pdf');
             res.send(previewBuffer);
@@ -1034,6 +1036,7 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
             sendNotificationToUser(doc.MaND_NguoiDang, 'document_bought', {
                 message: `Bạn vừa nhận được ${giaXu} Xu do có người mua tài liệu "${doc.TenTL}".`
             });
+            await updateQuestProgress(maND, 'MuaTaiLieu', 1, pool);
             res.status(200).json({ message: 'Mua tài liệu thành công!' });
         } catch (dbErr) {
             await connection.rollback();
@@ -1085,6 +1088,7 @@ router.post('/:maTL/rate', authMiddleware, rateLimiter, async (req, res) => {
             return res.status(409).json({ message: 'Bạn đã đánh giá tài liệu này rồi. Mỗi tài khoản chỉ được đánh giá một lần.' });
         }
         await pool.execute('INSERT INTO DANHGIA (MaND, MaTL, SoSao) VALUES (?, ?, ?)', [maND, maTL, soSao]);
+        await updateQuestProgress(maND, 'DanhGia', 1, pool);
         const [avgRows] = await pool.execute('SELECT AVG(SoSao) AS average, COUNT(*) AS count FROM DANHGIA WHERE MaTL = ?', [maTL]);
         res.status(200).json({ message: 'Đánh giá thành công.', average: avgRows[0].average, count: avgRows[0].count });
     } catch (error) {
@@ -1150,8 +1154,8 @@ router.post('/:maTL/comments', authMiddleware, commentLimiter, moderationMiddlew
             }
         }
         const [newCommentRows] = await pool.execute(`
-            SELECT BL.MaBL, BL.NoiDung, BL.NgayBinhLuan, BL.DaChinhSua, BL.Ghim, BL.MaBL_Cha,
-                   ND.MaND, ND.HoTen, ND.AvatarURL, ND.Role
+            SELECT BL.MaBL, BL.NoiDung, BL.NgayBinhLuan, BL.DaGhim, BL.DaChinhSua, BL.MaBL_Cha,
+                   ND.MaND, ND.HoTen, ND.AvatarURL, ND.VaiTro AS Role
             FROM BINHLUAN BL
             JOIN NGUOIDUNG ND ON BL.MaND = ND.MaND
             WHERE BL.MaBL = ?
@@ -1191,6 +1195,40 @@ router.delete('/comments/:maBL', authMiddleware, async (req, res) => {
         res.status(200).json({ message: 'Đã xóa bình luận.' });
     } catch (error) {
         console.error('Lỗi xóa bình luận:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/comments/:maBL/edit', authMiddleware, async (req, res) => {
+    const maBL = req.params.maBL;
+    const maND = req.user.MaND;
+    const { text } = req.body;
+    if (!text || !text.trim()) {
+        return res.status(400).json({ message: 'Nội dung bình luận không được để trống.' });
+    }
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT MaND, MaTL FROM BINHLUAN WHERE MaBL = ?', [maBL]);
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy bình luận.' });
+        }
+        if (rows[0].MaND !== maND) {
+            return res.status(403).json({ message: 'Bạn không có quyền chỉnh sửa bình luận này.' });
+        }
+        const maTL = rows[0].MaTL;
+        await pool.execute('UPDATE BINHLUAN SET NoiDung = ?, DaChinhSua = TRUE WHERE MaBL = ?', [text.trim(), maBL]);
+
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`document_${maTL}`).emit('document_comment_edited', {
+                maBL: parseInt(maBL),
+                noiDung: text.trim(),
+                maTL: parseInt(maTL)
+            });
+        }
+        res.status(200).json({ message: 'Đã chỉnh sửa bình luận.', noiDung: text.trim() });
+    } catch (error) {
+        console.error('Lỗi chỉnh sửa bình luận:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
@@ -1374,7 +1412,7 @@ router.put('/:maTL', authMiddleware, upload.none(), async (req, res) => {
     if (giaXu !== undefined && giaXu !== null) {
         parsedGiaXu = parseInt(giaXu);
         if (isNaN(parsedGiaXu) || parsedGiaXu < 0 || parsedGiaXu > 1000000) {
-            return res.status(400).json({ message: 'Giá Xu không hợp lệ. Phải từ 0 đến 1,000,000.' });
+            return res.status(400).json({ message: 'Giá Xu không hợp lệ. Phải từ 0 đến ' + maxPriceXu + '.' });
         }
     }
     let tempFilePath = null;

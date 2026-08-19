@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
 
@@ -17,6 +18,8 @@ async function fetchUploadSettings() {
 fetchUploadSettings();
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Đăng tài liệu' }]);
+
     loadUserProfileNav();
     const uploadForm = document.getElementById('uploadForm');
     const fileUpload = document.getElementById('fileUpload');
@@ -46,6 +49,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const checkAndRestoreDraft = () => {
+        const draftTitle = localStorage.getItem('draft_upload_title');
+        const draftDesc = localStorage.getItem('draft_upload_desc');
+
+        if (draftTitle || draftDesc) {
+            Swal.fire({
+                title: 'Khôi phục bản nháp?',
+                text: 'Bạn có một bản nháp tài liệu chưa đăng tải. Bạn có muốn khôi phục không?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Có, khôi phục',
+                cancelButtonText: 'Không, bỏ qua'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (draftTitle && tenTLInput) tenTLInput.value = draftTitle;
+                    if (draftDesc && moTaEditor) moTaEditor.root.innerHTML = draftDesc;
+                    checkUploadConditions();
+                } else {
+                    localStorage.removeItem('draft_upload_title');
+                    localStorage.removeItem('draft_upload_desc');
+                }
+            });
+        }
+    };
+    checkAndRestoreDraft();
+
+    if (moTaEditor) {
+        moTaEditor.on('text-change', () => {
+            localStorage.setItem('draft_upload_desc', moTaEditor.root.innerHTML);
+        });
+    }
+
     function checkUploadConditions() {
         const tenTL = tenTLInput.value.trim();
         const maMonHoc = subjectSelect.value;
@@ -67,7 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     checkUploadConditions();
-    tenTLInput.addEventListener('input', checkUploadConditions);
+    tenTLInput.addEventListener('input', () => {
+        localStorage.setItem('draft_upload_title', tenTLInput.value);
+        checkUploadConditions();
+    });
     subjectSelect.addEventListener('change', () => {
         checkUploadConditions();
         updateSubjectLevelInfo(subjectSelect, subjectLevelInfo);
@@ -121,18 +159,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (uploadZone) {
         uploadZone.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadZone.style.borderColor = 'var(--primary)';
-            uploadZone.style.background = 'var(--primary-light)';
+            uploadZone.classList.add('dragover');
         });
         uploadZone.addEventListener('dragleave', (e) => {
             e.preventDefault();
-            uploadZone.style.borderColor = '';
-            uploadZone.style.background = '';
+            uploadZone.classList.remove('dragover');
         });
         uploadZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadZone.style.borderColor = '';
-            uploadZone.style.background = '';
+            uploadZone.classList.remove('dragover');
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                 fileUpload.files = e.dataTransfer.files;
                 const event = new Event('change');
@@ -373,23 +408,54 @@ async function generatePdfThumbnail(file) {
             const uploadProgressBar = document.getElementById('uploadProgressBar');
             const uploadProgressPercent = document.getElementById('uploadProgressPercent');
             const uploadProgressText = document.getElementById('uploadProgressText');
+            const uploadSpeedText = document.getElementById('uploadSpeedText');
+            const uploadSizeText = document.getElementById('uploadSizeText');
 
             if (uploadProgressContainer) {
                 uploadProgressContainer.style.display = 'block';
                 uploadProgressBar.style.width = '0%';
                 uploadProgressPercent.textContent = '0%';
                 uploadProgressText.textContent = 'Đang tải lên máy chủ Cloud...';
+                if(uploadSpeedText) uploadSpeedText.textContent = '0 KB/s';
+                if(uploadSizeText) uploadSizeText.textContent = '0 MB / 0 MB';
             }
 
             const cloudData = await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/auto/upload`);
 
+                let lastLoaded = 0;
+                let lastTime = Date.now();
+
                 xhr.upload.onprogress = (event) => {
                     if (event.lengthComputable && uploadProgressContainer) {
                         const percentComplete = Math.round((event.loaded / event.total) * 100);
                         uploadProgressBar.style.width = percentComplete + '%';
                         uploadProgressPercent.textContent = percentComplete + '%';
+
+                        const currentTime = Date.now();
+                        const timeDiff = (currentTime - lastTime) / 1000; 
+                        if (timeDiff >= 0.5 || percentComplete === 100) { 
+                            const loadedDiff = event.loaded - lastLoaded;
+                            let speed = loadedDiff / timeDiff; 
+                            
+                            let speedText = '';
+                            if (speed > 1024 * 1024) {
+                                speedText = (speed / (1024 * 1024)).toFixed(1) + ' MB/s';
+                            } else {
+                                speedText = (speed / 1024).toFixed(0) + ' KB/s';
+                            }
+                            if(uploadSpeedText) uploadSpeedText.textContent = speedText;
+
+                            lastLoaded = event.loaded;
+                            lastTime = currentTime;
+                        }
+
+                        if (uploadSizeText) {
+                            const loadedMB = (event.loaded / (1024 * 1024)).toFixed(2);
+                            const totalMB = (event.total / (1024 * 1024)).toFixed(2);
+                            uploadSizeText.textContent = `${loadedMB} MB / ${totalMB} MB`;
+                        }
                     }
                 };
 
@@ -433,9 +499,11 @@ async function generatePdfThumbnail(file) {
             }
 
             if (response.ok) {
+                localStorage.removeItem('draft_upload_title');
+                localStorage.removeItem('draft_upload_desc');
                 await Swal.fire({
                     icon: 'success',
-                    title: 'Thành công!',
+                    title: 'Thành công',
                     text: 'Tải lên tài liệu thành công! Tài liệu đang chờ Admin kiểm duyệt.',
                     confirmButtonText: 'Đồng ý',
                     allowOutsideClick: false

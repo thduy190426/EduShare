@@ -1,6 +1,9 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting, renderDocumentSkeleton, renderGroupSkeleton } from '../shared/utils.js';
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ' }]);
+
     loadUserProfileNav();
     fetchUserProfileForHero();
     fetchFollowingFeed();

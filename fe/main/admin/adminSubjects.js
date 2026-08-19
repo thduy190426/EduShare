@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { getToken, showToast, renderPagination, getAssetUrl } from '../shared/utils.js';
 
@@ -37,6 +38,8 @@ function validateAddSubjectForm() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Môn học' }]);
+
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
         window.location.href = '../guest/guestHome.html';

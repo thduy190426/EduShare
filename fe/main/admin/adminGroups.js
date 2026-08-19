@@ -1,5 +1,8 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { checkAuth, getToken, showToast, renderPagination } from '../shared/utils.js';
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Quản lý Nhóm' }]);
+
     const user = checkAuth();
     if (!user || user.VaiTro !== 'Admin') {
         showToast('error', 'Bạn không có quyền truy cập trang này!');

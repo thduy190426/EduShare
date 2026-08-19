@@ -242,6 +242,8 @@ router.delete('/delete/:id', adminMiddleware, async (req, res) => {
 });
 router.get('/export/history', adminMiddleware, async (req, res) => {
     try {
+        const selectedCols = req.query.cols ? req.query.cols.split(',') : null;
+
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
             SELECT G.*, N.HoTen, N.Email 
@@ -249,8 +251,24 @@ router.get('/export/history', adminMiddleware, async (req, res) => {
             JOIN NGUOIDUNG N ON G.MaND = N.MaND
             ORDER BY G.NgayTao DESC
         `);
+
+        const allColumns = [
+            { id: 'MaGD', label: 'Mã GD' },
+            { id: 'NguoiDung', label: 'Người Dùng' },
+            { id: 'Email', label: 'Email' },
+            { id: 'SoTien', label: 'Số Tiền (VNĐ)' },
+            { id: 'SoXu', label: 'Số Xu' },
+            { id: 'KhuyenMai', label: 'Khuyến Mãi' },
+            { id: 'NgayTao', label: 'Ngày Tạo' },
+            { id: 'NgayDuyet', label: 'Ngày Duyệt' },
+            { id: 'TrangThai', label: 'Trạng Thái' }
+        ];
+
+        const exportColumns = selectedCols ? allColumns.filter(c => selectedCols.includes(c.id)) : allColumns;
+
         let csvContent = '\uFEFF'; 
-        csvContent += 'Mã GD,Người Dùng,Email,Số Tiền (VNĐ),Số Xu,Khuyến Mãi,Ngày Tạo,Ngày Duyệt,Trạng Thái\n';
+        csvContent += exportColumns.map(c => c.label).join(',') + '\n';
+
         for (const row of rows) {
             const dateStr = row.NgayTao ? new Date(row.NgayTao).toLocaleString('vi-VN') : '';
             const dateDuyetStr = row.NgayDuyet ? new Date(row.NgayDuyet).toLocaleString('vi-VN') : '';
@@ -258,17 +276,20 @@ router.get('/export/history', adminMiddleware, async (req, res) => {
             if (statusStr === 'DaDuyet') statusStr = 'Đã Duyệt';
             else if (statusStr === 'ChoDuyet') statusStr = 'Chờ Duyệt';
             else if (statusStr === 'TuChoi') statusStr = 'Từ Chối';
-            const values = [
-                row.MaGD,
-                `"${(row.HoTen || '').replace(/"/g, '""')}"`,
-                `"${(row.Email || '').replace(/"/g, '""')}"`,
-                row.SoTien || 0,
-                row.SoXu || 0,
-                `"${(row.MaPromo || '').replace(/"/g, '""')}"`,
-                `"${dateStr}"`,
-                `"${dateDuyetStr}"`,
-                `"${statusStr}"`
-            ];
+            
+            const rowDataMap = {
+                'MaGD': row.MaGD,
+                'NguoiDung': `"${(row.HoTen || '').replace(/"/g, '""')}"`,
+                'Email': `"${(row.Email || '').replace(/"/g, '""')}"`,
+                'SoTien': row.SoTien || 0,
+                'SoXu': row.SoXu || 0,
+                'KhuyenMai': `"${(row.MaPromo || '').replace(/"/g, '""')}"`,
+                'NgayTao': `"${dateStr}"`,
+                'NgayDuyet': `"${dateDuyetStr}"`,
+                'TrangThai': `"${statusStr}"`
+            };
+
+            const values = exportColumns.map(c => rowDataMap[c.id]);
             csvContent += values.join(',') + '\n';
         }
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');

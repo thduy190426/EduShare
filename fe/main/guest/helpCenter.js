@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 const faqs = [
     {
         id: 1,
@@ -50,6 +51,8 @@ const faqs = [
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'guestHome.html' }, { name: 'Trung tâm trợ giúp' }]);
+
     const faqContainer = document.getElementById('faq-list');
     const searchInput = document.getElementById('help-search-input');
     const categoryCards = document.querySelectorAll('.category-card');

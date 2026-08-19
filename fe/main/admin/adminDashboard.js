@@ -1,9 +1,12 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { getToken, getAssetUrl } from '../shared/utils.js';
+import { getToken, getAssetUrl, showExportColumnPicker } from '../shared/utils.js';
 
 const token = getToken();
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin' }]);
+
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
         window.location.href = '../guest/guestHome.html';
@@ -13,36 +16,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnExportRev = document.getElementById('btn-export-revenue');
     if (btnExportRev) {
-        btnExportRev.addEventListener('click', async () => {
-            try {
-                btnExportRev.disabled = true;
-                btnExportRev.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang tải...';
+        btnExportRev.addEventListener('click', () => {
+            const columnsDef = [
+                { id: 'MaGD', label: 'Mã GD' },
+                { id: 'NguoiDung', label: 'Người Dùng' },
+                { id: 'Email', label: 'Email' },
+                { id: 'SoTien', label: 'Số Tiền (VNĐ)' },
+                { id: 'SoXu', label: 'Số Xu' },
+                { id: 'KhuyenMai', label: 'Khuyến Mãi' },
+                { id: 'NgayTao', label: 'Ngày Tạo' },
+                { id: 'NgayDuyet', label: 'Ngày Duyệt' }
+            ];
 
-                const response = await fetch(`${API_URL}/admin/export/revenue`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+            showExportColumnPicker(columnsDef, async (selectedCols) => {
+                try {
+                    btnExportRev.disabled = true;
+                    btnExportRev.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang tải...';
 
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.message || 'Lỗi khi tải báo cáo');
+                    const colsParam = selectedCols.join(',');
+                    const response = await fetch(`${API_URL}/admin/export/revenue?cols=${colsParam}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.message || 'Lỗi khi tải báo cáo');
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'bao-cao-doanh-thu.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                } catch (err) {
+                    console.error(err);
+                    alert(err.message);
+                } finally {
+                    btnExportRev.disabled = false;
+                    btnExportRev.innerHTML = '<i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Xuất';
                 }
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'bao-cao-doanh-thu.csv';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-            } catch (err) {
-                console.error(err);
-                alert(err.message);
-            } finally {
-                btnExportRev.disabled = false;
-                btnExportRev.innerHTML = '<i class="fa-solid fa-file-csv" style="margin-right: 4px;"></i> Xuất';
-            }
+            });
         });
     }
 });

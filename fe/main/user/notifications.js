@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
 import { getSocket } from '../shared/socketClient.js';
@@ -6,6 +7,8 @@ let currentPage = 1;
 const LIMIT = 20;
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Thông báo' }]);
+
     loadUserProfileNav();
     fetchNotifications(currentPage);
     setupSocketListener();

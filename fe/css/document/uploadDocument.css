@@ -32,9 +32,7 @@
     
     .container { max-width: 800px; margin: 0 auto; }
     
-    .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
-    .breadcrumb a { color: var(--primary); font-weight: 500; }
-    .breadcrumb a:hover { text-decoration: underline; }
+
     
     .page-title { font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
     .page-desc { color: var(--text-secondary); font-size: 15px; margin-bottom: 32px; }
@@ -73,12 +71,18 @@
     .word-icon { color: #2563EB; }
     .powerpoint-icon { color: #EA580C; }
 
-    
-    .upload-zone { border: 2px dashed var(--border); border-radius: var(--radius-card); padding: 40px 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #F8FAFC; margin-bottom: 16px; }
+    .upload-zone { border: 3px dashed var(--border); border-radius: var(--radius-card); padding: 80px 24px; min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; cursor: pointer; transition: all 0.3s ease; background: #F8FAFC; margin-bottom: 16px; }
     .upload-zone:hover { border-color: var(--primary); background: var(--primary-light); }
-    .upload-icon { font-size: 48px; color: var(--primary); margin-bottom: 16px; }
-    .upload-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
-    .upload-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+    .upload-zone.dragover { border-color: var(--primary); background: var(--primary-light); animation: pulse-border 1.5s infinite; }
+    .upload-zone.dragover .upload-icon { transform: scale(1.2); }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+      70% { box-shadow: 0 0 0 15px rgba(79, 70, 229, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+    }
+    .upload-icon { font-size: 72px; color: var(--primary); margin-bottom: 24px; transition: transform 0.3s ease; }
+    .upload-title { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+    .upload-desc { font-size: 15px; color: var(--text-secondary); margin-bottom: 24px; }
     
     
     .file-preview { display: flex; align-items: center; gap: 16px; padding: 16px; border: 1px solid var(--success); border-radius: var(--radius-btn); background: #F0FDF4; margin-bottom: 24px; }

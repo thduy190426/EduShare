@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from "../shared/config.js";
 import { getToken, showToast, renderPagination, getAssetUrl, escapeHTML } from "../shared/utils.js";
 
@@ -7,6 +8,8 @@ let currentPage = 1;
 const limit = 10;
 
 document.addEventListener("DOMContentLoaded", () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Yêu cầu Giáo viên' }]);
+
     setupTabs();
     fetchRequests();
     setupModals();
@@ -218,3 +221,4 @@ async function handleReview(id, status, reason = null) {
         showToast("error", "Lỗi kết nối máy chủ.");
     }
 }
+

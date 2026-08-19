@@ -1,21 +1,19 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lịch sử giao dịch — EduShare</title>
+  <title>Nhiệm vụ hàng ngày &mdash; EduShare</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
-  <link rel="stylesheet" href="../../css/user/transactionHistory.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+  <link rel="stylesheet" href="../../css/shared/header.css">
+  <link rel="stylesheet" href="../../css/user/quests.css">
+  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
 </head>
-
 <body>
 
   <nav class="navbar">
@@ -27,7 +25,7 @@
       </button>
 
       <div class="user-profile" id="userProfileNav">
-        <div class="avatar" id="navAvatar">U</div>
+        <div class="avatar" id="navAvatar">?</div>
         <div class="user-info hide-on-tablet-mobile">
           <span class="user-name" id="navUserName">Đang tải...</span>
           <span class="user-role" id="navUserRole"></span>
@@ -40,46 +38,25 @@
     <aside id="app-sidebar" class="sidebar"></aside>
     
     <main class="content-area">
-      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
-        <div>
-          <h1 class="page-title">Lịch sử giao dịch</h1>
-          <p class="page-desc" style="margin-bottom: 0;">Theo dõi toàn bộ biến động số dư EduCoin (Xu) của bạn.</p>
+      <div class="quests-container">
+        <div class="quests-header">
+          <h1><i class="fa-solid fa-gift"></i> Nhiệm vụ của bạn</h1>
+          <p>Hoàn thành các nhiệm vụ dưới đây để nhận EduCoin mỗi ngày!</p>
         </div>
-        <div class="export-actions" style="display: flex; gap: 10px;">
-          <button id="btn-export-excel" class="btn-export"><i class="fa-solid fa-file-excel" style="color: #10B981;"></i> Xuất Excel</button>
-          <button id="btn-export-pdf" class="btn-export"><i class="fa-solid fa-file-pdf" style="color: #EF4444;"></i> Xuất PDF</button>
-        </div>
-      </div>
-
-      <div class="card" id="transaction-card">
-        <table class="transaction-table">
-          <thead>
-            <tr>
-              <th><i class="fa-regular fa-clock" style="margin-right: 6px;"></i> Thời gian</th>
-              <th><i class="fa-solid fa-tags" style="margin-right: 6px;"></i> Loại giao dịch</th>
-              <th><i class="fa-solid fa-coins" style="margin-right: 6px;"></i> Số dư thay đổi</th>
-              <th><i class="fa-solid fa-circle-info" style="margin-right: 6px;"></i> Mô tả chi tiết</th>
-            </tr>
-          </thead>
-          <tbody id="transaction-list">
-            <tr>
-              <td colspan="4" class="empty-state">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                <p>Đang tải dữ liệu...</p>
-              </td>
-            </tr>
-          </tbody>
-        </table>
         
-        <div id="pagination-container"></div>
+        <div id="questsList">
+          <div style="text-align: center; padding: 40px;">
+            <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: #4f46e5;"></i>
+            <p style="margin-top: 15px; color: #6b7280;">Đang tải dữ liệu nhiệm vụ...</p>
+          </div>
+        </div>
       </div>
     </main>
-
   </div>
 
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
-  <script type="module" src="../../main/user/transactionHistory.js"></script>
+  <script type="module" src="../../main/user/quests.js"></script>
 </body>
 </html>
-

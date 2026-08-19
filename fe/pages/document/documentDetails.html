@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chi tiết tài liệu — EduShare</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/document/documentDetails.css">
   <link rel="stylesheet" href="../../css/shared/footer.css">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/tributejs/dist/tribute.css">
+
   <style>
     .tribute-container ul { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 0; list-style: none; margin: 0; max-height: 200px; overflow-y: auto; }
     .tribute-container li { padding: 8px 12px; cursor: pointer; color: #1e293b; font-size: 14px; transition: background 0.2s; }
@@ -19,9 +21,7 @@
     .tagged-user:hover { text-decoration: underline; }
   </style>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.3/purify.min.js"></script>
-  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.3/purify.min.js" defer></script>
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
 <body>
   
@@ -76,8 +76,14 @@
 
       
       <div class="preview-container">
-        <div class="preview-header">
+        <div class="preview-header" style="display: flex; justify-content: space-between; align-items: center;">
           <span id="preview-filename">Đang tải...</span>
+          <div class="preview-controls" style="display: flex; gap: 8px;">
+            <button id="btn-zoom-out" class="btn btn-outline-primary" style="padding: 4px 10px; font-size: 14px;" title="Thu nhỏ"><i class="fa-solid fa-minus"></i></button>
+            <span id="zoom-level-text" style="display: flex; align-items: center; font-size: 14px; min-width: 45px; justify-content: center; font-weight: 500;">100%</span>
+            <button id="btn-zoom-in" class="btn btn-outline-primary" style="padding: 4px 10px; font-size: 14px;" title="Phóng to"><i class="fa-solid fa-plus"></i></button>
+            <button id="btn-fullscreen" class="btn btn-outline-primary" style="padding: 4px 10px; font-size: 14px; margin-left: 8px;" title="Toàn màn hình"><i class="fa-solid fa-expand"></i></button>
+          </div>
         </div>
         <div class="preview-pages">
           <i class="fa-solid fa-file" id="preview-icon"></i>
@@ -88,14 +94,15 @@
       
       <div class="comments-section">
         <h3 class="comments-title"><i class="fa-solid fa-comment"></i> Bình luận</h3>
-        
-        <div class="comment-form">
-          <div class="comment-avatar">You</div>
-          <div class="comment-input-area" style="overflow: hidden; border: 1px solid #CBD5E1; border-radius: 8px;">
-            <div id="comment-editor" style="background: white; font-family: inherit; font-size: 14px; min-height: 80px; border-bottom: none;"></div>
-            <button id="btn-submit-comment" class="btn-submit"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi bình luận</button>
+                <div class="comment-form">
+            <div class="comment-avatar">You</div>
+            <div class="comment-input-area" style="overflow: hidden; border: 1px solid #CBD5E1; border-radius: 8px;">
+              <div id="comment-editor-container" style="background: white; min-height: 80px;">
+                <div id="comment-placeholder" style="padding: 12px 15px; color: #9CA3AF; font-size: 14px; cursor: text; height: 100%;">Viết bình luận hoặc đặt câu hỏi về tài liệu này...</div>
+              </div>
+              <button id="btn-submit-comment" class="btn-submit" disabled style="opacity: 0.5;"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi bình luận</button>
+            </div>
           </div>
-        </div>
 
         <div class="comment-list" id="comments-list"></div>
       </div>
@@ -191,10 +198,10 @@
     </div>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://unpkg.com/tributejs/dist/tribute.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
   <script type="module" src="../../main/document/documentDetails.js"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 </body>
 </html>
+

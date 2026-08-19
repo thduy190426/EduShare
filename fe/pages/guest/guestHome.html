@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trang Chủ — EduShare</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../../css/guest/guestHome.css">
   <link rel="stylesheet" href="../../css/shared/skeleton.css">
@@ -32,11 +34,13 @@
 
   
   <header class="hero">
+    <div class="hero-blob blob-1"></div>
+    <div class="hero-blob blob-2"></div>
     <div class="container">
-      <h1>Chia sẻ tri thức<br>Kết nối học tập</h1>
-      <p>Nền tảng chia sẻ tài liệu học tập lớn nhất dành cho học sinh, sinh viên và giảng viên tại Việt Nam. Tìm kiếm, đóng góp và cùng nhau học tốt hơn.</p>
+      <h1 id="heroTitle">Chia sẻ tri thức<br>Kết nối học tập</h1>
+      <p class="reveal-on-scroll">Nền tảng chia sẻ tài liệu học tập lớn nhất dành cho học sinh, sinh viên và giảng viên tại Việt Nam. Tìm kiếm, đóng góp và cùng nhau học tốt hơn.</p>
       
-      <div class="hero-search-container">
+      <div class="hero-search-container reveal-on-scroll" style="transition-delay: 0.2s;">
         <div class="search-input-wrapper">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
           <input type="text" id="guestSearchInput" placeholder="Tìm kiếm tài liệu, môn học, giáo trình..." autocomplete="off">
@@ -45,7 +49,7 @@
         <div id="searchSuggestions" class="suggestions-dropdown hidden"></div>
       </div>
 
-      <div class="hero-actions">
+      <div class="hero-actions reveal-on-scroll" style="transition-delay: 0.4s;">
         <a href="../auth/register.html" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Tạo tài khoản miễn phí</a>
         <a href="#documents" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px;">Khám phá tài liệu</a>
       </div>
@@ -53,18 +57,18 @@
   </header>
 
   
-  <section class="stats">
+  <section class="stats" id="statsSection">
     <div class="container stats-grid">
-      <div class="stat-item">
-        <h3 id="stat-documents">50.000+</h3>
+      <div class="stat-item reveal-on-scroll">
+        <h3 id="stat-documents" data-target="0">0</h3>
         <p>Tài liệu hữu ích</p>
       </div>
-      <div class="stat-item">
-        <h3 id="stat-users">120.000+</h3>
+      <div class="stat-item reveal-on-scroll" style="transition-delay: 0.2s;">
+        <h3 id="stat-users" data-target="0">0</h3>
         <p>Thành viên tích cực</p>
       </div>
-      <div class="stat-item">
-        <h3 id="stat-downloads">2.5M+</h3>
+      <div class="stat-item reveal-on-scroll" style="transition-delay: 0.4s;">
+        <h3 id="stat-downloads" data-target="0">0</h3>
         <p>Lượt tải xuống</p>
       </div>
     </div>
@@ -72,24 +76,24 @@
 
   
   <section class="container" id="documents">
-    <div class="section-header">
+    <div class="section-header reveal-on-scroll">
       <h2 class="section-title">Tài liệu nổi bật</h2>
       <a href="#" class="section-link" onclick="requireLogin(event)">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
     </div>
     
-    <div class="doc-grid" id="homeDocGrid">
+    <div class="doc-grid reveal-on-scroll" id="homeDocGrid">
       
     </div>
   </section>
 
   
   <section class="container">
-    <div class="section-header">
+    <div class="section-header reveal-on-scroll">
       <h2 class="section-title">Môn học phổ biến</h2>
       <a href="#" class="section-link" onclick="requireLogin(event)">Xem tất cả <i class="fa-solid fa-arrow-right"></i></a>
     </div>
 
-    <div class="subject-grid" id="homeSubjectGrid">
+    <div class="subject-grid reveal-on-scroll" id="homeSubjectGrid">
 
     </div>
   </section>
@@ -135,7 +139,7 @@
   </footer>
 
   <script type="module" src="../../main/guest/home.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <!-- Preview Modal -->
   <div id="previewModal" class="modal hidden">
     <div class="modal-content preview-modal-content">
@@ -174,3 +178,4 @@
   </script>
 </body>
 </html>
+

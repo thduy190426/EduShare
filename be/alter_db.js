@@ -159,11 +159,18 @@ async function run() {
             )
         `);
 
+        await addColumnIfMissing('YEU_CAU_GIAO_VIEN', 'LyDoTuChoi', 'TEXT DEFAULT NULL');
+
         await addColumnIfMissing('BINHLUAN', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('BINHLUAN', 'DaChinhSua', 'BOOLEAN DEFAULT FALSE');
 
         await addColumnIfMissing('NHOM', 'AnhBia', 'VARCHAR(255) DEFAULT NULL');
 
         await addColumnIfMissing('NHOM', 'IsPrivate', 'BOOLEAN DEFAULT FALSE');
+
+        await addColumnIfMissing('TINNHAN', 'LoaiTinNhan', "ENUM('text', 'image', 'file') DEFAULT 'text'");
+        await addColumnIfMissing('TINNHAN', 'DaThuHoi', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('TINNHAN', 'DaChinhSua', 'BOOLEAN DEFAULT FALSE');
 
         await createTableIfMissing('BAIVIET_NHOM', `
             CREATE TABLE BAIVIET_NHOM (
@@ -207,6 +214,47 @@ async function run() {
                 NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (MaND_ThucHien) REFERENCES NGUOIDUNG(MaND),
                 FOREIGN KEY (MaND_BiTacDong) REFERENCES NGUOIDUNG(MaND)
+            )
+        `);
+
+        await createTableIfMissing('NHIEMVU', `
+            CREATE TABLE NHIEMVU (
+                MaNV INT AUTO_INCREMENT PRIMARY KEY,
+                TenNV VARCHAR(255) NOT NULL,
+                MoTa TEXT,
+                LoaiNV VARCHAR(100) NOT NULL,
+                MucTieu INT NOT NULL DEFAULT 1,
+                ThuongXu INT NOT NULL DEFAULT 0,
+                TanSuat ENUM('HangNgay', 'HangTuan', 'MotLan') DEFAULT 'HangNgay',
+                TrangThai ENUM('HoatDong', 'TamAn') DEFAULT 'HoatDong',
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        const [quests] = await pool.execute('SELECT COUNT(*) as count FROM NHIEMVU');
+        if (quests[0].count === 0) {
+            await pool.execute(`
+                INSERT INTO NHIEMVU (TenNV, MoTa, LoaiNV, MucTieu, ThuongXu, TanSuat) VALUES 
+                ('Đăng nhập hằng ngày', 'Đăng nhập vào hệ thống mỗi ngày', 'DangNhap', 1, 5, 'HangNgay'),
+                ('Đánh giá tài liệu', 'Đánh giá 1 tài liệu bất kỳ để giúp cộng đồng', 'DanhGia', 1, 10, 'HangNgay'),
+                ('Tham gia thảo luận', 'Bình luận hoặc trả lời 5 bài viết trong tuần', 'BinhLuanNhom', 5, 50, 'HangTuan'),
+                ('Cập nhật hồ sơ', 'Hoàn thiện thông tin cá nhân của bạn', 'CapNhatHoSo', 1, 20, 'MotLan'),
+                ('Mua tài liệu Premium', 'Mở khóa 1 tài liệu Premium bằng EduCoin', 'MuaTaiLieu', 1, 30, 'HangNgay'),
+                ('Đăng tải tài liệu', 'Chia sẻ 2 tài liệu hữu ích lên cộng đồng', 'UpTaiLieu', 2, 150, 'HangTuan')
+            `);
+            console.log('Inserted default quests');
+        }
+
+        await createTableIfMissing('TIENDO_NHIEMVU', `
+            CREATE TABLE TIENDO_NHIEMVU (
+                MaND INT NOT NULL,
+                MaNV INT NOT NULL,
+                TienDo INT DEFAULT 0,
+                TrangThai ENUM('DangLam', 'ChoNhan', 'DaNhan') DEFAULT 'DangLam',
+                NgayCapNhat DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (MaND, MaNV),
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE,
+                FOREIGN KEY (MaNV) REFERENCES NHIEMVU(MaNV) ON DELETE CASCADE
             )
         `);
     } finally {

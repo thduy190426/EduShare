@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { getAssetUrl, getToken, showToast, renderPagination, escapeHTML } from '../shared/utils.js';
 
@@ -18,6 +19,8 @@ async function readErrorMessage(res, fallback) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Báo cáo vi phạm' }]);
+
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
         window.location.href = '../guest/guestHome.html';

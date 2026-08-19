@@ -10,6 +10,7 @@ const SIDEBAR_ITEMS = [
     { label: 'Tải tài liệu', icon: 'fa-upload', href: '../document/uploadDocument.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Nhiệm vụ hàng ngày', icon: 'fa-gift', href: '../user/quests.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -396,6 +397,13 @@ function setupRealtimeNotifications() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const token = getToken();
+    let userRole = null;
+    if (token) {
+        const decoded = decodeJWT(token);
+        if (decoded) userRole = decoded.VaiTro;
+    }
+
     renderSidebar();
     renderNavbarUserProfile();
     setupUserProfileNavigation();
@@ -405,7 +413,226 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname.includes('/admin/')) {
         makeAdminTablesResizableAndSticky();
     }
+    
+    setupCommandPalette(userRole);
 });
+
+function setupCommandPalette(userRole) {
+    if (userRole !== 'Admin') return;
+
+    if (!document.getElementById('command-palette-styles')) {
+        const style = document.createElement('style');
+        style.id = 'command-palette-styles';
+        style.innerHTML = `
+            #command-palette-overlay {
+                position: fixed;
+                top: 0; left: 0; width: 100vw; height: 100vh;
+                background: rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(8px);
+                z-index: 10000;
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                padding-top: 12vh;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.2s, visibility 0.2s;
+            }
+            #command-palette-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+            #command-palette-modal {
+                background: var(--white);
+                width: 100%;
+                max-width: 600px;
+                border-radius: 12px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                overflow: hidden;
+                transform: scale(0.95);
+                transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                display: flex;
+                flex-direction: column;
+                margin: 0 16px;
+            }
+            #command-palette-overlay.show #command-palette-modal {
+                transform: scale(1);
+            }
+            .cp-header {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+            .cp-header i {
+                color: var(--text-secondary);
+                font-size: 18px;
+            }
+            .cp-input {
+                border: none;
+                outline: none;
+                font-size: 18px;
+                flex-grow: 1;
+                background: transparent;
+                color: var(--text-primary);
+                font-family: inherit;
+            }
+            .cp-results {
+                max-height: 400px;
+                overflow-y: auto;
+                padding: 12px;
+            }
+            .cp-item {
+                padding: 12px 16px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                cursor: pointer;
+                text-decoration: none;
+                color: var(--text-primary);
+                font-size: 15px;
+            }
+            .cp-item.selected, .cp-item:hover {
+                background: var(--primary-light);
+            }
+            .cp-item i {
+                color: var(--primary);
+                width: 24px;
+                text-align: center;
+                font-size: 16px;
+            }
+            .cp-empty {
+                padding: 24px;
+                text-align: center;
+                color: var(--text-secondary);
+                font-size: 14px;
+            }
+            .cp-shortcut {
+                font-size: 12px;
+                background: var(--bg);
+                border: 1px solid var(--border);
+                padding: 2px 6px;
+                border-radius: 4px;
+                color: var(--text-secondary);
+                margin-left: auto;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'command-palette-overlay';
+    overlay.innerHTML = `
+        <div id="command-palette-modal">
+            <div class="cp-header">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="cp-input" class="cp-input" placeholder="Tìm kiếm trang hoặc chức năng..." autocomplete="off">
+            </div>
+            <div class="cp-results" id="cp-results"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('cp-input');
+    const resultsContainer = document.getElementById('cp-results');
+    
+    const uniqueItemsMap = new Map();
+    SIDEBAR_ITEMS.filter(item => item.roles.includes('Admin')).forEach(item => {
+        uniqueItemsMap.set(item.href, item);
+    });
+    const cpItems = Array.from(uniqueItemsMap.values());
+    
+    let currentResults = [];
+    let selectedIndex = 0;
+
+    function renderResults(query = '') {
+        query = query.toLowerCase().trim();
+        currentResults = cpItems.filter(item => item.label.toLowerCase().includes(query));
+        
+        if (currentResults.length === 0) {
+            resultsContainer.innerHTML = '<div class="cp-empty">Không tìm thấy kết quả phù hợp.</div>';
+            return;
+        }
+
+        resultsContainer.innerHTML = currentResults.map((item, index) => `
+            <a href="${item.href}" class="cp-item ${index === 0 ? 'selected' : ''}" data-index="${index}">
+                <i class="fa-solid ${item.icon}"></i>
+                <span>${item.label}</span>
+                <span class="cp-shortcut">↵</span>
+            </a>
+        `).join('');
+        selectedIndex = 0;
+    }
+
+    function updateSelection() {
+        const items = resultsContainer.querySelectorAll('.cp-item');
+        items.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+
+    function togglePalette() {
+        if (overlay.classList.contains('show')) {
+            overlay.classList.remove('show');
+            document.body.style.overflow = '';
+            input.blur();
+        } else {
+            overlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            input.value = '';
+            renderResults();
+            setTimeout(() => input.focus(), 50);
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            togglePalette();
+        }
+        
+        if (!overlay.classList.contains('show')) return;
+
+        if (e.key === 'Escape') {
+            togglePalette();
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (selectedIndex < currentResults.length - 1) {
+                selectedIndex++;
+                updateSelection();
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (selectedIndex > 0) {
+                selectedIndex--;
+                updateSelection();
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentResults[selectedIndex]) {
+                let targetHref = currentResults[selectedIndex].href;
+                window.location.href = targetHref;
+            }
+        }
+    });
+
+    input.addEventListener('input', (e) => {
+        renderResults(e.target.value);
+    });
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            togglePalette();
+        }
+    });
+}
 
 window.refreshSidebarBadges = async function() {
     const token = getToken();

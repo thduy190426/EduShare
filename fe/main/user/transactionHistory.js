@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { getToken, escapeHTML } from '../shared/utils.js';
 
@@ -6,6 +7,7 @@ let currentPage = 1;
 const ITEMS_PER_PAGE = 10;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Lịch sử giao dịch' }]);
     const token = getToken();
     if (!token) {
         window.location.href = '../auth/login.html';
@@ -275,3 +277,5 @@ function exportToPDF() {
         });
     });
 }
+
+renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Lịch sử giao dịch' }]);

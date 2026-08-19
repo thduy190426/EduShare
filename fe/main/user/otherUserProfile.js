@@ -1,3 +1,4 @@
+import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { formatRatingSummary, getToken, getAssetUrl, decodeJWT, getAvatar } from '../shared/utils.js';
 const token = getToken();
@@ -14,6 +15,8 @@ function buildEducationText(profile) {
         .join(' - ');
 }
 document.addEventListener('DOMContentLoaded', () => {
+    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Hồ sơ người dùng' }]);
+
     if (!token) {
         Swal.fire('Vui lòng đăng nhập.');
         window.location.href = '../guest/guestHome.html';
@@ -92,9 +95,13 @@ async function fetchUserProfile() {
         else if (profile.GioiTinh === 'Khac') gioiTinhStr = 'Khác';
         document.getElementById('view-gioitinh').value = gioiTinhStr;
         document.getElementById('view-diachi').value = profile.DiaChi || 'Chưa cập nhật';
-        const schoolMajorText = buildEducationText(profile);
-        document.getElementById('container-school-major').style.display = 'flex';
-        document.getElementById('header-school-major').textContent = schoolMajorText;
+        if (profile.VaiTro === 'Admin') {
+            document.getElementById('container-school-major').style.display = 'none';
+        } else {
+            const schoolMajorText = buildEducationText(profile);
+            document.getElementById('container-school-major').style.display = 'flex';
+            document.getElementById('header-school-major').textContent = schoolMajorText;
+        }
         const avatarEl = document.getElementById('header-avatar');
         if (profile.AvatarURL) {
             avatarEl.innerHTML = `<img src="${getAssetUrl(profile.AvatarURL)}" draggable="false" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;

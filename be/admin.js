@@ -189,7 +189,18 @@ router.put('/documents/:maTL/review', teacherMiddleware, async (req, res) => {
         }
         let noiDungThongBao = '';
         if (quyetDinh === 'Duyet') {
-            noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" đã được duyệt.`;
+            let rewardXu = 0;
+            try {
+                const [cfg] = await conn.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "DOC_APPROVAL_REWARD_XU"');
+                if (cfg.length > 0) rewardXu = parseInt(cfg[0].GiaTri) || 0;
+            } catch (e) {}
+
+            if (rewardXu > 0) {
+                await conn.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [rewardXu, taiLieu.MaND_NguoiDang]);
+                await conn.execute("INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', ?, ?)", [taiLieu.MaND_NguoiDang, rewardXu, `Thưởng ${rewardXu} Xu vì tài liệu được duyệt: ${taiLieu.TenTL}`]);
+            }
+
+            noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" đã được duyệt.` + (rewardXu > 0 ? ` Bạn được thưởng +${rewardXu} Xu.` : '');
             const [followers] = await conn.execute(
                 'SELECT MaND_TheoDoi FROM THEODOI WHERE MaND_DuocTheoDoi = ?',
                 [taiLieu.MaND_NguoiDang]
@@ -1387,6 +1398,8 @@ router.delete('/promos/:id', adminMiddleware, async (req, res) => {
 });
 router.get('/export/revenue', adminMiddleware, async (req, res) => {
     try {
+        const selectedCols = req.query.cols ? req.query.cols.split(',') : null;
+
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
             SELECT G.*, N.HoTen, N.Email 
@@ -1395,28 +1408,54 @@ router.get('/export/revenue', adminMiddleware, async (req, res) => {
             WHERE G.TrangThai = 'DaDuyet'
             ORDER BY G.NgayDuyet DESC
         `);
+
+        const allColumns = [
+            { id: 'MaGD', label: 'Mã GD' },
+            { id: 'NguoiDung', label: 'Người Dùng' },
+            { id: 'Email', label: 'Email' },
+            { id: 'SoTien', label: 'Số Tiền (VNĐ)' },
+            { id: 'SoXu', label: 'Số Xu' },
+            { id: 'KhuyenMai', label: 'Khuyến Mãi' },
+            { id: 'NgayTao', label: 'Ngày Tạo' },
+            { id: 'NgayDuyet', label: 'Ngày Duyệt' }
+        ];
+
+        const exportColumns = selectedCols ? allColumns.filter(c => selectedCols.includes(c.id)) : allColumns;
+
         let csvContent = '\uFEFF'; 
-        csvContent += 'Mã GD,Người Dùng,Email,Số Tiền (VNĐ),Số Xu,Khuyến Mãi,Ngày Tạo,Ngày Duyệt\n';
+        csvContent += exportColumns.map(c => c.label).join(',') + '\n';
+
         let tongDoanhThu = 0;
         let tongXu = 0;
+        
         for (const row of rows) {
             const dateStr = row.NgayTao ? new Date(row.NgayTao).toLocaleString('vi-VN') : '';
             const dateDuyetStr = row.NgayDuyet ? new Date(row.NgayDuyet).toLocaleString('vi-VN') : '';
             tongDoanhThu += parseFloat(row.SoTien || 0);
             tongXu += parseInt(row.SoXu || 0);
-            const values = [
-                row.MaGD,
-                `"${(row.HoTen || '').replace(/"/g, '""')}"`,
-                `"${(row.Email || '').replace(/"/g, '""')}"`,
-                row.SoTien || 0,
-                row.SoXu || 0,
-                `"${(row.MaPromo || '').replace(/"/g, '""')}"`,
-                `"${dateStr}"`,
-                `"${dateDuyetStr}"`
-            ];
+            
+            const rowDataMap = {
+                'MaGD': row.MaGD,
+                'NguoiDung': `"${(row.HoTen || '').replace(/"/g, '""')}"`,
+                'Email': `"${(row.Email || '').replace(/"/g, '""')}"`,
+                'SoTien': row.SoTien || 0,
+                'SoXu': row.SoXu || 0,
+                'KhuyenMai': `"${(row.MaPromo || '').replace(/"/g, '""')}"`,
+                'NgayTao': `"${dateStr}"`,
+                'NgayDuyet': `"${dateDuyetStr}"`
+            };
+
+            const values = exportColumns.map(c => rowDataMap[c.id]);
             csvContent += values.join(',') + '\n';
         }
-        csvContent += `\nTổng Cộng,,,${tongDoanhThu},${tongXu},,,\n`;
+        
+        const summaryValues = exportColumns.map(c => {
+            if (c.id === 'SoTien') return tongDoanhThu;
+            if (c.id === 'SoXu') return tongXu;
+            if (exportColumns.indexOf(c) === 0) return '\nTổng Cộng';
+            return '';
+        });
+        csvContent += summaryValues.join(',') + '\n';
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename="bao-cao-doanh-thu.csv"');
         res.send(csvContent);

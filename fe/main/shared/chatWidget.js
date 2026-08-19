@@ -1,5 +1,5 @@
 import { getSocket } from './socketClient.js';
-import { getAssetUrl } from './utils.js';
+import { getAssetUrl, validateMessage } from './utils.js';
 
 const API_URL = window.API_URL || 'http://localhost:3000';
 let currentPartnerId = null;
@@ -74,6 +74,13 @@ function injectChatWidget() {
             <i class="fa-brands fa-facebook-messenger"></i>
             <span id="chat-unread-badge" class="hidden">0</span>
         </button>
+        
+        <div id="chat-lightbox-overlay" class="chat-lightbox-overlay" onclick="closeChatLightbox()">
+            <div class="chat-lightbox-content" onclick="event.stopPropagation()">
+                <button class="chat-lightbox-close" onclick="closeChatLightbox()"><i class="fa-solid fa-xmark"></i></button>
+                <img id="chat-lightbox-img" class="chat-lightbox-img" src="" alt="Zoomed image">
+            </div>
+        </div>
     `;
     document.body.appendChild(container);
 
@@ -129,19 +136,38 @@ function initChatEvents() {
         }, 500);
     });
 
+    btnSend.disabled = true;
+    btnSend.style.opacity = '0.5';
+    btnSend.style.cursor = 'not-allowed';
+
     btnSend.addEventListener('click', () => {
-        if (editMessageId) submitEdit();
-        else sendMessage('text');
-    });
-    inputMessage.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
+        if (!btnSend.disabled) {
             if (editMessageId) submitEdit();
             else sendMessage('text');
         }
     });
+    inputMessage.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!btnSend.disabled) {
+                if (editMessageId) submitEdit();
+                else sendMessage('text');
+            }
+        }
+    });
 
     inputMessage.addEventListener('input', () => {
+        const validation = validateMessage(inputMessage.value);
+        if (validation.isValid) {
+            btnSend.disabled = false;
+            btnSend.style.opacity = '1';
+            btnSend.style.cursor = 'pointer';
+        } else {
+            btnSend.disabled = true;
+            btnSend.style.opacity = '0.5';
+            btnSend.style.cursor = 'not-allowed';
+        }
+
         const socket = getSocket();
         if (socket && currentPartnerId) {
             socket.emit('typing', { receiverId: currentPartnerId });
@@ -461,7 +487,7 @@ function renderMessages(messages) {
         } else if (m.LoaiTinNhan === 'image') {
             const url = m.NoiDung.split('|')[0];
             msgDiv.classList.add('msg-image');
-            contentHtml = `<img src="${getAssetUrl(url)}" onload="window.scrollToBottom(false)" onclick="window.open('${getAssetUrl(url)}', '_blank')">`;
+            contentHtml = `<img src="${getAssetUrl(url)}" onload="window.scrollToBottom(false)" onclick="window.openChatLightbox('${getAssetUrl(url)}')">`;
         } else if (m.LoaiTinNhan === 'audio') {
             const url = m.NoiDung.split('|')[0];
             msgDiv.classList.add('msg-audio');
@@ -610,10 +636,28 @@ async function sendMessage(type = 'text', content = null) {
     const text = content || input.value.trim();
     if (!text || !currentPartnerId) return;
 
+    if (type === 'text') {
+        const validation = validateMessage(text);
+        if (!validation.isValid) {
+            if (validation.reason === 'sensitive') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Vi phạm tiêu chuẩn cộng đồng',
+                    text: `Tin nhắn của bạn chứa từ ngữ không phù hợp: "${validation.word}"`,
+                    confirmButtonText: 'Đã hiểu'
+                });
+            }
+            return;
+        }
+    }
+
     const socket = getSocket();
     if (socket) {
         socket.emit('send_message', { receiverId: currentPartnerId, text: text, type: type, replyToId: replyMessageId });
-        if (type === 'text') input.value = '';
+        if (type === 'text') {
+            input.value = '';
+            input.dispatchEvent(new Event('input'));
+        }
         cancelReply();
     }
 }
@@ -662,13 +706,33 @@ async function submitEdit() {
     const text = input.value.trim();
     if (!text || !editMessageId) return;
 
+    const validation = validateMessage(text);
+    if (!validation.isValid) {
+        if (validation.reason === 'sensitive') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Vi phạm tiêu chuẩn cộng đồng',
+                text: `Tin nhắn của bạn chứa từ ngữ không phù hợp: "${validation.word}"`,
+                confirmButtonText: 'Đã hiểu'
+            });
+        }
+        return;
+    }
+
     try {
-        const res = await fetch(`${API_URL}/api/chat/edit/${editMessageId}`, { 
-            method: 'PUT', headers: getAuthHeaders(), body: JSON.stringify({ text })
+        const res = await fetch(`${API_URL}/api/chat/edit/${editMessageId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({ text: text })
         });
         if (res.ok) {
             const socket = getSocket();
-            if (socket) socket.emit('message_edited', { messageId: editMessageId, receiverId: currentPartnerId });
+            if (socket) {
+                socket.emit('message_edited', { receiverId: currentPartnerId, messageId: editMessageId, text: text });
+            }
             cancelEdit();
             openConversation(currentPartnerId, currentPartnerName, currentPartnerAvatar);
         }
@@ -701,6 +765,26 @@ document.addEventListener('click', () => {
         if (el.parentElement) el.parentElement.classList.remove('active');
     });
 });
+
+window.openChatLightbox = function(imgSrc) {
+    const overlay = document.getElementById('chat-lightbox-overlay');
+    const img = document.getElementById('chat-lightbox-img');
+    if (overlay && img) {
+        img.src = imgSrc;
+        overlay.classList.add('show');
+    }
+};
+
+window.closeChatLightbox = function() {
+    const overlay = document.getElementById('chat-lightbox-overlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => {
+            const img = document.getElementById('chat-lightbox-img');
+            if (img) img.src = '';
+        }, 300);
+    }
+};
 
 async function reactMessage(msgId, reaction) {
     try {

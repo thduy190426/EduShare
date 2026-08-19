@@ -40,14 +40,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     document.head.appendChild(googleScript);
 
+    let trustedDeviceToken = localStorage.getItem('trustedDeviceToken');
+    let isTrusted = false;
+    if (trustedDeviceToken) {
+        try {
+            const payload = JSON.parse(atob(trustedDeviceToken.split('.')[1]));
+            if (payload.exp * 1000 > Date.now()) {
+                isTrusted = true;
+            }
+        } catch(e) {}
+    }
+    if (!isTrusted) {
+        trustedDeviceToken = null;
+        localStorage.removeItem('trustedDeviceToken');
+    } else {
+        window.isCaptchaSolved = true;
+        const rc = document.getElementById('recaptcha-container');
+        if (rc) rc.style.display = 'none';
+    }
+
     window.onRecaptchaLoad = function() {
         const recaptchaContainer = document.getElementById('recaptcha-container');
-        if (recaptchaContainer && config.recaptchaSiteKey) {
+        if (recaptchaContainer && config.recaptchaSiteKey && !isTrusted) {
             grecaptcha.render(recaptchaContainer, {
                 'sitekey': config.recaptchaSiteKey,
                 'callback': enableSubmitBtn,
                 'expired-callback': disableSubmitBtn
             });
+        } else if (!config.recaptchaSiteKey) {
+            window.isCaptchaSolved = true; // Auto-bypass if no site key configured
+            if (typeof validateLoginForm === 'function') validateLoginForm();
         }
     };
     const recaptchaScript = document.createElement('script');
@@ -179,10 +201,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
-            if (!recaptchaToken) {
-                Toast.fire({ icon: 'warning', title: 'Vui lòng xác nhận bạn không phải người máy' });
-                return;
+            let recaptchaToken = '';
+            if (!isTrusted && config.recaptchaSiteKey) {
+                recaptchaToken = typeof grecaptcha !== 'undefined' ? grecaptcha.getResponse() : '';
+                if (!recaptchaToken) {
+                    Toast.fire({ icon: 'warning', title: 'Vui lòng xác nhận bạn không phải người máy' });
+                    return;
+                }
             }
 
             try {
@@ -211,7 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     fetch(`${API_URL}/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, matKhau, rememberLogin, recaptchaToken })
+                        body: JSON.stringify({ email, matKhau, rememberLogin, recaptchaToken, trustedDeviceToken })
                     }),
                     new Promise(resolve => setTimeout(resolve, 1000))
                 ]);
@@ -224,7 +249,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     submitBtn.style.opacity = '1';
                     submitBtn.style.cursor = 'pointer';
                     submitBtn.innerHTML = originalText;
-                    if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+                    try {
+                        if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+                    } catch (err) {
+                        console.warn('reCAPTCHA reset ignored:', err);
+                    }
                     Swal.fire({
                         icon: 'error',
                         title: 'Đăng nhập thất bại',
@@ -321,6 +350,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         rememberLogin
                     });
 
+                    if (data.trustedDeviceToken) {
+                        localStorage.setItem('trustedDeviceToken', data.trustedDeviceToken);
+                    }
+
                     let vaiTro = 'SinhVien';
                     try {
                         const base64Url = data.token.split('.')[1];
@@ -350,7 +383,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 submitBtn.style.opacity = '1';
                 submitBtn.style.cursor = 'pointer';
                 submitBtn.innerHTML = 'Đăng nhập';
-                if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+                try {
+                    if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+                } catch (err) {
+                    console.warn('reCAPTCHA reset ignored:', err);
+                }
                 Toast.fire({ icon: 'error', title: 'Không thể kết nối đến máy chủ' });
             }
         });

@@ -16,6 +16,7 @@ const qrcode = require('qrcode');
 const { authMiddleware } = require('./middlewares/auth');
 const { validate } = require('./middlewares/validate');
 const { loginSchema, registerSchema, twoFactorLoginSchema } = require('./schemas/authSchemas');
+const { updateQuestProgress } = require('./services/questService');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '891380242693-mebda946u7bpcbbnjd8ro50lsaqp6unu.apps.googleusercontent.com');
 
 const winstonLogger = require('./config/logger');
@@ -177,10 +178,11 @@ async function verifyRecaptcha(token) {
     if (process.env.NODE_ENV === 'test') return true;
     if (!token) return false;
     try {
-        const response = await fetch(`https://www.google.com/recaptcha/api/siteverify`, {
+        const response = await fetch(`https://www.recaptcha.net/recaptcha/api/siteverify`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`
+            body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
+            signal: AbortSignal.timeout(5000)
         });
         const data = await response.json();
         return data.success;
@@ -223,6 +225,7 @@ const routes = [
     ['/api/settings', require('./settings')],
     ['/api/chat', require('./chat')],
     ['/api/badges', require('./badges')],
+    ['/api/quests', require('./quests')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -404,6 +407,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
         });
 
         logger.success(`Google Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
+        updateQuestProgress(user.MaND, 'DangNhap', 1, pool);
 
         res.json({
             message: 'Đăng nhập thành công',
@@ -501,6 +505,7 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
         });
 
         logger.success(`Facebook Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
+        updateQuestProgress(user.MaND, 'DangNhap', 1, pool);
 
         res.json({
             message: 'Đăng nhập thành công',
@@ -520,10 +525,20 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
 });
 
 app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => {
-    const { email, matKhau, rememberLogin, recaptchaToken } = req.body;
+    const { email, matKhau, rememberLogin, recaptchaToken, trustedDeviceToken } = req.body;
 
-    const isHuman = await verifyRecaptcha(recaptchaToken);
-    if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
+    let isHuman = false;
+    if (trustedDeviceToken) {
+        try {
+            const decoded = jwt.verify(trustedDeviceToken, process.env.JWT_SECRET);
+            if (decoded.trusted) isHuman = true;
+        } catch (err) {}
+    }
+
+    if (!isHuman) {
+        isHuman = await verifyRecaptcha(recaptchaToken);
+        if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
+    }
 
     try {
         const [rows] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
@@ -587,6 +602,7 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
         });
 
         logger.success(`Login OK — id: ${user.MaND}  role: ${user.VaiTro}  remember: ${!!rememberLogin}`);
+        updateQuestProgress(user.MaND, 'DangNhap', 1, pool);
         res.status(200).json({
             message: 'Đăng nhập thành công.',
             token: accessToken,
@@ -656,6 +672,7 @@ app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), as
         });
 
         logger.success(`2FA Login OK — id: ${user.MaND}`);
+        updateQuestProgress(user.MaND, 'DangNhap', 1, pool);
         res.status(200).json({
             message: 'Đăng nhập thành công.',
             token: accessToken,

@@ -25,7 +25,7 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 ### Frontend
 
 - **HTML5 & CSS3** — Giao diện thuần túy, thiết kế responsive theo hướng Mobile-first.
-- **Vanilla JavaScript** — Xử lý logic phía Client, gọi API qua Fetch API.
+- **Vanilla JavaScript** — Xử lý logic phía Client, gọi API qua Fetch API, kết hợp kỹ thuật **Optimistic UI** (Phản hồi tức thì) cho trải nghiệm mượt mà.
 - **Tối ưu hóa SEO** — Tự động cập nhật Meta tags linh hoạt dựa trên văn bản trích xuất tự động từ tài liệu gốc.
 - **Socket.io Client** — Kết nối thời gian thực cho tính năng Chat 1-1, Chat nhóm và Thông báo hệ thống.
 - **Thư viện bên thứ ba**:
@@ -34,6 +34,7 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
   - `FontAwesome (v6)`: Hệ thống biểu tượng.
   - `Google Identity Services`: Xác thực OAuth2.
   - `Tribute.js`: Tích hợp tính năng nhắc tên (@Username) trong bình luận nhóm.
+  - `Quill.js` & `DOMPurify`: Trình soạn thảo văn bản phong phú (Rich Text Editor) và làm sạch HTML an toàn.
 
 ### Backend
 
@@ -79,7 +80,7 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
   - Mua tài liệu Premium bằng Xu; tác giả tự động nhận doanh thu. Lịch sử giao dịch chi tiết, Transaction bảo mật.
   - **Hệ thống Danh hiệu (Badges)**: Người dùng có thể được Admin trao tặng các danh hiệu đặc biệt (hiển thị công khai trên Profile) khi có những đóng góp xuất sắc.
 - **Tương tác xã hội & Thông báo Real-time**:
-  - Đánh giá (Rating 1–5 sao) và Bình luận tài liệu.
+  - Đánh giá (Rating 1–5 sao) và Bình luận tài liệu (Hỗ trợ Optimistic UI, ghim bình luận, trả lời, và **chỉnh sửa bình luận Real-time**).
   - Theo dõi người dùng khác (Follow/Unfollow) và Đánh dấu lưu tài liệu (Bookmark).
   - **Thông báo thời gian thực**: Sử dụng Socket.io, người dùng nhận được thông báo ngay lập tức khi có người bình luận, nhắc tên, tài liệu được duyệt/mua, hoặc được nhận thưởng/danh hiệu.
 - **Cộng đồng nhóm (Groups)**:
