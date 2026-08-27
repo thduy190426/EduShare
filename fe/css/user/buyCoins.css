@@ -30,6 +30,16 @@ body {
   min-height: 100vh;
 }
 
+.content-area .breadcrumb-container {
+  padding: 24px 48px 16px 48px;
+}
+
+@media (max-width: 768px) {
+  .content-area .breadcrumb-container {
+      padding: 16px 24px 12px 24px;
+  }
+}
+
 .hero-banner {
   background: linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%);
   color: var(--white);

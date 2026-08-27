@@ -11,7 +11,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
-<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="../../css/shared/footer.css">
+</head>
 <body>
   
   
@@ -38,6 +40,12 @@
 
     
     <main class="content-area">
+      <nav aria-label="breadcrumb" class="breadcrumb-container">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Thông báo</li>
+        </ol>
+      </nav>
       
       <div class="page-header">
         <h1 class="page-title">Thông báo của bạn</h1>
@@ -59,6 +67,46 @@
           Xem thêm thông báo
         </button>
       </div>
+
+    
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-grid">
+            <div class="footer-branding">
+              <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+              <p class="footer-desc">Nền tảng chia sẻ tài liệu học tập miễn phí giúp cộng đồng học sinh, sinh viên và giảng viên dễ dàng tiếp cận nguồn tri thức phong phú.</p>
+            </div>
+            <div class="footer-col">
+              <h4>Về chúng tôi</h4>
+              <div class="footer-links">
+                <a href="../guest/about.html">Giới thiệu</a>
+                <a href="../guest/terms.html">Điều khoản dịch vụ</a>
+                <a href="../guest/privacy.html">Chính sách bảo mật</a>
+                <a href="../guest/contact.html">Liên hệ</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Hỗ trợ</h4>
+              <div class="footer-links">
+                <a href="../guest/helpCenter.html">Trung tâm trợ giúp</a>
+                <a href="../guest/guide.html">Hướng dẫn đăng tài liệu</a>
+                <a href="../guest/copyright.html">Quy định bản quyền</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Cộng đồng</h4>
+              <div class="footer-links">
+                <a href="../guest/forum.html">Diễn đàn</a>
+                <a href="../group/groupList.html">Nhóm học tập</a>
+                <a href="../guest/blog.html">Blog</a>
+              </div>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            &copy; 2026 EduShare. Tất cả các quyền được bảo lưu.
+          </div>
+        </div>
+      </footer>
 
     </main>
   </div>

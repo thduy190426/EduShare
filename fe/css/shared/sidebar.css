@@ -5,7 +5,7 @@
 .sidebar-animated .navbar .logo { transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1); }
 .menu-group { margin-bottom: 24px; }
 .menu-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; padding-left: 12px; }
-.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; color: var(--text-secondary); font-weight: 500; font-size: 15px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 4px; position: relative; cursor: pointer; overflow: hidden; background: transparent; border: 1px solid transparent; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; color: var(--text-secondary); font-weight: 500; font-size: 15px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-bottom: 4px; position: relative; cursor: pointer; overflow: hidden; background: transparent; border: 1px solid transparent; text-decoration: none !important; }
 .menu-item:hover { background: #F1F5F9; color: var(--primary); transform: translateX(6px); }
 .menu-item:active { transform: scale(0.96) translateX(4px); }
 .menu-item.active { background: var(--primary-light); color: var(--primary); font-weight: 600; border-color: rgba(79, 70, 229, 0.1); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.08); }

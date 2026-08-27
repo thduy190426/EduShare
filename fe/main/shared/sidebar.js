@@ -10,7 +10,7 @@ const SIDEBAR_ITEMS = [
     { label: 'Tải tài liệu', icon: 'fa-upload', href: '../document/uploadDocument.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
-    { label: 'Nhiệm vụ hàng ngày', icon: 'fa-gift', href: '../user/quests.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Nhiệm vụ hàng ngày', icon: 'fa-gift', href: '../user/quests.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -159,18 +159,24 @@ async function renderSidebar() {
     }
 
     const btnToggle = document.getElementById('btn-toggle-sidebar');
-    if (btnToggle) {
-        if (localStorage.getItem('sidebar-collapsed') === 'true') {
-            document.documentElement.classList.add('sidebar-collapsed');
-        }
-        btnToggle.addEventListener('click', () => {
-            document.documentElement.classList.toggle('sidebar-collapsed');
-            const isCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
-            localStorage.setItem('sidebar-collapsed', isCollapsed);
+    
+    let isManuallyCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    let isHoveringSidebar = false;
+    let ignoreHoverUntilLeave = false;
 
-            const iconEl = document.getElementById('icon-toggle-sidebar');
+    const updateSidebarState = () => {
+        const iconEl = document.getElementById('icon-toggle-sidebar');
+        
+        if (isManuallyCollapsed && (!isHoveringSidebar || ignoreHoverUntilLeave)) {
+            document.documentElement.classList.add('sidebar-collapsed');
             if (iconEl) {
-                if (isCollapsed) {
+                iconEl.classList.remove('fa-arrow-left', 'fa-bars');
+                iconEl.classList.add('fa-arrow-right');
+            }
+        } else {
+            document.documentElement.classList.remove('sidebar-collapsed');
+            if (iconEl) {
+                if (isManuallyCollapsed) {
                     iconEl.classList.remove('fa-arrow-left', 'fa-bars');
                     iconEl.classList.add('fa-arrow-right');
                 } else {
@@ -178,6 +184,34 @@ async function renderSidebar() {
                     iconEl.classList.add('fa-arrow-left');
                 }
             }
+        }
+    };
+
+    if (isManuallyCollapsed) {
+        document.documentElement.classList.add('sidebar-collapsed');
+    }
+
+    sidebarEl.addEventListener('mouseenter', () => {
+        isHoveringSidebar = true;
+        updateSidebarState();
+    });
+
+    sidebarEl.addEventListener('mouseleave', () => {
+        isHoveringSidebar = false;
+        ignoreHoverUntilLeave = false;
+        updateSidebarState();
+    });
+
+    if (btnToggle) {
+        btnToggle.addEventListener('click', () => {
+            isManuallyCollapsed = !isManuallyCollapsed;
+            localStorage.setItem('sidebar-collapsed', isManuallyCollapsed);
+            
+            if (isManuallyCollapsed) {
+                ignoreHoverUntilLeave = true;
+            }
+            
+            updateSidebarState();
         });
     }
     await refreshSidebarBadges();

@@ -188,7 +188,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
-            SELECT N.MaND, N.HoTen, N.Email, N.VaiTro, N.AvatarURL, N.Tuoi, N.GioiTinh, N.DiaChi, N.TruongHoc, N.KhoaNganh, N.SoDuXu, N.HienThiLichSuTai, N.HienThiDanhGia, N.AuthType, N.IsTwoFactorEnabled,
+            SELECT N.MaND, N.HoTen, N.Email, N.VaiTro, N.AvatarURL, N.Tuoi, N.GioiTinh, N.DiaChi, N.TruongHoc, N.KhoaNganh, N.GioiThieu, N.SoDuXu, N.HienThiLichSuTai, N.HienThiDanhGia, N.AuthType, N.IsTwoFactorEnabled,
                    D.TenDanhHieu AS DanhHieu, D.IconClass AS DanhHieuIcon, D.MauSac AS DanhHieuMauSac
             FROM NGUOIDUNG N
             LEFT JOIN NGUOIDUNG_DANHHIEU ND ON N.MaND = ND.MaND AND ND.LaDanhHieuChinh = TRUE
@@ -238,10 +238,104 @@ router.post('/send-change-password-otp', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi gửi OTP.' });
     }
 });
+const generateOTPChangeEmail = (hoTen, otp) => {
+    return `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #4F46E5;">Xác nhận Thay đổi Email</h2>
+            <p>Xin chào ${hoTen},</p>
+            <p>Chúng tôi nhận được yêu cầu thay đổi Email cho tài khoản EduShare của bạn. Dưới đây là mã xác thực OTP để hoàn tất quá trình này:</p>
+            <div style="margin: 20px 0; padding: 15px; background-color: #f3f4f6; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">
+                ${otp}
+            </div>
+            <p>Mã OTP này sẽ hết hạn sau <strong>5 phút</strong>.</p>
+            <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
+            <p>Trân trọng,<br>Đội ngũ EduShare</p>
+        </div>
+    `;
+};
+
+router.post('/change-email/request', authMiddleware, async (req, res) => {
+    try {
+        const { newEmail } = req.body;
+        const pool = req.app.locals.pool;
+        const maND = req.user.MaND;
+
+        if (!newEmail) return res.status(400).json({ message: 'Vui lòng cung cấp email mới.' });
+
+        const [existing] = await pool.execute('SELECT MaND FROM NGUOIDUNG WHERE Email = ?', [newEmail]);
+        if (existing.length > 0) return res.status(409).json({ message: 'Email này đã được sử dụng bởi người dùng khác.' });
+
+        const [userRows] = await pool.execute('SELECT HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (userRows.length === 0) return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+        await pool.execute(
+            'INSERT INTO CHANGE_EMAIL_OTP (MaND, NewEmail, OTP, ExpiresAt) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE NewEmail = ?, OTP = ?, ExpiresAt = ?',
+            [maND, newEmail, otp, expiresAt, newEmail, otp, expiresAt]
+        );
+
+        await transporter.sendMail({
+            to: newEmail,
+            subject: 'Mã OTP Xác Nhận Thay Đổi Email',
+            html: generateOTPChangeEmail(userRows[0].HoTen, otp)
+        });
+
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email mới của bạn.' });
+    } catch (err) {
+        console.error('Lỗi gửi OTP đổi email:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi gửi OTP.' });
+    }
+});
+
+router.post('/change-email/verify', authMiddleware, async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const pool = req.app.locals.pool;
+        const maND = req.user.MaND;
+
+        if (!otp) return res.status(400).json({ message: 'Vui lòng cung cấp mã OTP.' });
+
+        const [otpRows] = await pool.execute('SELECT * FROM CHANGE_EMAIL_OTP WHERE MaND = ? AND OTP = ?', [maND, otp]);
+        if (otpRows.length === 0) return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+
+        if (new Date(otpRows[0].ExpiresAt) < new Date()) {
+            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+        }
+
+        const newEmail = otpRows[0].NewEmail;
+
+        await pool.execute('UPDATE NGUOIDUNG SET Email = ? WHERE MaND = ?', [newEmail, maND]);
+        await pool.execute('DELETE FROM CHANGE_EMAIL_OTP WHERE MaND = ?', [maND]);
+
+        const [users] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        const user = users[0];
+        
+        const payload = { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL };
+        const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '15m' });
+        const newRefreshToken = jwt.sign({ MaND: user.MaND }, process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret', { expiresIn: '7d' });
+        
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await pool.execute('INSERT INTO REFRESH_TOKENS (Token, MaND, ExpiresAt) VALUES (?, ?, ?)', [newRefreshToken, user.MaND, expiresAt]);
+
+        res.status(200).json({
+            message: 'Thay đổi email thành công.',
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+            user: payload
+        });
+    } catch (err) {
+        console.error('Lỗi xác nhận OTP đổi email:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi xác nhận OTP.' });
+    }
+});
+
 router.put('/profile', authMiddleware, validate(updateProfileSchema), async (req, res) => {
-    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, otp, hienThiLichSuTai, hienThiDanhGia } = req.body;
+    const { hoTen, matKhauCu, matKhauMoi, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, gioiThieu, otp, hienThiLichSuTai, hienThiDanhGia } = req.body;
     const normalizedTruongHoc = typeof truongHoc === 'string' && truongHoc.trim() !== '' ? truongHoc.trim() : null;
     const normalizedKhoaNganh = typeof khoaNganh === 'string' && khoaNganh.trim() !== '' ? khoaNganh.trim() : null;
+    const normalizedGioiThieu = typeof gioiThieu === 'string' && gioiThieu.trim() !== '' ? gioiThieu.trim() : null;
     const normalizedHoTen = typeof hoTen === 'string' ? hoTen.trim() : '';
     const normalizedTuoi = tuoi === undefined || tuoi === '' ? null : Number(tuoi);
     const normalizedGioiTinh = normalizeGioiTinh(gioiTinh);
@@ -276,13 +370,13 @@ router.put('/profile', authMiddleware, validate(updateProfileSchema), async (req
             }
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(matKhauMoi, saltRounds);
-            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?',
-                [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, hienThiLichSuTai, hienThiDanhGia, maND]);
+            await pool.execute('UPDATE NGUOIDUNG SET HoTen = ?, MatKhau = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, GioiThieu = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?',
+                [normalizedHoTen, hashedPassword, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, normalizedGioiThieu, hienThiLichSuTai, hienThiDanhGia, maND]);
             await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);
         } else {
             await pool.execute(
-                'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?',
-                [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, hienThiLichSuTai, hienThiDanhGia, maND]
+                'UPDATE NGUOIDUNG SET HoTen = ?, Tuoi = ?, GioiTinh = ?, DiaChi = ?, TruongHoc = ?, KhoaNganh = ?, GioiThieu = ?, HienThiLichSuTai = ?, HienThiDanhGia = ? WHERE MaND = ?',
+                [normalizedHoTen, normalizedTuoi, normalizedGioiTinh, normalizedDiaChi, normalizedTruongHoc, normalizedKhoaNganh, normalizedGioiThieu, hienThiLichSuTai, hienThiDanhGia, maND]
             );
         }
         await updateQuestProgress(maND, 'CapNhatHoSo', 1, pool);
@@ -640,7 +734,7 @@ router.get('/:maND/profile', authMiddleware, async (req, res) => {
     const maND_HienTai = req.user.MaND;
     try {
         const pool = req.app.locals.pool;
-        const [userRows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, TruongHoc, KhoaNganh, HienThiLichSuTai, HienThiDanhGia FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
+        const [userRows] = await pool.execute('SELECT MaND, HoTen, Email, VaiTro, AvatarURL, TruongHoc, KhoaNganh, GioiThieu, HienThiLichSuTai, HienThiDanhGia FROM NGUOIDUNG WHERE MaND = ?', [maND_Khac]);
         if (userRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
         const [followRows] = await pool.execute(
             'SELECT 1 FROM THEODOI WHERE MaND_TheoDoi = ? AND MaND_DuocTheoDoi = ?',

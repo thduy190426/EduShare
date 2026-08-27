@@ -13,6 +13,8 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
   <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
+  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="../../css/shared/footer.css">
 </head>
 
 <body>
@@ -60,6 +62,12 @@
 
 
     <main class="content-area">
+      <nav aria-label="breadcrumb" class="breadcrumb-container">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Hồ sơ người dùng</li>
+        </ol>
+      </nav>
 
 
       <div class="profile-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -90,8 +98,13 @@
       </div>
 
 
+      <div class="form-card" style="margin-bottom: 20px;">
+        <h2 class="card-title"><i class="fa-solid fa-address-card" style="margin-right: 6px; color: var(--primary);"></i> Giới thiệu bản thân</h2>
+        <div id="view-gioithieu" style="font-size: 15px; color: var(--text-secondary); line-height: 1.6; white-space: pre-wrap; padding: 5px 0;">Đang tải...</div>
+      </div>
+
       <div class="form-card">
-        <h2 class="card-title">Thông tin người dùng</h2>
+        <h2 class="card-title"><i class="fa-solid fa-circle-user" style="margin-right: 6px; color: var(--primary);"></i> Thông tin người dùng</h2>
         <form>
           <div class="form-row" style="grid-template-columns: 1fr;">
             <div class="form-group">
@@ -118,10 +131,21 @@
               <input type="text" id="view-diachi" class="form-control" disabled>
             </div>
           </div>
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-building-columns" style="margin-right: 6px;"></i> Trường học:</label>
+              <input type="text" id="view-truonghoc" class="form-control" disabled>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-graduation-cap" style="margin-right: 6px;"></i> Khoa/Ngành:</label>
+              <input type="text" id="view-khoanganh" class="form-control" disabled>
+            </div>
+          </div>
         </form>
       </div>
 
       <div class="form-card">
+        <h2 class="card-title"><i class="fa-solid fa-folder-open" style="margin-right: 6px; color: var(--primary);"></i> Hoạt động tài liệu</h2>
         <div style="border-bottom: 1px solid #E5E7EB; margin-bottom: 20px; display: flex; gap: 20px;">
           <h2 class="card-title profile-tab active-tab" id="tab-shared" style="cursor: pointer; color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin: 0; font-size: 16px; transition: all 0.3s ease;">
             <i class="fa-solid fa-file-lines" style="margin-right: 8px;"></i>Tài liệu đã chia sẻ
@@ -138,6 +162,46 @@
           <p>Đang tải tài liệu...</p>
         </div>
       </div>
+
+    
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-grid">
+            <div class="footer-branding">
+              <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+              <p class="footer-desc">Nền tảng chia sẻ tài liệu học tập miễn phí giúp cộng đồng học sinh, sinh viên và giảng viên dễ dàng tiếp cận nguồn tri thức phong phú.</p>
+            </div>
+            <div class="footer-col">
+              <h4>Về chúng tôi</h4>
+              <div class="footer-links">
+                <a href="../guest/about.html">Giới thiệu</a>
+                <a href="../guest/terms.html">Điều khoản dịch vụ</a>
+                <a href="../guest/privacy.html">Chính sách bảo mật</a>
+                <a href="../guest/contact.html">Liên hệ</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Hỗ trợ</h4>
+              <div class="footer-links">
+                <a href="../guest/helpCenter.html">Trung tâm trợ giúp</a>
+                <a href="../guest/guide.html">Hướng dẫn đăng tài liệu</a>
+                <a href="../guest/copyright.html">Quy định bản quyền</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Cộng đồng</h4>
+              <div class="footer-links">
+                <a href="../guest/forum.html">Diễn đàn</a>
+                <a href="../group/groupList.html">Nhóm học tập</a>
+                <a href="../guest/blog.html">Blog</a>
+              </div>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            &copy; 2026 EduShare. Tất cả các quyền được bảo lưu.
+          </div>
+        </div>
+      </footer>
 
     </main>
   </div>

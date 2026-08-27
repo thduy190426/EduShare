@@ -38,6 +38,7 @@ function injectChatWidget() {
             <div class="chat-header">
                 <button class="back-btn" id="chat-back-btn"><i class="fa-solid fa-arrow-left"></i></button>
                 <div class="chat-title" id="chat-header-title">Tin nhắn</div>
+                <button class="info-btn" id="chat-info-btn" style="display:none;" title="Thông tin"><i class="fa-solid fa-circle-info"></i></button>
                 <button class="close-btn" id="chat-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
@@ -81,6 +82,24 @@ function injectChatWidget() {
                 <img id="chat-lightbox-img" class="chat-lightbox-img" src="" alt="Zoomed image">
             </div>
         </div>
+
+        <div id="chat-info-modal" class="chat-info-modal" style="display:none;">
+            <button class="chat-info-close" id="chat-info-close"><i class="fa-solid fa-xmark"></i></button>
+            <div id="chat-info-avatar-container"></div>
+            <h3 id="chat-info-name"></h3>
+            <p id="chat-info-role"></p>
+            <div class="chat-info-stats">
+                <div>
+                    <div id="chat-info-docs" class="stat-val">0</div>
+                    <div class="stat-lbl">Tài liệu</div>
+                </div>
+                <div>
+                    <div id="chat-info-joined" class="stat-val">-</div>
+                    <div class="stat-lbl">Tham gia</div>
+                </div>
+            </div>
+            <a id="chat-info-profile-link" href="#">Xem trang cá nhân</a>
+        </div>
     `;
     document.body.appendChild(container);
 
@@ -99,6 +118,9 @@ function initChatEvents() {
     const inputMessage = document.getElementById('chat-message-input');
     const fileUpload = document.getElementById('chat-file-upload');
     const btnMic = document.getElementById('chat-mic-btn');
+    const btnInfo = document.getElementById('chat-info-btn');
+    const btnInfoClose = document.getElementById('chat-info-close');
+    const infoModal = document.getElementById('chat-info-modal');
 
     btnOpen.addEventListener('click', () => {
         panel.classList.toggle('open');
@@ -113,6 +135,7 @@ function initChatEvents() {
     btnClose.addEventListener('click', () => {
         panel.classList.remove('open');
         document.body.style.overflow = '';
+        infoModal.style.display = 'none';
     });
 
     btnBack.addEventListener('click', () => {
@@ -120,10 +143,53 @@ function initChatEvents() {
         document.getElementById('chat-contacts-view').style.display = 'flex';
         document.getElementById('chat-back-btn').style.display = 'none';
         document.getElementById('chat-header-title').innerText = 'Tin nhắn';
+        document.getElementById('chat-info-btn').style.display = 'none';
+        infoModal.style.display = 'none';
+        document.getElementById('messages-list').style.overflow = '';
         currentPartnerId = null;
         cancelReply();
         cancelEdit();
         loadContacts();
+    });
+
+    btnInfoClose.addEventListener('click', () => {
+        infoModal.style.display = 'none';
+        document.getElementById('messages-list').style.overflow = '';
+    });
+
+    btnInfo.addEventListener('click', async () => {
+        if (!currentPartnerId) return;
+        try {
+            const res = await fetch(`${API_URL}/api/chat/info/${currentPartnerId}`, { headers: getAuthHeaders() });
+            const data = await res.json();
+            if (res.ok) {
+                const info = data.info;
+                const infoContainer = document.getElementById('chat-info-avatar-container');
+                if (info.AvatarURL) {
+                    infoContainer.innerHTML = `<img id="chat-info-avatar" src="${getAssetUrl(info.AvatarURL)}" onerror="this.src='https://via.placeholder.com/80'" alt="Avatar">`;
+                } else {
+                    const initial = info.HoTen.trim().split(' ').pop().charAt(0).toUpperCase();
+                    infoContainer.innerHTML = `<div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--primary-light); background-color: var(--primary-light); color: var(--primary); font-size: 32px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 10px auto;">${initial}</div>`;
+                }
+                document.getElementById('chat-info-name').innerText = info.HoTen;
+                document.getElementById('chat-info-role').innerText = info.VaiTro === 'GiangVien' ? 'Giảng viên' : (info.VaiTro === 'QuanTri' ? 'Quản trị viên' : 'Sinh viên');
+                document.getElementById('chat-info-docs').innerText = info.SoTaiLieu || 0;
+                
+                const joinedDate = new Date(info.NgayTao || info.NgayThamGia || new Date());
+                document.getElementById('chat-info-joined').innerText = `T${joinedDate.getMonth() + 1}/${joinedDate.getFullYear()}`;
+                
+                const profileUrl = `/pages/user/otherUserProfile.html?id=${info.MaND}`;
+                document.getElementById('chat-info-profile-link').href = profileUrl;
+                document.getElementById('chat-info-profile-link').onclick = (e) => {
+                    e.preventDefault();
+                    window.location.href = profileUrl;
+                };
+                infoModal.style.display = 'block';
+                document.getElementById('messages-list').style.overflow = 'hidden';
+            }
+        } catch (err) {
+            console.error('Lỗi lấy thông tin:', err);
+        }
     });
 
     let searchTimeout;
@@ -361,6 +427,7 @@ async function openConversation(partnerId, partnerName, partnerAvatar) {
     document.getElementById('chat-contacts-view').style.display = 'none';
     document.getElementById('chat-conversation-view').style.display = 'flex';
     document.getElementById('chat-back-btn').style.display = 'block';
+    document.getElementById('chat-info-btn').style.display = 'block';
 
     updateHeaderStatus();
     document.getElementById('messages-list').innerHTML = '<div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:13px;"><i class="fa-regular fa-hand-peace" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i><br>Đang tải...</div>';
@@ -631,10 +698,27 @@ function scrollToBottom(smooth = true) {
 }
 window.scrollToBottom = scrollToBottom;
 
+let lastMessageTime = 0;
+const MESSAGE_COOLDOWN_MS = 2000;
+
 async function sendMessage(type = 'text', content = null) {
     const input = document.getElementById('chat-message-input');
     const text = content || input.value.trim();
     if (!text || !currentPartnerId) return;
+
+    const now = Date.now();
+    if (now - lastMessageTime < MESSAGE_COOLDOWN_MS) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Thao tác quá nhanh',
+            text: 'Vui lòng đợi vài giây trước khi gửi tin nhắn tiếp theo để tránh spam.',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+        return;
+    }
 
     if (type === 'text') {
         const validation = validateMessage(text);
@@ -650,6 +734,8 @@ async function sendMessage(type = 'text', content = null) {
             return;
         }
     }
+
+    lastMessageTime = Date.now();
 
     const socket = getSocket();
     if (socket) {
@@ -706,6 +792,20 @@ async function submitEdit() {
     const text = input.value.trim();
     if (!text || !editMessageId) return;
 
+    const now = Date.now();
+    if (now - lastMessageTime < MESSAGE_COOLDOWN_MS) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Thao tác quá nhanh',
+            text: 'Vui lòng đợi vài giây trước khi chỉnh sửa để tránh spam.',
+            timer: 2000,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end'
+        });
+        return;
+    }
+
     const validation = validateMessage(text);
     if (!validation.isValid) {
         if (validation.reason === 'sensitive') {
@@ -729,6 +829,7 @@ async function submitEdit() {
             body: JSON.stringify({ text: text })
         });
         if (res.ok) {
+            lastMessageTime = Date.now();
             const socket = getSocket();
             if (socket) {
                 socket.emit('message_edited', { receiverId: currentPartnerId, messageId: editMessageId, text: text });
@@ -969,7 +1070,7 @@ window.toggleContactMenu = function(event, partnerId, isPinned, isBlocked) {
         menu.style.boxShadow = 'var(--shadow-md)';
         menu.style.zIndex = '10000';
         menu.style.padding = '8px 0';
-        menu.style.minWidth = '180px';
+        menu.style.minWidth = 'max-content';
         document.body.appendChild(menu);
 
         document.addEventListener('click', () => {
@@ -979,19 +1080,19 @@ window.toggleContactMenu = function(event, partnerId, isPinned, isBlocked) {
 
     menu.style.display = 'block';
     
-    const x = Math.min(event.pageX, window.innerWidth - 200);
-    menu.style.left = `${x}px`;
+    menu.style.left = 'auto';
+    menu.style.right = `${window.innerWidth - event.pageX - 10}px`;
     menu.style.top = `${event.pageY + 10}px`;
 
     menu.innerHTML = `
-        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; color: var(--text-main);" class="menu-item" onclick="pinContact(${partnerId})">
-            <i class="fa-solid fa-thumbtack" style="width: 16px;"></i> ${isPinned ? 'Bỏ ghim' : 'Ghim'}
+        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 12px; align-items: center; color: var(--text-primary); text-align: left; white-space: nowrap; font-size: 14px; transition: background 0.2s;" class="menu-item" onclick="pinContact(${partnerId})">
+            <i class="fa-solid fa-thumbtack" style="width: 16px; text-align: center;"></i> <span>${isPinned ? 'Bỏ ghim' : 'Ghim'}</span>
         </div>
-        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; color: var(--text-main);" class="menu-item" onclick="blockContact(${partnerId})">
-            <i class="fa-solid fa-ban" style="width: 16px;"></i> ${isBlocked ? 'Bỏ chặn' : 'Chặn'}
+        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 12px; align-items: center; color: var(--text-primary); text-align: left; white-space: nowrap; font-size: 14px; transition: background 0.2s;" class="menu-item" onclick="blockContact(${partnerId})">
+            <i class="fa-solid fa-ban" style="width: 16px; text-align: center;"></i> <span>${isBlocked ? 'Bỏ chặn' : 'Chặn'}</span>
         </div>
-        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 8px; align-items: center; color: var(--danger);" class="menu-item" onclick="deleteContact(${partnerId})">
-            <i class="fa-solid fa-trash" style="width: 16px;"></i> Xóa cuộc trò chuyện
+        <div style="padding: 10px 16px; cursor: pointer; display: flex; gap: 12px; align-items: center; color: var(--danger); text-align: left; white-space: nowrap; font-size: 14px; transition: background 0.2s;" class="menu-item" onclick="deleteContact(${partnerId})">
+            <i class="fa-solid fa-trash" style="width: 16px; text-align: center;"></i> <span>Xoá</span>
         </div>
     `;
     

@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="../../css/user/transactionHistory.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="../../css/shared/footer.css">
 </head>
 
 <body>
@@ -40,6 +42,12 @@
     <aside id="app-sidebar" class="sidebar"></aside>
     
     <main class="content-area">
+      <nav aria-label="breadcrumb" class="breadcrumb-container">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Lịch sử giao dịch</li>
+        </ol>
+      </nav>
       <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px;">
         <div>
           <h1 class="page-title">Lịch sử giao dịch</h1>
@@ -73,6 +81,46 @@
         
         <div id="pagination-container"></div>
       </div>
+    
+      <footer class="footer">
+        <div class="container">
+          <div class="footer-grid">
+            <div class="footer-branding">
+              <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+              <p class="footer-desc">Nền tảng chia sẻ tài liệu học tập miễn phí giúp cộng đồng học sinh, sinh viên và giảng viên dễ dàng tiếp cận nguồn tri thức phong phú.</p>
+            </div>
+            <div class="footer-col">
+              <h4>Về chúng tôi</h4>
+              <div class="footer-links">
+                <a href="../guest/about.html">Giới thiệu</a>
+                <a href="../guest/terms.html">Điều khoản dịch vụ</a>
+                <a href="../guest/privacy.html">Chính sách bảo mật</a>
+                <a href="../guest/contact.html">Liên hệ</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Hỗ trợ</h4>
+              <div class="footer-links">
+                <a href="../guest/helpCenter.html">Trung tâm trợ giúp</a>
+                <a href="../guest/guide.html">Hướng dẫn đăng tài liệu</a>
+                <a href="../guest/copyright.html">Quy định bản quyền</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Cộng đồng</h4>
+              <div class="footer-links">
+                <a href="../guest/forum.html">Diễn đàn</a>
+                <a href="../group/groupList.html">Nhóm học tập</a>
+                <a href="../guest/blog.html">Blog</a>
+              </div>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            &copy; 2026 EduShare. Tất cả các quyền được bảo lưu.
+          </div>
+        </div>
+      </footer>
+
     </main>
 
   </div>

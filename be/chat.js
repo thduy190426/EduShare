@@ -96,6 +96,29 @@ router.get('/history/:partnerId', authMiddleware, async (req, res) => {
         res.status(200).json({ messages });
     } catch (error) {
         console.error('Lỗi khi lấy lịch sử chat:', error);
+    }
+});
+
+router.get('/info/:partnerId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const partnerId = req.params.partnerId;
+        const pool = req.app.locals.pool;
+
+        const [rows] = await pool.execute(`
+            SELECT MaND, HoTen, AvatarURL, VaiTro, NgayTao,
+                   (SELECT COUNT(*) FROM TAILIEU WHERE MaND_NguoiDang = NGUOIDUNG.MaND AND TrangThaiKiemDuyet = 'DaDuyet') as SoTaiLieu
+            FROM NGUOIDUNG 
+            WHERE MaND = ?
+        `, [partnerId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+        }
+
+        res.status(200).json({ info: rows[0] });
+    } catch (error) {
+        console.error('Lỗi khi lấy thông tin người dùng chat:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

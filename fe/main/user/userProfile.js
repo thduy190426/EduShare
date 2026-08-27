@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML } from '../shared/utils.js';
+import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML, saveLoginSession } from '../shared/utils.js';
 
 const token = getToken();
 
@@ -74,6 +74,7 @@ function checkProfileChanges() {
     const currentDiaChi = document.getElementById('input-diachi').value;
     const currentTruongHoc = document.getElementById('input-truonghoc').value;
     const currentKhoaNganh = document.getElementById('input-khoanganh').value;
+    const currentGioiThieu = document.getElementById('input-gioithieu').value;
     const currentPrivacyDownloads = document.getElementById('input-privacy-downloads').checked;
     const currentPrivacyRatings = document.getElementById('input-privacy-ratings').checked;
 
@@ -84,6 +85,7 @@ function checkProfileChanges() {
         currentDiaChi !== initialProfileState.diaChi ||
         currentTruongHoc !== initialProfileState.truongHoc ||
         currentKhoaNganh !== initialProfileState.khoaNganh ||
+        currentGioiThieu !== initialProfileState.gioiThieu ||
         currentPrivacyDownloads !== initialProfileState.privacyDownloads ||
         currentPrivacyRatings !== initialProfileState.privacyRatings;
 
@@ -246,6 +248,7 @@ async function initProfile() {
         document.getElementById('input-diachi').value = profile.DiaChi || '';
         document.getElementById('input-truonghoc').value = profile.TruongHoc || '';
         document.getElementById('input-khoanganh').value = profile.KhoaNganh || '';
+        document.getElementById('input-gioithieu').value = profile.GioiThieu || '';
         
         if (profile.VaiTro === 'Admin') {
             const schoolInput = document.getElementById('input-truonghoc');
@@ -268,6 +271,7 @@ async function initProfile() {
             diaChi: profile.DiaChi || '',
             truongHoc: profile.TruongHoc || '',
             khoaNganh: profile.KhoaNganh || '',
+            gioiThieu: profile.GioiThieu || '',
             privacyDownloads: profile.HienThiLichSuTai !== 0,
             privacyRatings: profile.HienThiDanhGia !== 0
         };
@@ -348,6 +352,7 @@ async function saveProfile() {
     const diaChi = document.getElementById('input-diachi').value;
     const truongHoc = document.getElementById('input-truonghoc').value;
     const khoaNganh = document.getElementById('input-khoanganh').value;
+    const gioiThieu = document.getElementById('input-gioithieu').value;
     const hienThiLichSuTai = document.getElementById('input-privacy-downloads').checked ? 1 : 0;
     const hienThiDanhGia = document.getElementById('input-privacy-ratings').checked ? 1 : 0;
 
@@ -360,7 +365,7 @@ async function saveProfile() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, hienThiLichSuTai, hienThiDanhGia })
+            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, gioiThieu, hienThiLichSuTai, hienThiDanhGia })
         });
         const data = await res.json();
         if (res.ok) {
@@ -397,6 +402,12 @@ async function changePassword() {
     const confirm = document.getElementById('input-confirm-pw').value;
     const otp = document.getElementById('input-change-pw-otp').value;
     const hoTen = document.getElementById('input-hoten').value;
+    const tuoi = document.getElementById('input-tuoi').value;
+    const gioiTinh = document.getElementById('input-gioitinh').value;
+    const diaChi = document.getElementById('input-diachi').value;
+    const truongHoc = document.getElementById('input-truonghoc').value;
+    const khoaNganh = document.getElementById('input-khoanganh').value;
+    const gioiThieu = document.getElementById('input-gioithieu').value;
 
     if (!matKhauCu || !matKhauMoi || !confirm || !otp) return Toast.fire({ icon: 'warning', title: 'Vui lòng điền đủ thông tin đổi mật khẩu và mã OTP.' });
     if (matKhauMoi !== confirm) return Toast.fire({ icon: 'warning', title: 'Mật khẩu xác nhận không khớp.' });
@@ -408,7 +419,7 @@ async function changePassword() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, matKhauCu, matKhauMoi, otp, hienThiLichSuTai: document.getElementById('input-privacy-downloads').checked ? 1 : 0, hienThiDanhGia: document.getElementById('input-privacy-ratings').checked ? 1 : 0 })
+            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, gioiThieu, matKhauCu, matKhauMoi, otp, hienThiLichSuTai: document.getElementById('input-privacy-downloads').checked ? 1 : 0, hienThiDanhGia: document.getElementById('input-privacy-ratings').checked ? 1 : 0 })
         });
         const data = await res.json();
         if (res.ok) {
@@ -1196,13 +1207,95 @@ function setupEventListeners() {
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', processDeleteAccount);
 
     const inputDeletePw = document.getElementById('input-delete-pw');
+    const inputDeletePwVisual = document.getElementById('input-delete-pw-visual');
     const toggleDeletePw = document.getElementById('toggle-delete-pw');
 
-    if (toggleDeletePw && inputDeletePw) {
+    if (toggleDeletePw && inputDeletePw && inputDeletePwVisual) {
+        let realValue = "";
+        let isVisible = false;
+        let maskTimeout = null;
+
+        inputDeletePwVisual.addEventListener('input', (e) => {
+            const visualValue = inputDeletePwVisual.value;
+            const cursor = inputDeletePwVisual.selectionStart;
+            
+            if (isVisible) {
+                realValue = visualValue;
+            } else {
+                if (visualValue.length > realValue.length) {
+                    const diff = visualValue.length - realValue.length;
+                    const added = visualValue.substring(cursor - diff, cursor);
+                    realValue = realValue.substring(0, cursor - diff) + added + realValue.substring(cursor - diff);
+                } else if (visualValue.length < realValue.length) {
+                    const diff = realValue.length - visualValue.length;
+                    realValue = realValue.substring(0, cursor) + realValue.substring(cursor + diff);
+                } else {
+                    const lastChar = visualValue.substring(cursor - 1, cursor);
+                    if (lastChar !== '•') {
+                        realValue = realValue.substring(0, cursor - 1) + lastChar + realValue.substring(cursor);
+                    }
+                }
+            }
+            
+            inputDeletePw.value = realValue;
+            inputDeletePw.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            if (!isVisible) {
+                let masked = "";
+                for(let i = 0; i < realValue.length; i++) {
+                    if (i === cursor - 1) {
+                        masked += realValue[i];
+                    } else {
+                        masked += '•';
+                    }
+                }
+                inputDeletePwVisual.value = masked;
+                inputDeletePwVisual.setSelectionRange(cursor, cursor);
+                
+                clearTimeout(maskTimeout);
+                maskTimeout = setTimeout(() => {
+                    if (!isVisible) {
+                        const cur = inputDeletePwVisual.selectionStart;
+                        inputDeletePwVisual.value = '•'.repeat(realValue.length);
+                        if (document.activeElement === inputDeletePwVisual) {
+                            inputDeletePwVisual.setSelectionRange(cur, cur);
+                        }
+                    }
+                }, 300);
+            }
+        });
+
+        inputDeletePwVisual.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+            const cursor = inputDeletePwVisual.selectionStart;
+            const cursorEnd = inputDeletePwVisual.selectionEnd;
+            
+            realValue = realValue.substring(0, cursor) + text + realValue.substring(cursorEnd);
+            inputDeletePw.value = realValue;
+            inputDeletePw.dispatchEvent(new Event('input', { bubbles: true }));
+            
+            if (isVisible) {
+                inputDeletePwVisual.value = realValue;
+            } else {
+                inputDeletePwVisual.value = '•'.repeat(realValue.length);
+            }
+            
+            const newCursor = cursor + text.length;
+            inputDeletePwVisual.setSelectionRange(newCursor, newCursor);
+        });
+
         toggleDeletePw.addEventListener('click', function () {
-            const type = inputDeletePw.getAttribute('type') === 'password' ? 'text' : 'password';
+            isVisible = !isVisible;
+            const type = isVisible ? 'text' : 'password';
             inputDeletePw.setAttribute('type', type);
-            this.className = type === 'password' ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+            this.className = isVisible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+            
+            if (isVisible) {
+                inputDeletePwVisual.value = realValue;
+            } else {
+                inputDeletePwVisual.value = '•'.repeat(realValue.length);
+            }
         });
     }
 
@@ -1351,7 +1444,7 @@ function setupEventListeners() {
         if(el) el.addEventListener('input', checkPasswordChanges);
     });
 
-    ['input-hoten', 'input-tuoi', 'input-gioitinh', 'input-diachi', 'input-truonghoc', 'input-khoanganh'].forEach(id => {
+    ['input-hoten', 'input-tuoi', 'input-gioitinh', 'input-diachi', 'input-truonghoc', 'input-khoanganh', 'input-gioithieu'].forEach(id => {
         document.getElementById(id).addEventListener('input', checkProfileChanges);
         document.getElementById(id).addEventListener('change', checkProfileChanges);
     });
@@ -1819,6 +1912,11 @@ async function loadActiveSessions() {
         const listContainer = document.getElementById('sessions-list');
         if (!listContainer) return;
         
+        const btnLogoutAll = document.getElementById('btn-logout-all-sessions');
+        if (btnLogoutAll) {
+            btnLogoutAll.style.display = sessions.length > 1 ? 'inline-block' : 'none';
+        }
+        
         if (sessions.length === 0) {
             listContainer.innerHTML = '<p>Không có phiên đăng nhập nào.</p>';
             return;
@@ -1957,3 +2055,223 @@ function parseDeviceInfo(ua) {
 
     return `${browser} trên ${os}`;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnLogoutAllSessions = document.getElementById('btn-logout-all-sessions');
+    if (btnLogoutAllSessions) {
+        btnLogoutAllSessions.addEventListener('click', async () => {
+            const result = await Swal.fire({
+                title: 'Đăng xuất tất cả',
+                text: 'Bạn có chắc chắn muốn đăng xuất khỏi tất cả các thiết bị khác (ngoại trừ thiết bị này)?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Đăng xuất',
+                cancelButtonText: 'Hủy'
+            });
+            
+            if (result.isConfirmed) {
+                try {
+                    const currentRefreshToken = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+                    const res = await fetch(`${API_URL}/users/sessions`, {
+                        method: 'DELETE',
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ refreshToken: currentRefreshToken }),
+                        credentials: 'include'
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        Swal.fire('Thành công', data.message || 'Đã đăng xuất khỏi tất cả thiết bị khác.', 'success');
+                        loadActiveSessions();
+                    } else {
+                        Swal.fire('Lỗi', data.message || 'Không thể đăng xuất', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
+                }
+            }
+        });
+    }
+
+    // --- CHANGE EMAIL LOGIC ---
+    const btnOpenChangeEmail = document.getElementById('btn-open-change-email');
+    const changeEmailModal = document.getElementById('changeEmailModal');
+    const step1 = document.getElementById('change-email-step-1');
+    const step2 = document.getElementById('change-email-step-2');
+    const inputNewEmail = document.getElementById('new-email-input');
+    const inputOtp = document.getElementById('new-email-otp');
+    const changeEmailDesc = document.getElementById('change-email-desc');
+
+    if (btnOpenChangeEmail) {
+        btnOpenChangeEmail.addEventListener('click', () => {
+            changeEmailModal.style.display = 'flex';
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+            inputNewEmail.value = '';
+            inputOtp.value = '';
+            changeEmailDesc.textContent = 'Vui lòng nhập địa chỉ Email mới để nhận mã xác thực OTP.';
+            
+            const btnSendOtp = document.getElementById('btn-send-email-otp');
+            const btnVerifyOtp = document.getElementById('btn-verify-email-otp');
+            if(btnSendOtp) {
+                btnSendOtp.disabled = true;
+                btnSendOtp.style.cursor = 'not-allowed';
+                btnSendOtp.style.opacity = '0.6';
+            }
+            if(btnVerifyOtp) {
+                btnVerifyOtp.disabled = true;
+                btnVerifyOtp.style.cursor = 'not-allowed';
+                btnVerifyOtp.style.opacity = '0.6';
+            }
+        });
+    }
+
+    const validateEmail = (email) => {
+        return String(email).toLowerCase().match(
+            /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+        );
+    };
+
+    inputNewEmail?.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        const btnSendOtp = document.getElementById('btn-send-email-otp');
+        if (!btnSendOtp) return;
+        if (validateEmail(val)) {
+            btnSendOtp.disabled = false;
+            btnSendOtp.style.cursor = 'pointer';
+            btnSendOtp.style.opacity = '1';
+        } else {
+            btnSendOtp.disabled = true;
+            btnSendOtp.style.cursor = 'not-allowed';
+            btnSendOtp.style.opacity = '0.6';
+        }
+    });
+
+    inputOtp?.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        e.target.value = val.replace(/[^0-9]/g, '');
+        const btnVerifyOtp = document.getElementById('btn-verify-email-otp');
+        if (!btnVerifyOtp) return;
+        if (e.target.value.length === 6) {
+            btnVerifyOtp.disabled = false;
+            btnVerifyOtp.style.cursor = 'pointer';
+            btnVerifyOtp.style.opacity = '1';
+        } else {
+            btnVerifyOtp.disabled = true;
+            btnVerifyOtp.style.cursor = 'not-allowed';
+            btnVerifyOtp.style.opacity = '0.6';
+        }
+    });
+
+    const closeEmailModal = () => {
+        changeEmailModal.classList.add('closing');
+        setTimeout(() => {
+            changeEmailModal.style.display = 'none';
+            changeEmailModal.classList.remove('closing');
+        }, 250);
+    };
+
+    document.getElementById('btn-cancel-change-email')?.addEventListener('click', () => {
+        closeEmailModal();
+    });
+
+    document.getElementById('btn-send-email-otp')?.addEventListener('click', async () => {
+        const newEmail = inputNewEmail.value.trim();
+        if (!newEmail) {
+            Toast.fire({ icon: 'warning', title: 'Vui lòng nhập email mới.' });
+            return;
+        }
+
+        const btn = document.getElementById('btn-send-email-otp');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang gửi...';
+
+        try {
+            const res = await fetch(`${API_URL}/users/change-email/request`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ newEmail })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                Toast.fire({ icon: 'success', title: data.message });
+                step1.style.display = 'none';
+                step2.style.display = 'block';
+                changeEmailDesc.textContent = `Mã OTP đã được gửi đến ${newEmail}. Mã có hiệu lực 5 phút.`;
+            } else {
+                Toast.fire({ icon: 'error', title: data.message });
+            }
+        } catch (error) {
+            Toast.fire({ icon: 'error', title: 'Lỗi mạng, vui lòng thử lại.' });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP';
+        }
+    });
+
+    document.getElementById('btn-back-change-email')?.addEventListener('click', () => {
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+        changeEmailDesc.textContent = 'Vui lòng nhập địa chỉ Email mới để nhận mã xác thực OTP.';
+    });
+
+    document.getElementById('btn-verify-email-otp')?.addEventListener('click', async () => {
+        const otp = inputOtp.value.trim();
+        if (!otp) {
+            Toast.fire({ icon: 'warning', title: 'Vui lòng nhập mã OTP.' });
+            return;
+        }
+
+        const btn = document.getElementById('btn-verify-email-otp');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang xác nhận...';
+
+        try {
+            const res = await fetch(`${API_URL}/users/change-email/verify`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ otp })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Thành công',
+                    text: data.message,
+                    confirmButtonText: 'Đóng'
+                });
+                closeEmailModal();
+                
+                // Cập nhật Token mới vào hệ thống
+                saveLoginSession({
+                    token: data.accessToken,
+                    refreshToken: data.refreshToken,
+                    avatarURL: data.user.AvatarURL,
+                    rememberLogin: true
+                });
+
+                // Cập nhật lại UI Input Email hiện tại
+                document.getElementById('input-email').value = inputNewEmail.value.trim();
+            } else {
+                Toast.fire({ icon: 'error', title: data.message });
+            }
+        } catch (error) {
+            Toast.fire({ icon: 'error', title: 'Lỗi mạng, vui lòng thử lại.' });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check" style="margin-right: 6px;"></i> Xác nhận';
+        }
+    });
+});

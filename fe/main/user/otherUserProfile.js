@@ -95,6 +95,17 @@ async function fetchUserProfile() {
         else if (profile.GioiTinh === 'Khac') gioiTinhStr = 'Khác';
         document.getElementById('view-gioitinh').value = gioiTinhStr;
         document.getElementById('view-diachi').value = profile.DiaChi || 'Chưa cập nhật';
+        document.getElementById('view-truonghoc').value = profile.TruongHoc || 'Chưa cập nhật';
+        document.getElementById('view-khoanganh').value = profile.KhoaNganh || 'Chưa cập nhật';
+        
+        const bioEl = document.getElementById('view-gioithieu');
+        if (bioEl) {
+            if (profile.GioiThieu && profile.GioiThieu.trim() !== '') {
+                bioEl.textContent = profile.GioiThieu;
+            } else {
+                bioEl.innerHTML = '<span style="color: #94a3b8; font-style: italic;">Người dùng này chưa cập nhật phần giới thiệu bản thân.</span>';
+            }
+        }
         if (profile.VaiTro === 'Admin') {
             document.getElementById('container-school-major').style.display = 'none';
         } else {

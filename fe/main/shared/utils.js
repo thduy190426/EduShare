@@ -663,3 +663,10 @@ export const validateMessage = (text) => {
     return { isValid: true };
 };
 
+if (typeof window !== 'undefined' && window.location) {
+    const path = window.location.pathname;
+    if (!path.includes('/auth/') && !path.includes('/guest/')) {
+        localStorage.setItem('lastVisitedPage', window.location.href);
+    }
+}
+

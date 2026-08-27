@@ -1228,6 +1228,8 @@ async function fetchGroupInfo() {
         }
         const group = data.group;
         currentGroupInfo = group;
+        const bcGroupTitle = document.getElementById('bc-group-title');
+        if (bcGroupTitle && group.TenNhom) bcGroupTitle.textContent = group.TenNhom;
         const isGroupAdmin = currentUserId && String(currentUserId) === String(group.MaND_QuanTri);
         window.currentGroupRole = data.role;
         const isMember = data.isMember || isGroupAdmin;

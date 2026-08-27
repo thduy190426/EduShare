@@ -352,11 +352,7 @@ window.handleGoogleLogin = async function(response) {
                 timer: 1500,
                 showConfirmButton: false
             }).then(() => {
-                if (data.user.VaiTro === 'Admin') {
-                    window.location.href = '../admin/adminDashboard.html';
-                } else {
-                    window.location.href = '../user/userHome.html';
-                }
+                redirectUser(data.user.VaiTro);
             });
         } else {
             Swal.fire('Lỗi', data.message || 'Đăng nhập Google thất bại', 'error');
@@ -366,3 +362,18 @@ window.handleGoogleLogin = async function(response) {
         Swal.fire('Lỗi', 'Không thể kết nối đến server', 'error');
     }
 };
+
+
+function redirectUser(vaiTro) {
+    const lastVisitedPage = localStorage.getItem('lastVisitedPage');
+    if (lastVisitedPage) {
+        localStorage.removeItem('lastVisitedPage');
+        window.location.href = lastVisitedPage;
+    } else {
+        if (vaiTro === 'Admin') {
+            window.location.href = '../admin/adminDashboard.html';
+        } else {
+            window.location.href = '../user/userHome.html';
+        }
+    }
+}

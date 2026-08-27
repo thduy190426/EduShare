@@ -378,7 +378,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
         const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '7d' }
         );
 
         const refreshToken = crypto.randomBytes(40).toString('hex');
@@ -396,7 +396,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         res.cookie('refreshToken', refreshToken, {
@@ -476,7 +476,7 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
         const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '7d' }
         );
 
         const refreshToken = crypto.randomBytes(40).toString('hex');
@@ -494,7 +494,7 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         res.cookie('refreshToken', refreshToken, {
@@ -572,7 +572,7 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
         const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '7d' }
         );
 
         const refreshToken = crypto.randomBytes(40).toString('hex');
@@ -591,7 +591,7 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         res.cookie('refreshToken', refreshToken, {
@@ -642,7 +642,7 @@ app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), as
         const accessToken = jwt.sign(
             { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '7d' }
         );
 
         const refreshToken = crypto.randomBytes(40).toString('hex');
@@ -661,7 +661,7 @@ app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), as
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         res.cookie('refreshToken', refreshToken, {
@@ -778,14 +778,14 @@ app.post('/api/refresh-token', async (req, res) => {
         const newAccessToken = jwt.sign(
             { MaND: tokenData.MaND, VaiTro: tokenData.VaiTro, HoTen: tokenData.HoTen },
             process.env.JWT_SECRET,
-            { expiresIn: '15m' }
+            { expiresIn: '7d' }
         );
 
         res.cookie('token', newAccessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 15 * 60 * 1000
+            maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
         res.status(200).json({ token: newAccessToken });
@@ -817,6 +817,25 @@ app.get('/api/users/sessions', authMiddleware, async (req, res) => {
         res.status(200).json(sessions);
     } catch (err) {
         logger.error('Get sessions failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+app.delete('/api/users/sessions', authMiddleware, async (req, res) => {
+    try {
+        const currentRefreshToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
+        if (!currentRefreshToken) {
+            return res.status(401).json({ message: 'Không tìm thấy phiên đăng nhập hiện tại.' });
+        }
+        
+        const [result] = await pool.execute(
+            'UPDATE REFRESH_TOKENS SET Revoked = TRUE WHERE MaND = ? AND Token != ? AND Revoked = FALSE',
+            [req.user.MaND, currentRefreshToken]
+        );
+        
+        res.status(200).json({ message: 'Đã đăng xuất khỏi tất cả các thiết bị khác.' });
+    } catch (err) {
+        logger.error('Revoke all sessions failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

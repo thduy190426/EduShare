@@ -202,6 +202,7 @@ async function run() {
         `);
 
         await addColumnIfMissing('TAILIEU', 'TextSEO', 'TEXT');
+        await addColumnIfMissing('TAILIEU', 'TomTatAI', 'TEXT');
 
         await createTableIfMissing('AUDIT_LOG', `
             CREATE TABLE AUDIT_LOG (

@@ -14,7 +14,10 @@ let allComments = [];
 let documentOwnerId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Chi tiết tài liệu' }]);
+    if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'manual';
+    }
+    window.scrollTo(0, 0);
 
     const urlParams = new URLSearchParams(window.location.search);
     currentMaTL = urlParams.get('id');
@@ -96,6 +99,8 @@ async function fetchDocumentDetails() {
 
         const data = await response.json();
         renderDocumentInfo(data.document, data.hasPurchased);
+        const bcTitle = document.getElementById('bc-doc-title');
+        if (bcTitle && data.document.TenTL) bcTitle.textContent = data.document.TenTL;
         updateSEO(data.document.TenTL, data.document.TextSEO || data.document.MoTa);
 
         allComments = data.comments || [];
@@ -235,6 +240,24 @@ function renderDocumentInfo(doc, hasPurchased) {
     }
 
     document.getElementById('doc-title').textContent = doc.TenTL;
+
+    const aiSummaryContainer = document.getElementById('ai-summary-container');
+    const aiSummaryContent = document.getElementById('ai-summary-content');
+    const aiSummaryGenerateWrapper = document.getElementById('ai-summary-generate-wrapper');
+
+    if (aiSummaryContainer) {
+        aiSummaryContainer.style.display = 'block';
+        if (doc.TomTatAI) {
+            if (aiSummaryContent) {
+                aiSummaryContent.textContent = doc.TomTatAI;
+                aiSummaryContent.style.display = 'block';
+            }
+            if (aiSummaryGenerateWrapper) aiSummaryGenerateWrapper.style.display = 'none';
+        } else {
+            if (aiSummaryContent) aiSummaryContent.style.display = 'none';
+            if (aiSummaryGenerateWrapper) aiSummaryGenerateWrapper.style.display = 'block';
+        }
+    }
     const authorNameEl = document.getElementById('doc-author-name');
     const authorProfileUrl = getUserProfileUrl(doc.MaND_NguoiDang);
     authorNameEl.textContent = doc.TenNguoiDang;
@@ -588,6 +611,48 @@ function setupEventListeners() {
         }
     });
 
+    const btnShare = document.getElementById('btn-share');
+    if (btnShare) {
+        btnShare.addEventListener('click', () => {
+            const shareUrl = `${API_URL}/documents/share/${currentMaTL}`;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Đã copy link chia sẻ!' });
+            }).catch(err => {
+                console.error('Lỗi khi copy link:', err);
+                Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: 'Không thể copy link.' });
+            });
+        });
+    }
+
+    const btnGenerateAi = document.getElementById('btn-generate-ai-summary');
+    if (btnGenerateAi) {
+        btnGenerateAi.addEventListener('click', async () => {
+            if (!token) return Swal.fire('Vui lòng đăng nhập để tạo tóm tắt AI.');
+            btnGenerateAi.disabled = true;
+            btnGenerateAi.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
+            try {
+                const res = await fetch(`${API_URL}/documents/${currentMaTL}/generate-summary`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, icon: 'success', title: 'Tạo thành công!' });
+                    fetchDocumentDetails();
+                } else {
+                    Swal.fire(data.message || 'Lỗi khi tạo tóm tắt.');
+                    btnGenerateAi.disabled = false;
+                    btnGenerateAi.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Tạo tóm tắt ngay';
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Lỗi máy chủ.');
+                btnGenerateAi.disabled = false;
+                btnGenerateAi.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Tạo tóm tắt ngay';
+            }
+        });
+    }
+
     let isReporting = false;
     const btnReport = document.getElementById('btn-report');
 
@@ -789,8 +854,6 @@ function setupEventListeners() {
                 const noiDung = window.commentEditor.root.innerHTML;
                 submitComment(noiDung, null);
             });
-
-            window.commentEditor.focus();
         });
     }
 }
@@ -1488,8 +1551,17 @@ async function renderPdfToCanvas(url, container, reRender = false) {
             await page.render(renderContext).promise;
 
             if (pageNum === 1 && !reRender) {
+                // Ensure the container is scrolled to the top when the first page appears
                 container.scrollTop = 0;
             }
+        }
+
+        if (!reRender) {
+            // Force scroll to top again after all pages are rendered to defeat any browser scroll-anchoring
+            container.scrollTop = 0;
+            window.scrollTo(0, 0);
+            setTimeout(() => { container.scrollTop = 0; window.scrollTo(0, 0); }, 100);
+            setTimeout(() => { container.scrollTop = 0; window.scrollTo(0, 0); }, 500);
         }
 
         container.oncontextmenu = e => { e.preventDefault(); return false; };

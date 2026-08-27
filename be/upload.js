@@ -11,8 +11,11 @@ const streamifier = require('streamifier');
 const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
+const officeParser = require('officeparser');
 const { sendNotificationToUser } = require('./services/socket');
 const { updateQuestProgress } = require('./services/questService');
+const { generateAISummary } = require('./services/aiService');
+
 async function extractTextFromFile(filePath, mimeType) {
     try {
         let text = '';
@@ -23,10 +26,12 @@ async function extractTextFromFile(filePath, mimeType) {
         } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const result = await mammoth.extractRawText({ path: filePath });
             text = result.value;
+        } else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || mimeType === 'application/vnd.ms-powerpoint') {
+            text = await officeParser.parseOfficeAsync(filePath);
         }
         if (text) {
             text = text.replace(/\s+/g, ' ').trim();
-            return text.substring(0, 1000);
+            return text.substring(0, 3000);
         }
     } catch (err) {
         console.error('Error extracting text:', err);
@@ -351,11 +356,16 @@ router.post('/upload', authMiddleware, uploadLimiter, upload.none(), moderationM
                 previewURL = previewUploadResult.secure_url;
             }
         }
+        let tomTatAI = null;
+        if (textSEO) {
+            tomTatAI = await generateAISummary(textSEO);
+        }
+
         fs.unlinkSync(tempFilePath);
         await pool.execute(
-            `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, ThumbnailURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash, TextSEO) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?, ?, ?)`,
-            [tenTL, moTa || null, fileURL, finalThumbnailUrl, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu, fileHash, textSEO || null]
+            `INSERT INTO TAILIEU (TenTL, MoTa, FileURL, ThumbnailURL, PreviewURL, LoaiFile, MaMonHoc, MaND_NguoiDang, TrangThaiKiemDuyet, LaTaiLieuChinhThuc, LaTaiLieuDocQuyen, GiaXu, FileHash, TextSEO, TomTatAI) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ChoDuyet', ?, ?, ?, ?, ?, ?)`,
+            [tenTL, moTa || null, fileURL, finalThumbnailUrl, previewURL, loaiFile, maMonHoc, req.user.MaND, laTaiLieuChinhThuc, laTaiLieuDocQuyen, giaXu, fileHash, textSEO ? textSEO.substring(0, 1000) : null, tomTatAI]
         );
         await notifyActiveAdmins(
             pool,
@@ -756,6 +766,69 @@ router.get('/:maTL', async (req, res) => {
         res.status(200).json({ document: taiLieu, comments, isBookmarked, hasRated, hasDownloaded, hasPurchased });
     } catch (error) {
         console.error('Lỗi khi lấy chi tiết tài liệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/:maTL/generate-summary', authMiddleware, async (req, res) => {
+    const maTL = req.params.maTL;
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT TextSEO, TomTatAI, FileURL, LoaiFile FROM TAILIEU WHERE MaTL = ? AND TrangThaiKiemDuyet = "DaDuyet" AND IsDeleted = FALSE', [maTL]);
+        
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy tài liệu.' });
+        }
+        
+        if (rows[0].TomTatAI) {
+            return res.status(400).json({ message: 'Tài liệu này đã có tóm tắt AI.' });
+        }
+        
+        let textSEO = rows[0].TextSEO;
+        const fileURL = rows[0].FileURL;
+        const loaiFile = rows[0].LoaiFile;
+        
+        if (!textSEO && fileURL) {
+            try {
+                const response = await fetch(fileURL);
+                if (response.ok) {
+                    const buffer = await response.arrayBuffer();
+                    const tempFilePath = `./uploads/temp_${Date.now()}_${maTL}`;
+                    const fs = require('fs');
+                    if (!fs.existsSync('./uploads')) fs.mkdirSync('./uploads');
+                    fs.writeFileSync(tempFilePath, Buffer.from(buffer));
+                    
+                    let mimeType = 'application/pdf';
+                    if (loaiFile === 'doc' || loaiFile === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                    else if (loaiFile === 'ppt' || loaiFile === 'pptx') mimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                    
+                    textSEO = await extractTextFromFile(tempFilePath, mimeType);
+                    fs.unlinkSync(tempFilePath);
+                    
+                    if (textSEO) {
+                        await pool.execute('UPDATE TAILIEU SET TextSEO = ? WHERE MaTL = ?', [textSEO.substring(0, 1000), maTL]);
+                    }
+                }
+            } catch (err) {
+                console.error('Lỗi tải/trích xuất text:', err);
+            }
+        }
+        
+        if (!textSEO) {
+            return res.status(400).json({ message: 'Tài liệu không có đủ dữ liệu văn bản để tóm tắt.' });
+        }
+        
+        const tomTatAI = await generateAISummary(textSEO);
+        
+        if (!tomTatAI) {
+            return res.status(500).json({ message: 'Không thể tạo tóm tắt AI lúc này.' });
+        }
+        
+        await pool.execute('UPDATE TAILIEU SET TomTatAI = ? WHERE MaTL = ?', [tomTatAI, maTL]);
+        
+        res.status(200).json({ message: 'Tạo tóm tắt thành công.', tomTatAI });
+    } catch (error) {
+        console.error('Lỗi khi tạo tóm tắt AI:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
@@ -1568,4 +1641,50 @@ router.delete('/:maTL', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
+
+router.get('/share/:id', async (req, res) => {
+    try {
+        const docId = req.params.id;
+        const pool = req.app.locals.pool;
+        
+        const [rows] = await pool.execute('SELECT TenTL, MoTa, ThumbnailURL FROM TAILIEU WHERE MaTL = ?', [docId]);
+        if (rows.length === 0) {
+            return res.status(404).send('Tài liệu không tồn tại.');
+        }
+
+        const doc = rows[0];
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const targetUrl = `${frontendUrl}/pages/document/documentDetails.html?id=${docId}`;
+
+        const html = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>${doc.TenTL} - EduShare</title>
+    <meta property="og:title" content="${doc.TenTL} - EduShare">
+    <meta property="og:description" content="${doc.MoTa || 'Tài liệu giáo dục trên EduShare'}">
+    <meta property="og:image" content="${doc.ThumbnailURL || 'https://edushare.com/default-thumbnail.png'}">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="${targetUrl}">
+    
+    <noscript>
+        <meta http-equiv="refresh" content="0; url=${targetUrl}">
+    </noscript>
+    
+    <script>
+        window.location.replace("${targetUrl}");
+    </script>
+</head>
+<body>
+    <p>Đang chuyển hướng tới tài liệu...</p>
+</body>
+</html>`;
+        res.send(html);
+    } catch (error) {
+        console.error('Lỗi API GET /documents/share/:id:', error);
+        res.status(500).send('Lỗi máy chủ.');
+    }
+});
+
 module.exports = router;
