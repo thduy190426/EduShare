@@ -226,6 +226,8 @@ const routes = [
     ['/api/chat', require('./chat')],
     ['/api/badges', require('./badges')],
     ['/api/quests', require('./quests')],
+    ['/api/collections', require('./collections')],
+    ['/api/cart', require('./cart')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -239,6 +241,22 @@ app.get('/api/config', (req, res) => {
         facebookAppId: process.env.FACEBOOK_APP_ID,
         recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY
     });
+});
+
+app.get('/api/public/stats', async (req, res) => {
+    try {
+        const [dashboardRows] = await pool.execute('SELECT TotalUsers, TotalDocuments FROM ADMIN_DASHBOARD_SUMMARY WHERE Id = 1');
+        const [schoolRows] = await pool.execute('SELECT COUNT(*) as totalSchools FROM TRUONGHOC');
+        
+        res.status(200).json({
+            totalUsers: dashboardRows[0]?.TotalUsers || 0,
+            totalDocuments: dashboardRows[0]?.TotalDocuments || 0,
+            totalSchools: schoolRows[0]?.totalSchools || 0
+        });
+    } catch (err) {
+        logger.error('Fetch public stats failed', err);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
 });
 
 app.get('/api/truonghoc', async (req, res) => {
@@ -376,7 +394,7 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
         }
 
         const accessToken = jwt.sign(
-            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
+            { MaND: user.MaND, VaiTro: user.VaiTro, AdminRole: user.AdminRole, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -552,9 +570,43 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
             return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
         }
 
+        if (user.LockoutUntil && new Date(user.LockoutUntil) > new Date()) {
+            const remainingMinutes = Math.ceil((new Date(user.LockoutUntil) - new Date()) / 60000);
+            return res.status(403).json({ message: `Tài khoản đang bị khóa tạm thời. Vui lòng thử lại sau ${remainingMinutes} phút.` });
+        }
+
         const isMatch = await bcrypt.compare(matKhau, user.MatKhau);
-        if (!isMatch)
-            return res.status(401).json({ message: 'Mật khẩu không chính xác.' });
+        if (!isMatch) {
+            let failedAttempts = (user.FailedLoginAttempts || 0) + 1;
+            if (failedAttempts >= 5) {
+                const lockoutTime = new Date(Date.now() + 30 * 60000);
+                await pool.execute('UPDATE NGUOIDUNG SET FailedLoginAttempts = ?, LockoutUntil = ? WHERE MaND = ?', [failedAttempts, lockoutTime, user.MaND]);
+                
+                const mailOptions = {
+                    from: `"EduShare Security" <${process.env.GMAIL_USER}>`,
+                    to: email,
+                    subject: 'Cảnh báo bảo mật: Tài khoản bị khóa tạm thời',
+                    html: `
+                        <h2>Cảnh báo bảo mật từ EduShare</h2>
+                        <p>Chào ${user.HoTen},</p>
+                        <p>Chúng tôi phát hiện có người vừa cố gắng đăng nhập vào tài khoản của bạn và nhập sai mật khẩu 5 lần liên tiếp.</p>
+                        <p>Để bảo vệ an toàn cho bạn, tài khoản đã được <strong>khóa tạm thời trong 30 phút</strong>.</p>
+                        <p>Nếu bạn không thực hiện hành động này, vui lòng truy cập chức năng "Quên mật khẩu" để đặt lại mật khẩu mới hoặc liên hệ với ban quản trị.</p>
+                        <p>Trân trọng,<br>Đội ngũ EduShare</p>
+                    `
+                };
+                transporter.sendMail(mailOptions).catch(err => logger.error('Lỗi khi gửi email cảnh báo khóa tài khoản:', err));
+
+                return res.status(403).json({ message: 'Bạn đã nhập sai mật khẩu 5 lần. Tài khoản bị khóa 30 phút.' });
+            } else {
+                await pool.execute('UPDATE NGUOIDUNG SET FailedLoginAttempts = ? WHERE MaND = ?', [failedAttempts, user.MaND]);
+                return res.status(401).json({ message: `Mật khẩu không chính xác. Bạn còn ${5 - failedAttempts} lần thử.` });
+            }
+        }
+
+        if ((user.FailedLoginAttempts && user.FailedLoginAttempts > 0) || user.LockoutUntil) {
+            await pool.execute('UPDATE NGUOIDUNG SET FailedLoginAttempts = 0, LockoutUntil = NULL WHERE MaND = ?', [user.MaND]);
+        }
 
         if (user.IsTwoFactorEnabled) {
             const tempToken = jwt.sign(
@@ -570,7 +622,7 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
         }
 
         const accessToken = jwt.sign(
-            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
+            { MaND: user.MaND, VaiTro: user.VaiTro, AdminRole: user.AdminRole, HoTen: user.HoTen },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -640,7 +692,7 @@ app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), as
         }
 
         const accessToken = jwt.sign(
-            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen },
+            { MaND: user.MaND, VaiTro: user.VaiTro, AdminRole: user.AdminRole, HoTen: user.HoTen },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
@@ -776,7 +828,7 @@ app.post('/api/refresh-token', async (req, res) => {
         }
 
         const newAccessToken = jwt.sign(
-            { MaND: tokenData.MaND, VaiTro: tokenData.VaiTro, HoTen: tokenData.HoTen },
+            { MaND: tokenData.MaND, VaiTro: tokenData.VaiTro, AdminRole: tokenData.AdminRole, HoTen: tokenData.HoTen },
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );

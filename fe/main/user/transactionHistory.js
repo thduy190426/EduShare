@@ -134,12 +134,7 @@ function renderPagination() {
     const paginationContainer = document.getElementById('pagination-container');
     if (!paginationContainer) return;
 
-    const totalPages = Math.ceil(allTransactions.length / ITEMS_PER_PAGE);
-
-    if (totalPages <= 1) {
-        paginationContainer.innerHTML = '';
-        return;
-    }
+    const totalPages = Math.max(1, Math.ceil(allTransactions.length / ITEMS_PER_PAGE));
 
     let html = '';
     html += `<button class="btn-page ${currentPage === 1 ? 'disabled' : ''}" data-page="${currentPage - 1}">Trước</button>`;

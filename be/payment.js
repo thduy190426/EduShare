@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, adminMiddleware } = require('./middlewares/auth');
+const { authMiddleware, superAdminMiddleware } = require('./middlewares/auth');
 const { paymentLimiter } = require('./middlewares/rateLimit');
 router.get('/packages', async (req, res) => {
     try {
@@ -52,8 +52,22 @@ router.post('/promos/validate', authMiddleware, async (req, res) => {
 router.post('/create', authMiddleware, paymentLimiter, async (req, res) => {
     const { packageId, promoCode } = req.body;
     const userId = req.user.MaND;
+    const idempotencyKey = req.headers['x-idempotency-key'];
+
     try {
         const pool = req.app.locals.pool;
+
+        if (idempotencyKey) {
+            try {
+                await pool.execute('INSERT INTO IDEMPOTENCY_KEYS (IdempotencyKey, MaND, ApiEndpoint) VALUES (?, ?, ?)', [idempotencyKey, userId, req.originalUrl]);
+            } catch (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(409).json({ message: 'Giao dịch đang được xử lý hoặc đã hoàn tất. Vui lòng không gửi lại.' });
+                }
+                throw err;
+            }
+        }
+
         const [pkgRows] = await pool.execute('SELECT SoTien, SoXu FROM GOI_NAP_XU WHERE MaGoi = ? AND TrangThai = "HoatDong"', [packageId]);
         if (pkgRows.length === 0) {
             return res.status(400).json({ message: 'Gói nạp không hợp lệ hoặc đã bị ẩn.' });
@@ -101,7 +115,7 @@ router.post('/create', authMiddleware, paymentLimiter, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi tạo giao dịch.' });
     }
 });
-router.get('/transactions', adminMiddleware, async (req, res) => {
+router.get('/transactions', superAdminMiddleware, async (req, res) => {
     const status = req.query.status || 'ChoDuyet';
     try {
         const pool = req.app.locals.pool;
@@ -130,7 +144,7 @@ router.get('/transactions', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/transactions/counts', adminMiddleware, async (req, res) => {
+router.get('/transactions/counts', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
@@ -146,7 +160,7 @@ router.get('/transactions/counts', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.post('/approve/:id', adminMiddleware, async (req, res) => {
+router.post('/approve/:id', superAdminMiddleware, async (req, res) => {
     const maGD = req.params.id;
     const adminId = req.user.MaND;
     try {
@@ -172,6 +186,7 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
                 'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
                 [tx.MaND, `Giao dịch nạp ${tx.SoXu} xu của bạn đã được phê duyệt thành công!`, 'HeThong']
             );
+            sendNotificationToUser(tx.MaND, 'new_notification', { message: `Giao dịch nạp ${tx.SoXu} xu của bạn đã được phê duyệt thành công!`, link: null });
             await connection.commit();
             connection.release();
             const { sendNotificationToUser } = require('./services/socket');
@@ -189,7 +204,7 @@ router.post('/approve/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.post('/reject/:id', adminMiddleware, async (req, res) => {
+router.post('/reject/:id', superAdminMiddleware, async (req, res) => {
     const maGD = req.params.id;
     const adminId = req.user.MaND;
     try {
@@ -208,6 +223,7 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
                 'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
                 [txRows[0].MaND, `Giao dịch nạp xu (Mã GD: ${maGD}) của bạn đã bị từ chối do không nhận được thanh toán.`, 'HeThong']
             );
+            sendNotificationToUser(txRows[0].MaND, 'new_notification', { message: `Giao dịch nạp xu (Mã GD: ${maGD}) của bạn đã bị từ chối do không nhận được thanh toán.`, link: null });
             await connection.commit();
             connection.release();
             const { sendNotificationToUser } = require('./services/socket');
@@ -226,7 +242,7 @@ router.post('/reject/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.delete('/delete/:id', adminMiddleware, async (req, res) => {
+router.delete('/delete/:id', superAdminMiddleware, async (req, res) => {
     const maGD = req.params.id;
     try {
         const pool = req.app.locals.pool;
@@ -240,7 +256,7 @@ router.delete('/delete/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/export/history', adminMiddleware, async (req, res) => {
+router.get('/export/history', superAdminMiddleware, async (req, res) => {
     try {
         const selectedCols = req.query.cols ? req.query.cols.split(',') : null;
 

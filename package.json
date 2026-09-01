@@ -8,5 +8,10 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "canvas": "^4.0.0-rc3",
+    "pdfjs-dist": "^3.11.174",
+    "tesseract.js": "^7.0.0"
   }
 }

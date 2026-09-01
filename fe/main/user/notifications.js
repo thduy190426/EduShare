@@ -136,9 +136,21 @@ function renderNotifications(notifications, page = 1, hasMore = false) {
             </button>
         `;
 
+        let startX = 0;
+        let currentX = 0;
+        let isSwiping = false;
+        let hasSwiped = false; 
+
         if (!noti.DaDoc || noti.LinkDich) {
             item.style.cursor = 'pointer';
-            item.onclick = async () => {
+            item.onclick = async (e) => {
+                if (e && e.target.closest('.noti-delete-btn')) return;
+                
+                if (hasSwiped) {
+                    hasSwiped = false; 
+                    return;
+                }
+
                 if (!noti.DaDoc) {
                     await markAsRead(noti.MaTB);
                     item.classList.remove('unread');
@@ -146,7 +158,12 @@ function renderNotifications(notifications, page = 1, hasMore = false) {
                 }
 
                 if (noti.LinkDich) {
-                    window.location.href = new URL(noti.LinkDich, window.location.href).href;
+                    if (noti.LinkDich.startsWith('http')) {
+                        window.location.href = noti.LinkDich;
+                    } else {
+                        const path = noti.LinkDich.startsWith('/') ? noti.LinkDich : '/' + noti.LinkDich;
+                        window.location.href = window.location.origin + path;
+                    }
                     return;
                 }
 
@@ -163,6 +180,50 @@ function renderNotifications(notifications, page = 1, hasMore = false) {
                 await deleteNotification(noti.MaTB, item);
             });
         }
+
+        item.style.touchAction = 'pan-y';
+        item.style.userSelect = 'none';
+
+        item.addEventListener('pointerdown', (e) => {
+            if (e.target.closest('.noti-delete-btn')) return;
+            item.setPointerCapture(e.pointerId);
+            startX = e.clientX;
+            currentX = startX;
+            isSwiping = true;
+            hasSwiped = false;
+            item.style.transition = 'none';
+        });
+
+        item.addEventListener('pointermove', (e) => {
+            if (!isSwiping) return;
+            currentX = e.clientX;
+            const diffX = currentX - startX;
+            if (Math.abs(diffX) > 10) hasSwiped = true;
+            
+            if (diffX < 0) {
+                item.style.transform = `translateX(${diffX}px)`;
+                item.style.opacity = 1 - Math.abs(diffX) / (window.innerWidth / 2);
+            }
+        });
+
+        const handlePointerEnd = async (e) => {
+            if (!isSwiping) return;
+            isSwiping = false;
+            item.releasePointerCapture(e.pointerId);
+            item.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+            const diffX = currentX - startX;
+            if (diffX < -75) {
+                item.style.transform = `translateX(-100%)`;
+                item.style.opacity = '0';
+                await deleteNotification(noti.MaTB, item, true);
+            } else {
+                item.style.transform = `translateX(0)`;
+                item.style.opacity = '1';
+            }
+        };
+
+        item.addEventListener('pointerup', handlePointerEnd);
+        item.addEventListener('pointercancel', handlePointerEnd);
 
         list.appendChild(item);
     });
@@ -189,21 +250,23 @@ async function markAsRead(maTB) {
     }
 }
 
-async function deleteNotification(maTB, itemEl) {
+async function deleteNotification(maTB, itemEl, skipConfirm = false) {
     const token = getToken();
     if (!token) return;
 
-    const result = await Swal.fire({
-        title: 'Xoá thông báo?',
-        text: 'Thông báo này sẽ bị xóa khỏi danh sách của bạn.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy',
-        confirmButtonColor: '#EF4444'
-    });
+    if (!skipConfirm) {
+        const result = await Swal.fire({
+            title: 'Xoá thông báo?',
+            text: 'Thông báo này sẽ bị xóa khỏi danh sách của bạn.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: '#EF4444'
+        });
 
-    if (!result.isConfirmed) return;
+        if (!result.isConfirmed) return;
+    }
 
     try {
         const res = await fetch(`${API_URL}/notifications/${maTB}`, {

@@ -202,11 +202,13 @@ async function handleBuy(packageId, cardElement) {
     cardElement.classList.add("loading");
 
     try {
+        const idempotencyKey = window.generateIdempotencyKey();
         const response = await fetch(`${API_URL}/payment/create`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${token}`,
+                "X-Idempotency-Key": idempotencyKey
             },
             body: JSON.stringify({ packageId, promoCode: activePromo })
         });

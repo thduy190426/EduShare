@@ -119,10 +119,17 @@ body, input, button, textarea, select {
     background: #f1f5f9;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .payment-result-container {
-        margin: 30px 16px;
+        margin: 40px 16px;
         padding: 30px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .payment-result-container {
+        margin: 20px 16px;
+        padding: 24px 16px;
     }
     .action-buttons {
         flex-direction: column;
@@ -130,4 +137,13 @@ body, input, button, textarea, select {
     .btn-primary, .btn-outline {
         width: 100%;
     }
+    .result-title {
+        font-size: 24px;
+    }
+    .result-icon {
+        font-size: 56px;
+    }
 }
+
+*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+

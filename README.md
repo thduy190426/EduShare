@@ -78,10 +78,13 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 - **Hệ thống giao dịch (Xu) & Danh hiệu (Badges)**:
   - Nạp Xu qua Admin, nhập mã khuyến mãi (Promo Code).
   - Mua tài liệu Premium bằng Xu; tác giả tự động nhận doanh thu. Lịch sử giao dịch chi tiết, Transaction bảo mật.
+  - **Giỏ hàng (Shopping Cart)**: Thêm nhiều tài liệu Premium vào giỏ để thanh toán một lần. Hỗ trợ áp dụng mã khuyến mãi (Promo Code) trên tổng đơn. Thanh toán giỏ hàng được xử lý qua Transaction (ACID) đảm bảo đồng bộ hóa doanh thu hàng loạt cho các tác giả.
+  - **Nhiệm vụ hàng ngày (Daily Quests)**: Hệ thống nhiệm vụ đa dạng (đăng nhập, đánh giá tài liệu, đăng bài,...) khuyến khích tương tác. Hoàn thành nhiệm vụ để nhận phần thưởng Xu hấp dẫn.
   - **Hệ thống Danh hiệu (Badges)**: Người dùng có thể được Admin trao tặng các danh hiệu đặc biệt (hiển thị công khai trên Profile) khi có những đóng góp xuất sắc.
-- **Tương tác xã hội & Thông báo Real-time**:
+- **Tương tác xã hội, Lưu trữ & Thông báo Real-time**:
   - Đánh giá (Rating 1–5 sao) và Bình luận tài liệu (Hỗ trợ Optimistic UI, ghim bình luận, trả lời, và **chỉnh sửa bình luận Real-time**).
   - Theo dõi người dùng khác (Follow/Unfollow) và Đánh dấu lưu tài liệu (Bookmark).
+  - **Bộ sưu tập cá nhân (Collections)**: Hỗ trợ người dùng tạo các bộ sưu tập riêng (tối đa 5 thư mục) để phân loại, quản lý và lưu trữ các tài liệu chuyên ngành một cách khoa học.
   - **Thông báo thời gian thực**: Sử dụng Socket.io, người dùng nhận được thông báo ngay lập tức khi có người bình luận, nhắc tên, tài liệu được duyệt/mua, hoặc được nhận thưởng/danh hiệu.
 - **Cộng đồng nhóm (Groups)**:
   - Tạo nhóm học tập (Công khai / Riêng tư). Tùy chỉnh ảnh bìa, mô tả nhóm.
@@ -100,8 +103,8 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
   - Duyệt/Từ chối tài liệu, xử lý báo cáo vi phạm với **Auto-Moderation** (tự động ẩn tài liệu nếu quá 5 report).
   - Hoàn tiền tự động cho người mua nếu tài liệu bị gỡ (Xóa mềm - Soft Delete).
   - Xét duyệt yêu cầu Nâng cấp Giảng viên, Giao dịch nạp xu.
-- **Quản lý Danh hiệu (Badges)**: Xem xét hồ sơ và trao tặng/thu hồi Danh hiệu cho bất kỳ người dùng nào trong hệ thống.
-- **Hệ thống Cron Jobs Tự động**: Tự động chạy ngầm vào đầu tháng để tổng kết và phát thưởng Xu cho Top Bảng Vàng (Người dùng có lượt đóng góp và lượt tải nhiều nhất).
+- **Quản lý Nhiệm vụ & Danh hiệu (Quests & Badges)**: Thiết lập, cấu hình các nhiệm vụ hàng ngày (Quests) để thu hút người dùng. Xem xét hồ sơ và trao tặng/thu hồi Danh hiệu (Badges) cho bất kỳ người dùng nào trong hệ thống.
+- **Hệ thống Cron Jobs Tự động**: Tự động chạy ngầm vào đầu tháng để tổng kết và phát thưởng Xu cho Top Bảng Vàng (Người dùng có lượt đóng góp và lượt tải nhiều nhất). Đặt lại tiến độ nhiệm vụ hàng ngày.
 - **Cấu hình hệ thống động**: Tùy chỉnh các tham số cốt lõi từ giao diện web: tỷ giá nạp Xu - VNĐ, giới hạn đăng tải, bật/tắt tính năng đăng ký, duyệt nhóm.
 - **Mã khuyến mãi (Promo Code)** & **Quản lý Gói Nạp (Packages)**: Tạo, chỉnh sửa các gói nạp và mã quà tặng người dùng.
 - **Kiểm soát Hệ thống Nâng cao**:
@@ -130,9 +133,11 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ, đượ
 
 ### 3. Phân hệ Người dùng & Cá nhân hóa (User Module)
 - **`userHome.html`**: Trang chủ cá nhân hóa sau khi đăng nhập (Bảng feed tài liệu, gợi ý nhóm, top contributor).
-- **`userProfile.html`**: Hồ sơ cá nhân (Cập nhật thông tin, đổi Avatar, yêu cầu cấp quyền Giảng viên, xem Danh hiệu).
+- **`userProfile.html`**: Hồ sơ cá nhân (Cập nhật thông tin, đổi Avatar, yêu cầu cấp quyền Giảng viên, xem Danh hiệu, quản lý Bộ sưu tập).
 - **`otherUserProfile.html`**: Xem hồ sơ công khai của các tác giả/người dùng khác.
 - **`buyCoins.html`**: Giao diện chọn gói nạp EduCoin và thanh toán.
+- **`cart.html`**: Quản lý giỏ hàng, nhập mã khuyến mãi (Promo Code) và thanh toán tổng đơn.
+- **`quests.html`**: Trung tâm nhiệm vụ hàng ngày (Daily Quests) để theo dõi tiến độ và nhận thưởng.
 - **`payment-success.html` / `payment-failed.html`**: Các trang điều hướng (Callback) kết quả thanh toán.
 - **`transactionHistory.html`**: Xem chi tiết lịch sử giao dịch (nạp xu, mua bán tài liệu).
 - **`notifications.html`**: Trung tâm quản lý thông báo hệ thống (Real-time).
@@ -150,7 +155,8 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ, đượ
 ### 6. Phân hệ Quản trị (Admin Panel)
 - **`adminDashboard.html`**: Bảng điều khiển trung tâm với biểu đồ thống kê.
 - **`adminModeration.html`**: Khu vực xét duyệt/từ chối tài liệu mới đăng.
-- **`adminUserManagement.html`**: Quản lý người dùng, cấp quyền Danh hiệu, xử lý vi phạm tài khoản.
+- **`adminUserManagement.html`**: Quản lý người dùng, xử lý vi phạm tài khoản.
+- **`adminQuestsBadges.html`**: Thiết lập và quản lý hệ thống Nhiệm vụ (Quests) và Danh hiệu (Badges).
 - **`adminViolationReports.html`**: Xử lý báo cáo vi phạm.
 - **`adminGroups.html`**: Quản trị hoạt động của tất cả các nhóm.
 - **`adminPayments.html` / `adminPromos.html` / `adminPackages.html`**: Kiểm soát giao dịch nạp rút, phát hành mã khuyến mãi, thiết lập gói nạp.
@@ -172,7 +178,7 @@ EduShare/
 │   ├── server.js             # Entry point của Server
 │   ├── database.sql          # Schema cơ sở dữ liệu (Bản chuẩn)
 │   ├── alter_db.js           # Script thay đổi/nâng cấp cấu trúc CSDL
-│   └── *.js                  # Các Router API (users.js, upload.js, admin.js, badges.js, chat.js,...)
+│   └── *.js                  # Các Router API (users.js, upload.js, cart.js, collections.js...)
 │
 └── fe/                       # Frontend (HTML / CSS / Vanilla JS)
     ├── assets/               # Hình ảnh, biểu tượng tĩnh

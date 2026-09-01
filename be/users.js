@@ -312,7 +312,7 @@ router.post('/change-email/verify', authMiddleware, async (req, res) => {
         const [users] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE MaND = ?', [maND]);
         const user = users[0];
         
-        const payload = { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL };
+        const payload = { MaND: user.MaND, VaiTro: user.VaiTro, AdminRole: user.AdminRole, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL };
         const newAccessToken = jwt.sign(payload, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '15m' });
         const newRefreshToken = jwt.sign({ MaND: user.MaND }, process.env.JWT_REFRESH_SECRET || 'fallback_refresh_secret', { expiresIn: '7d' });
         
@@ -387,7 +387,7 @@ router.put('/profile', authMiddleware, validate(updateProfileSchema), async (req
         } catch(e) {}
         
         const newToken = jwt.sign(
-            { MaND: maND, VaiTro: req.user.VaiTro, HoTen: normalizedHoTen },
+            { MaND: maND, VaiTro: req.user.VaiTro, AdminRole: req.user.AdminRole, HoTen: normalizedHoTen },
             process.env.JWT_SECRET,
             { expiresIn: jwtExpiryDays + 'd' }
         );
@@ -710,6 +710,43 @@ router.get('/bookmarks', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
+
+router.get('/recently-viewed', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const offset = (page - 1) * limit;
+
+        const [countResult] = await pool.execute(`
+            SELECT COUNT(*) AS total FROM LICH_SU_XEM L
+            JOIN TAILIEU TL ON L.MaTL = TL.MaTL
+            WHERE L.MaND = ? AND TL.TrangThaiHienThi = 'Hien'
+        `, [req.user.MaND]);
+
+        const total = countResult[0].total;
+        const totalPages = Math.ceil(total / limit);
+
+        const [rows] = await pool.execute(`
+            SELECT TL.*, MH.TenMonHoc, L.NgayXem, ND.HoTen AS TenNguoiDang,
+                   COALESCE((SELECT ROUND(AVG(SoSao), 1) FROM DANHGIA WHERE MaTL = TL.MaTL), 0) AS DiemDanhGia,
+                   (SELECT COUNT(*) FROM DANHGIA WHERE MaTL = TL.MaTL) AS SoDanhGia
+            FROM LICH_SU_XEM L
+            JOIN TAILIEU TL ON L.MaTL = TL.MaTL
+            LEFT JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
+            LEFT JOIN NGUOIDUNG ND ON TL.MaND_NguoiDang = ND.MaND
+            WHERE L.MaND = ? AND TL.TrangThaiHienThi = 'Hien'
+            ORDER BY L.NgayXem DESC
+            LIMIT ? OFFSET ?
+        `, [req.user.MaND, limit.toString(), offset.toString()]);
+
+        res.status(200).json({ documents: rows, total, totalPages, currentPage: page });
+    } catch (error) {
+        console.error('Lỗi recently-viewed:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 router.get('/:maND/documents', authMiddleware, async (req, res) => {
     const maND_Khac = req.params.maND;
     try {
@@ -1077,4 +1114,65 @@ router.get('/:maND/rated-documents', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
+
+router.get('/creator-stats', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const maND = req.user.MaND;
+
+        const [docStats] = await pool.execute(`
+            SELECT 
+                COUNT(MaTL) as TotalDocs,
+                COALESCE(SUM(SoLuotTai), 0) as TotalDownloads
+            FROM TAILIEU 
+            WHERE MaND_NguoiDang = ? AND TrangThaiKiemDuyet = 'DaDuyet'
+        `, [maND]);
+
+        const [revenueStats] = await pool.execute(`
+            SELECT COALESCE(SUM(SoXuThayDoi), 0) as TotalRevenue
+            FROM LICH_SU_XU 
+            WHERE MaND = ? AND LoaiGiaoDich = 'BanTaiLieu'
+        `, [maND]);
+
+        const [monthlyRevenue] = await pool.execute(`
+            SELECT 
+                DATE_FORMAT(NgayTao, '%Y-%m') AS month, 
+                SUM(SoXuThayDoi) AS revenue 
+            FROM LICH_SU_XU 
+            WHERE MaND = ? 
+              AND LoaiGiaoDich = 'BanTaiLieu' 
+              AND NgayTao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) 
+            GROUP BY month 
+            ORDER BY month ASC
+        `, [maND]);
+
+        const [topDocs] = await pool.execute(`
+            SELECT 
+                TL.MaTL, 
+                TL.TenTL, 
+                COUNT(TDM.MaND) as SoLuotBan, 
+                SUM(TDM.GiaXuThoiDiemMua) as TongDoanhThu 
+            FROM TAILIEU_DAMUA TDM 
+            JOIN TAILIEU TL ON TDM.MaTL = TL.MaTL 
+            WHERE TL.MaND_NguoiDang = ? 
+            GROUP BY TL.MaTL, TL.TenTL 
+            ORDER BY TongDoanhThu DESC 
+            LIMIT 5
+        `, [maND]);
+
+        res.status(200).json({
+            summary: {
+                totalDocs: docStats[0].TotalDocs,
+                totalDownloads: docStats[0].TotalDownloads,
+                totalRevenue: revenueStats[0].TotalRevenue
+            },
+            monthlyRevenue: monthlyRevenue,
+            topDocs: topDocs
+        });
+    } catch (error) {
+        console.error('Lỗi lấy thống kê creator:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 module.exports = router;

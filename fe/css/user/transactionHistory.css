@@ -363,3 +363,6 @@ body, input, button, textarea, select {
   .transaction-table td:last-child { border-bottom: none; }
   .transaction-table td::before { content: attr(data-label); font-weight: 600; color: var(--text-secondary); margin-right: auto; text-align: left; }
 }
+
+*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+

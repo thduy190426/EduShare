@@ -174,3 +174,6 @@ div:where(.swal2-container) div:where(.swal2-popup) {
 .breadcrumb-item.active span { color: var(--text-primary, #1E293B); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 .breadcrumb-icon { font-size: 14px; color: inherit; display: flex; align-items: center; transform: translateY(-0.8px); }
 .breadcrumb-separator { display: flex; align-items: center; justify-content: center; padding: 0 12px; color: #CBD5E1; font-size: 11px; }
+
+*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+

@@ -46,7 +46,7 @@
     .btn-clear-filter { height: 40px; border: 1px solid var(--border); border-radius: var(--radius-btn); padding: 0 14px; background: #F8FAFC; color: var(--text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; }
     .btn-clear-filter:hover { border-color: var(--secondary); color: var(--secondary); background: var(--primary-light); }
 
-    .table-card { background: var(--white); border-radius: var(--radius-card); border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .table-card { background: var(--white); border-radius: var(--radius-card); border: 1px solid var(--border); overflow-x: auto; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     .data-table { width: 100%; border-collapse: collapse; text-align: left; }
     .data-table th { padding: 16px 24px; font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); background: #F8FAFC; }
     .data-table td { padding: 16px 24px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }

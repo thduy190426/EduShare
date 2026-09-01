@@ -12,6 +12,8 @@ const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const officeParser = require('officeparser');
+const Tesseract = require('tesseract.js');
+const { convertPdfToImages } = require('./pdf-to-img');
 const { sendNotificationToUser } = require('./services/socket');
 const { updateQuestProgress } = require('./services/questService');
 const { generateAISummary } = require('./services/aiService');
@@ -23,6 +25,25 @@ async function extractTextFromFile(filePath, mimeType) {
             const dataBuffer = fs.readFileSync(filePath);
             const data = await pdfParse(dataBuffer, { max: 3 });
             text = data.text;
+            const cleanText = text.replace(/\s+/g, '').trim();
+            if (cleanText.length < 50) {
+                console.log('Phát hiện Scanned PDF, tiến hành chạy OCR (tesseract.js)...');
+                text = '';
+                try {
+                    const images = await convertPdfToImages(filePath, 3);
+                    if (images && images.length > 0) {
+                        const worker = await Tesseract.createWorker('vie+eng');
+                        for (let i = 0; i < images.length; i++) {
+                            const { data: { text: ocrText } } = await worker.recognize(images[i]);
+                            text += ocrText + '\n\n';
+                        }
+                        await worker.terminate();
+                        console.log('Hoàn thành OCR.');
+                    }
+                } catch (ocrErr) {
+                    console.error('Lỗi khi chạy OCR:', ocrErr);
+                }
+            }
         } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
             const result = await mammoth.extractRawText({ path: filePath });
             text = result.value;
@@ -754,6 +775,14 @@ router.get('/:maTL', async (req, res) => {
                 if (decoded.VaiTro === 'Admin' || decoded.VaiTro === 'GiaoVien' || taiLieu.MaND_NguoiDang === decoded.MaND) {
                     canViewFullDoc = true;
                 }
+                try {
+                    await pool.execute(
+                        'INSERT INTO LICH_SU_XEM (MaND, MaTL) VALUES (?, ?) ON DUPLICATE KEY UPDATE NgayXem = CURRENT_TIMESTAMP',
+                        [decoded.MaND, maTL]
+                    );
+                } catch (viewErr) {
+                    console.error('Lỗi khi ghi nhận lịch sử xem:', viewErr);
+                }
             } catch (e) {
             }
         }
@@ -1067,9 +1096,24 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
         if (doc.MaND_NguoiDang === maND) {
             return res.status(400).json({ message: 'Bạn không thể mua tài liệu của chính mình.' });
         }
+        const idempotencyKey = req.headers['x-idempotency-key'];
+
         const connection = await pool.getConnection();
         await connection.beginTransaction();
         try {
+            if (idempotencyKey) {
+                try {
+                    await connection.execute('INSERT INTO IDEMPOTENCY_KEYS (IdempotencyKey, MaND, ApiEndpoint) VALUES (?, ?, ?)', [idempotencyKey, maND, req.originalUrl]);
+                } catch (err) {
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        await connection.rollback();
+                        connection.release();
+                        return res.status(409).json({ message: 'Giao dịch đang được xử lý hoặc đã hoàn tất. Vui lòng không gửi lại.' });
+                    }
+                    throw err;
+                }
+            }
+
             const [purchaseRows] = await connection.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ? FOR UPDATE', [maTL, maND]);
             if (purchaseRows.length > 0) {
                 await connection.rollback();
@@ -1104,6 +1148,7 @@ router.post('/:maTL/buy', authMiddleware, async (req, res) => {
                 'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
                 [doc.MaND_NguoiDang, `Bạn vừa nhận được ${giaXu} Xu từ do có người vừa mua tài liệu "${doc.TenTL}".`, 'HeThong']
             );
+        sendNotificationToUser(doc.MaND_NguoiDang, 'new_notification', { message: `Bạn vừa nhận được ${giaXu} Xu từ do có người vừa mua tài liệu "${doc.TenTL}".`, link: null });
             await connection.commit();
             connection.release();
             sendNotificationToUser(doc.MaND_NguoiDang, 'document_bought', {

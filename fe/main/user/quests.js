@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderQuests(data.quests);
             }
         } catch (error) {
-            questsList.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px;">Lỗi tải dữ liệu nhiệm vụ. Vui lòng thử lại sau.</div>`;
+            questsList.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 20px; grid-column: 1 / -1;">Lỗi tải dữ liệu nhiệm vụ. Vui lòng thử lại sau.</div>`;
         }
     }
 
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderQuests(quests) {
         if (quests.length === 0) {
-            questsList.innerHTML = `<div style="text-align: center; color: #6b7280; padding: 20px;">Hiện tại chưa có nhiệm vụ nào.</div>`;
+            questsList.innerHTML = `<div style="text-align: center; color: #6b7280; padding: 20px; grid-column: 1 / -1;">Hiện tại chưa có nhiệm vụ nào.</div>`;
             return;
         }
 
@@ -59,9 +59,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.innerHTML = `
                 <div class="quest-info">
                     <div class="quest-title">
-                        ${getIconForType(q.LoaiNV)}
-                        ${q.TenNV}
-                        <span style="font-size: 0.75rem; font-weight: normal; background: #e5e7eb; padding: 2px 8px; border-radius: 10px; margin-left: 10px; color: #4b5563;">${q.TanSuat === 'HangNgay' ? 'Hàng ngày' : 'Hàng tuần'}</span>
+                        <div class="quest-name">
+                            ${getIconForType(q.LoaiNV)}
+                            <span>${q.TenNV}</span>
+                        </div>
+                        <span class="quest-badge">${q.TanSuat === 'HangNgay' ? 'Hàng ngày' : 'Hàng tuần'}</span>
                     </div>
                     <div class="quest-desc">${q.MoTa}</div>
                     <div class="quest-reward">
@@ -143,3 +145,4 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadQuests();
 });
+

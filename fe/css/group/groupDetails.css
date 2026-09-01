@@ -301,3 +301,19 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
     color: #dc2626;
     transform: scale(1.1);
 }
+
+
+.tribute-container ul { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 0; list-style: none; margin: 0; max-height: 200px; overflow-y: auto; }
+    .tribute-container li { padding: 8px 12px; cursor: pointer; color: #1e293b; font-size: 14px; transition: background 0.2s; }
+    .tribute-container li.highlight, .tribute-container li:hover { background: #f1f5f9; color: #3b82f6; }
+    .tribute-container img { width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 8px; object-fit: cover; }
+    .tagged-user { color: #3b82f6; font-weight: 500; text-decoration: none; }
+    .tagged-user:hover { text-decoration: underline; }
+    
+    .group-react-wrapper { position: relative; display: flex; align-items: center; }
+    .group-emoji-picker { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: white; border: 1px solid var(--border); border-radius: 24px; padding: 4px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); gap: 4px; z-index: 100; }
+    .group-emoji-picker::after { content: ''; position: absolute; top: 100%; left: -10%; width: 120%; height: 16px; background: transparent; }
+    .group-react-wrapper:hover .group-emoji-picker { display: flex; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .group-emoji-picker span { cursor: pointer; font-size: 18px; transition: transform 0.2s; padding: 4px; border-radius: 50%; display: flex; align-items: center; justify-content: center; user-select: none; }
+    .group-emoji-picker span:hover { transform: scale(1.3); background: rgba(0,0,0,0.05); }
+    @keyframes popIn { from { opacity: 0; transform: translateX(-50%) scale(0.8); } to { opacity: 1; transform: translateX(-50%) scale(1); } }

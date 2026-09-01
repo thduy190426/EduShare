@@ -607,6 +607,7 @@ function renderMessages(messages) {
                 }
                 dropdownHtml += `<button class="dropdown-item danger" onclick="unsendMessage(${m.MaTN})"><i class="fa-solid fa-rotate-left"></i> Thu hồi</button>`;
             }
+            dropdownHtml += `<button class="dropdown-item danger" onclick="deleteMessageForMe(${m.MaTN})"><i class="fa-regular fa-trash-can"></i> Xóa ở phía tôi</button>`;
             dropdownHtml += `</div>`;
 
             actionsDiv.innerHTML = `
@@ -754,6 +755,16 @@ async function unsendMessage(msgId) {
         if (res.ok) {
             const socket = getSocket();
             if (socket) socket.emit('message_unsent', { messageId: msgId, receiverId: currentPartnerId });
+            loadContacts();
+            openConversation(currentPartnerId, currentPartnerName, currentPartnerAvatar);
+        }
+    } catch (err) {}
+}
+
+async function deleteMessageForMe(msgId) {
+    try {
+        const res = await fetch(`${API_URL}/api/chat/delete-message-for-me/${msgId}`, { method: 'PUT', headers: getAuthHeaders() });
+        if (res.ok) {
             loadContacts();
             openConversation(currentPartnerId, currentPartnerName, currentPartnerAvatar);
         }
@@ -1056,6 +1067,7 @@ window.unsendMessage = unsendMessage;
 window.cancelEdit = cancelEdit;
 window.startReply = window.startReply;
 window.cancelReply = window.cancelReply;
+window.deleteMessageForMe = deleteMessageForMe;
 window.addEventListener('DOMContentLoaded', injectChatWidget);
 
 window.toggleContactMenu = function(event, partnerId, isPinned, isBlocked) {

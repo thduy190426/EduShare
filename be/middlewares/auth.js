@@ -20,7 +20,7 @@ const authMiddleware = async (req, res, next) => {
 
         const pool = req.app.locals.pool;
         if (pool) {
-            const [userRows] = await pool.execute('SELECT TrangThai, VaiTro FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
+            const [userRows] = await pool.execute('SELECT TrangThai, VaiTro, AdminRole FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
             if (userRows.length === 0) {
                 return res.status(401).json({ message: 'Người dùng không tồn tại.' });
             }
@@ -28,6 +28,7 @@ const authMiddleware = async (req, res, next) => {
                 return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động.' });
             }
             decoded.VaiTro = userRows[0].VaiTro;
+            decoded.AdminRole = userRows[0].AdminRole;
         }
 
         req.user = decoded;
@@ -50,6 +51,19 @@ const adminMiddleware = async (req, res, next) => {
     });
 };
 
+const superAdminMiddleware = async (req, res, next) => {
+    await authMiddleware(req, res, () => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Không tìm thấy thông tin user.' });
+        }
+        if (req.user.VaiTro === 'Admin' && req.user.AdminRole === 'SuperAdmin') {
+            next();
+        } else {
+            return res.status(403).json({ message: 'Chỉ Super Admin mới có quyền thực hiện chức năng này.' });
+        }
+    });
+};
+
 const teacherMiddleware = async (req, res, next) => {
     await authMiddleware(req, res, () => {
         if (!req.user) {
@@ -66,5 +80,6 @@ const teacherMiddleware = async (req, res, next) => {
 module.exports = {
     authMiddleware,
     adminMiddleware,
+    superAdminMiddleware,
     teacherMiddleware
 };

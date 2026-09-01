@@ -655,3 +655,6 @@ body, input, button, textarea, select {
 .stat-val { font-weight: 600; font-size: 16px; color: var(--text-primary); }
 .stat-lbl { font-size: 12px; color: var(--text-secondary); }
 #chat-info-profile-link { display: block; margin-top: 20px; padding: 10px; background: var(--primary); color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500; transition: background 0.2s; cursor: pointer; }
+
+*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+

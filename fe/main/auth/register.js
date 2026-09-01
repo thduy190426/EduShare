@@ -365,7 +365,12 @@ window.handleGoogleLogin = async function(response) {
 
 
 function redirectUser(vaiTro) {
-    const lastVisitedPage = localStorage.getItem('lastVisitedPage');
+    let lastVisitedPage = localStorage.getItem('lastVisitedPage');
+    
+    if (vaiTro !== 'Admin' && lastVisitedPage && lastVisitedPage.includes('/admin/')) {
+        lastVisitedPage = null;
+    }
+
     if (lastVisitedPage) {
         localStorage.removeItem('lastVisitedPage');
         window.location.href = lastVisitedPage;

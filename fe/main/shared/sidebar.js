@@ -9,23 +9,25 @@ const SIDEBAR_ITEMS = [
     { label: 'Tìm kiếm tài liệu', icon: 'fa-magnifying-glass', href: '../document/searchResults.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tải tài liệu', icon: 'fa-upload', href: '../document/uploadDocument.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Giỏ hàng', icon: 'fa-cart-shopping', href: '../user/cart.html', roles: ['SinhVien'], group: 'user', badge: 'cartCount' },
     { label: 'Nhóm học tập', icon: 'fa-users', href: '../group/groupList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Nhiệm vụ hàng ngày', icon: 'fa-gift', href: '../user/quests.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
-    { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin', 'GiaoVien'], badge: 'pendingDocs', group: 'admin' },
-    { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], badge: 'pendingPayments', group: 'admin' },
-    { label: 'Duyệt giáo viên', icon: 'fa-id-card-clip', href: '../admin/adminTeacherRequests.html', roles: ['Admin'], badge: 'pendingTeachers', group: 'admin' },
-    { label: 'Người dùng', icon: 'fa-users-gear', href: '../admin/adminUserManagement.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], badge: 'pendingSubjects', group: 'admin' },
-    { label: 'Quản lý nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Báo cáo', icon: 'fa-flag', href: '../admin/adminViolationReports.html', roles: ['Admin'], badge: 'pendingReports', group: 'admin' },
-    { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Gói nạp', icon: 'fa-box-open', href: '../admin/adminPackages.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Nhật ký (Logs)', icon: 'fa-clipboard-list', href: '../admin/adminAuditLogs.html', roles: ['Admin'], group: 'admin' },
-    { label: 'Cấu hình hệ thống', icon: 'fa-gear', href: '../admin/adminSettings.html', roles: ['Admin'], group: 'admin' }
+    { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], adminRoles: ['SuperAdmin', 'Moderator'], group: 'admin' },
+    { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin', 'GiaoVien'], adminRoles: ['SuperAdmin', 'Moderator'], badge: 'pendingDocs', group: 'admin' },
+    { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], badge: 'pendingPayments', group: 'admin' },
+    { label: 'Duyệt giáo viên', icon: 'fa-id-card-clip', href: '../admin/adminTeacherRequests.html', roles: ['Admin'], adminRoles: ['SuperAdmin', 'Moderator'], badge: 'pendingTeachers', group: 'admin' },
+    { label: 'Người dùng', icon: 'fa-users-gear', href: '../admin/adminUserManagement.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Môn học', icon: 'fa-book', href: '../admin/adminSubjects.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], badge: 'pendingSubjects', group: 'admin' },
+    { label: 'Quản lý nhóm', icon: 'fa-users-rectangle', href: '../admin/adminGroups.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Nhiệm vụ & Danh hiệu', icon: 'fa-medal', href: '../admin/adminQuestsBadges.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Báo cáo', icon: 'fa-flag', href: '../admin/adminViolationReports.html', roles: ['Admin'], adminRoles: ['SuperAdmin', 'Moderator'], badge: 'pendingReports', group: 'admin' },
+    { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Gói nạp', icon: 'fa-box-open', href: '../admin/adminPackages.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Nhật ký (Logs)', icon: 'fa-clipboard-list', href: '../admin/adminAuditLogs.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Cấu hình hệ thống', icon: 'fa-gear', href: '../admin/adminSettings.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' }
 ];
 
 async function renderSidebar() {
@@ -45,21 +47,31 @@ async function renderSidebar() {
     }
 
     const userRole = decoded.VaiTro;
+    const adminRole = decoded.AdminRole || 'SuperAdmin';
     const currentPath = window.location.pathname;
 
     let html = ``;
     const userItems = SIDEBAR_ITEMS.filter(item => item.group === 'user' && item.roles.includes(userRole));
-    const adminItems = SIDEBAR_ITEMS.filter(item => item.group === 'admin' && item.roles.includes(userRole));
+    const adminItems = SIDEBAR_ITEMS.filter(item => {
+        if (item.group !== 'admin' || !item.roles.includes(userRole)) return false;
+        if (userRole === 'Admin' && item.adminRoles) {
+            return item.adminRoles.includes(adminRole);
+        }
+        return true;
+    });
 
     if (userItems.length > 0) {
         html += `<div class="menu-group">`;
         if (adminItems.length > 0) html += `<div class="menu-label">Học tập</div>`;
         userItems.forEach(item => {
             const isActive = currentPath.includes(item.href.split('/').pop()) ? 'active' : '';
+            const badgeId = item.badge ? `id="badge-${item.badge}"` : '';
+            const badgeHtml = item.badge ? `<span class="badge" ${badgeId} style="display:none;">0</span>` : '';
             html += `
                 <a href="${item.href}" class="menu-item ${isActive}">
                     <span class="menu-icon"><i class="fa-solid ${item.icon}"></i></span>
                     <span class="menu-text">${item.label}</span>
+                    ${badgeHtml}
                 </a>
             `;
         });
@@ -718,6 +730,20 @@ window.refreshSidebarBadges = async function() {
             }
         } catch (e) {
             console.error('Lỗi load teacher moderation badge:', e);
+        }
+    }
+
+    if (userRole === 'SinhVien') {
+        try {
+            const res = await fetch(`${API_URL}/cart/count`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                updateSidebarBadge('badge-cartCount', data.count || 0);
+            }
+        } catch (e) {
+            console.error('Lỗi load cart badge:', e);
         }
     }
 };

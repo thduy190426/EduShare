@@ -184,6 +184,4 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
     color: #1e293b;
     text-align: justify;
 }
-. p r e v i e w - p a g e s  
-   o v e r f l o w - a n c h o r :   n o n e ;    
- 
+.preview-pages { overflow-anchor: none; }

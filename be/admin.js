@@ -1,9 +1,11 @@
 const express = require('express');
+const { sendNotificationToUser } = require('./services/socket');
+
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
-const { adminMiddleware, teacherMiddleware } = require('./middlewares/auth');
+const { adminMiddleware, superAdminMiddleware, teacherMiddleware } = require('./middlewares/auth');
 router.get('/documents/list', teacherMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
@@ -133,6 +135,7 @@ router.put('/documents/bulk-review', teacherMiddleware, async (req, res) => {
                             `../document/documentDetails.html?id=${maTL}`
                         ]
                     );
+        sendNotificationToUser(follower.MaND_TheoDoi, 'new_notification', { message: `Người bạn đang theo dõi vừa có tài liệu mới được đăng tải: "${taiLieu.TenTL}"!`, link: `../document/documentDetails.html?id=${maTL}` });
                 }
             } else {
                 noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" bị từ chối với lý do: ${lyDoTuChoi}`;
@@ -141,6 +144,7 @@ router.put('/documents/bulk-review', teacherMiddleware, async (req, res) => {
                 'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                 [taiLieu.MaND_NguoiDang, 'HeThong', noiDungThongBao, quyetDinh === 'Duyet' ? `../document/documentDetails.html?id=${maTL}` : `../document/myDocuments.html`]
             );
+        sendNotificationToUser(taiLieu.MaND_NguoiDang, 'new_notification', { message: noiDungThongBao, link: quyetDinh === 'Duyet' ? `../document/documentDetails.html?id=${maTL}` : `../document/myDocuments.html` });
             successCount++;
         }
         await conn.commit();
@@ -215,6 +219,7 @@ router.put('/documents/:maTL/review', teacherMiddleware, async (req, res) => {
                         `../document/documentDetails.html?id=${maTL}`
                     ]
                 );
+        sendNotificationToUser(follower.MaND_TheoDoi, 'new_notification', { message: `Người bạn đang theo dõi vừa có tài liệu mới được đăng tải: "${taiLieu.TenTL}"!`, link: `../document/documentDetails.html?id=${maTL}` });
             }
         } else {
             noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" bị từ chối với lý do: ${lyDoTuChoi}`;
@@ -223,6 +228,7 @@ router.put('/documents/:maTL/review', teacherMiddleware, async (req, res) => {
             'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
             [taiLieu.MaND_NguoiDang, 'HeThong', noiDungThongBao, quyetDinh === 'Duyet' ? `../document/documentDetails.html?id=${maTL}` : `../document/myDocuments.html`]
         );
+        sendNotificationToUser(taiLieu.MaND_NguoiDang, 'new_notification', { message: noiDungThongBao, link: quyetDinh === 'Duyet' ? `../document/documentDetails.html?id=${maTL}` : `../document/myDocuments.html` });
         await conn.commit();
         res.status(200).json({ message: 'Đã xử lý kiểm duyệt thành công.' });
     } catch (error) {
@@ -261,7 +267,7 @@ router.put('/documents/:maTL/toggle-visibility', teacherMiddleware, async (req, 
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/users', adminMiddleware, async (req, res) => {
+router.get('/users', superAdminMiddleware, async (req, res) => {
     try {
         const { search, role, status, sort, page, limit } = req.query;
         const pool = req.app.locals.pool;
@@ -315,7 +321,7 @@ router.get('/users', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.delete('/users/:maND', adminMiddleware, async (req, res) => {
+router.delete('/users/:maND', superAdminMiddleware, async (req, res) => {
     const maND = parseInt(req.params.maND, 10);
     if (!Number.isInteger(maND)) {
         return res.status(400).json({ message: 'Người dùng không hợp lệ.' });
@@ -426,7 +432,7 @@ router.delete('/users/:maND', adminMiddleware, async (req, res) => {
         conn.release();
     }
 });
-router.put('/users/bulk-status', adminMiddleware, async (req, res) => {
+router.put('/users/bulk-status', superAdminMiddleware, async (req, res) => {
     const { userIds, trangThai } = req.body;
     if (!Array.isArray(userIds) || userIds.length === 0) {
         return res.status(400).json({ message: 'Danh sách người dùng không hợp lệ.' });
@@ -470,7 +476,7 @@ router.put('/users/bulk-status', adminMiddleware, async (req, res) => {
         conn.release();
     }
 });
-router.put('/users/:maND/status', adminMiddleware, async (req, res) => {
+router.put('/users/:maND/status', superAdminMiddleware, async (req, res) => {
     const maND = req.params.maND;
     const { trangThai } = req.body;
     if (trangThai !== 'HoatDong' && trangThai !== 'BiKhoa') {
@@ -484,7 +490,7 @@ router.put('/users/:maND/status', adminMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         await connection.beginTransaction();
         try {
-            const [userRows] = await connection.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
+            const [userRows] = await connection.execute('SELECT VaiTro, AdminRole FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
             if (userRows.length === 0) {
                 await connection.rollback();
                 connection.release();
@@ -518,9 +524,13 @@ router.put('/users/:maND/status', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.put('/users/:maND/role', adminMiddleware, async (req, res) => {
+router.put('/users/:maND/role', superAdminMiddleware, async (req, res) => {
     const maND = req.params.maND;
-    const { vaiTro } = req.body;
+    const { vaiTro, adminRole } = req.body;
+    let validAdminRole = null;
+    if (vaiTro === 'Admin') {
+        validAdminRole = ['SuperAdmin', 'Moderator'].includes(adminRole) ? adminRole : 'SuperAdmin';
+    }
     if (!['SinhVien', 'GiaoVien', 'Admin'].includes(vaiTro)) {
         return res.status(400).json({ message: 'Vai trò không hợp lệ.' });
     }
@@ -532,7 +542,7 @@ router.put('/users/:maND/role', adminMiddleware, async (req, res) => {
         const connection = await pool.getConnection();
         await connection.beginTransaction();
         try {
-            const [userRows] = await connection.execute('SELECT VaiTro FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
+            const [userRows] = await connection.execute('SELECT VaiTro, AdminRole FROM NGUOIDUNG WHERE MaND = ? FOR UPDATE', [maND]);
             if (userRows.length === 0) {
                 await connection.rollback();
                 connection.release();
@@ -546,7 +556,7 @@ router.put('/users/:maND/role', adminMiddleware, async (req, res) => {
                     return res.status(403).json({ message: 'Không thể hạ quyền Admin cuối cùng của hệ thống.' });
                 }
             }
-            await connection.execute('UPDATE NGUOIDUNG SET VaiTro = ? WHERE MaND = ?', [vaiTro, maND]);
+            await connection.execute('UPDATE NGUOIDUNG SET VaiTro = ?, AdminRole = ? WHERE MaND = ?', [vaiTro, validAdminRole, maND]);
             await connection.execute(
                 'INSERT INTO AUDIT_LOG (MaND_ThucHien, MaND_BiTacDong, HanhDong, ChiTiet) VALUES (?, ?, ?, ?)',
                 [req.user.MaND, maND, 'DoiQuyen', `Đổi quyền thành ${vaiTro}`]
@@ -675,6 +685,7 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
                                 "INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, 'HeThong', ?, ?)",
                                 [buyer.MaND, `Tài liệu "${doc.TenTL}" mà bạn đã mua vừa bị gỡ do vi phạm. Hệ thống đã hoàn lại ${doc.GiaXu} Xu vào ví của bạn.`, '../user/userProfile.html']
                             );
+        sendNotificationToUser(buyer.MaND, 'new_notification', { message: '../user/userProfile.html', link: null });
                         }
                     }
                 } else {
@@ -704,10 +715,12 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [doc.MaND_NguoiDang, 'HeThong', `Tài liệu "${doc.TenTL}" của bạn đã bị từ chối do vi phạm quy định cộng đồng. Nếu có truy thu Xu, vui lòng kiểm tra Lịch sử giao dịch.`, '../document/myDocuments.html']
                 );
+        sendNotificationToUser(doc.MaND_NguoiDang, 'new_notification', { message: `Tài liệu "${doc.TenTL}" của bạn đã bị từ chối do vi phạm quy định cộng đồng. Nếu có truy thu Xu, vui lòng kiểm tra Lịch sử giao dịch.`, link: '../document/myDocuments.html' });
                 await conn.execute(
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [doc.NguoiBaoCao, 'HeThong', `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã được xử lý (Vi phạm). Cảm ơn bạn đã đóng góp.`, `../document/documentDetails.html?id=${doc.MaTL}`]
                 );
+        sendNotificationToUser(doc.NguoiBaoCao, 'new_notification', { message: `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã được xử lý (Vi phạm). Cảm ơn bạn đã đóng góp.`, link: `../document/documentDetails.html?id=${doc.MaTL}` });
             }
         } else {
             await conn.execute('UPDATE BAOCAOVIPHAM SET TrangThai = ? WHERE MaBC = ?', ['TuChoi', maBC]);
@@ -717,6 +730,7 @@ router.put('/reports/:maBC/review', adminMiddleware, async (req, res) => {
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [doc.NguoiBaoCao, 'HeThong', `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã bị từ chối do không phát hiện vi phạm.`, `../document/documentDetails.html?id=${doc.MaTL}`]
                 );
+        sendNotificationToUser(doc.NguoiBaoCao, 'new_notification', { message: `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã bị từ chối do không phát hiện vi phạm.`, link: `../document/documentDetails.html?id=${doc.MaTL}` });
             }
         }
         await conn.commit();
@@ -772,6 +786,7 @@ router.put('/reports/bulk-review', adminMiddleware, async (req, res) => {
                                 "INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, 'HeThong', ?, ?)",
                                 [buyer.MaND, `Tài liệu "${doc.TenTL}" mà bạn đã mua vừa bị gỡ do vi phạm. Hệ thống đã hoàn lại ${doc.GiaXu} Xu vào ví của bạn.`, '../user/userProfile.html']
                             );
+        sendNotificationToUser(buyer.MaND, 'new_notification', { message: '../user/userProfile.html', link: null });
                         }
                     }
                 } else {
@@ -801,16 +816,19 @@ router.put('/reports/bulk-review', adminMiddleware, async (req, res) => {
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [doc.MaND_NguoiDang, 'HeThong', `Tài liệu "${doc.TenTL}" của bạn đã bị từ chối do vi phạm quy định cộng đồng. Nếu có truy thu Xu, vui lòng kiểm tra Lịch sử giao dịch.`, '../document/myDocuments.html']
                 );
+        sendNotificationToUser(doc.MaND_NguoiDang, 'new_notification', { message: `Tài liệu "${doc.TenTL}" của bạn đã bị từ chối do vi phạm quy định cộng đồng. Nếu có truy thu Xu, vui lòng kiểm tra Lịch sử giao dịch.`, link: '../document/myDocuments.html' });
                 await conn.execute(
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [doc.NguoiBaoCao, 'HeThong', `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã được xử lý (Vi phạm). Cảm ơn bạn đã đóng góp.`, `../document/documentDetails.html?id=${doc.MaTL}`]
                 );
+        sendNotificationToUser(doc.NguoiBaoCao, 'new_notification', { message: `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã được xử lý (Vi phạm). Cảm ơn bạn đã đóng góp.`, link: `../document/documentDetails.html?id=${doc.MaTL}` });
             } else {
                 await conn.execute('UPDATE BAOCAOVIPHAM SET TrangThai = ? WHERE MaBC = ?', ['TuChoi', maBC]);
                 await conn.execute(
                     'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
                     [doc.NguoiBaoCao, 'HeThong', `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã bị từ chối do không phát hiện vi phạm.`, `../document/documentDetails.html?id=${doc.MaTL}`]
                 );
+        sendNotificationToUser(doc.NguoiBaoCao, 'new_notification', { message: `Báo cáo vi phạm của bạn cho tài liệu "${doc.TenTL}" đã bị từ chối do không phát hiện vi phạm.`, link: `../document/documentDetails.html?id=${doc.MaTL}` });
             }
         }
         await conn.commit();
@@ -855,7 +873,7 @@ router.delete('/reports/:maBC', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi xoá báo cáo.' });
     }
 });
-router.get('/subjects', adminMiddleware, async (req, res) => {
+router.get('/subjects', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const countSql = `SELECT COUNT(*) as total FROM MONHOC WHERE TrangThai IN ('HoatDong', 'TamAn')`;
@@ -882,7 +900,7 @@ router.get('/subjects', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.put('/subjects/:id/status', adminMiddleware, async (req, res) => {
+router.put('/subjects/:id/status', superAdminMiddleware, async (req, res) => {
     const id = req.params.id;
     const { trangThai } = req.body;
     if (trangThai !== 'HoatDong' && trangThai !== 'TamAn') {
@@ -900,7 +918,7 @@ router.put('/subjects/:id/status', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.post('/subjects', adminMiddleware, async (req, res) => {
+router.post('/subjects', superAdminMiddleware, async (req, res) => {
     const { tenMonHoc, capHoc, moTa } = req.body;
     if (!tenMonHoc) return res.status(400).json({ message: 'Tên môn học bắt buộc.' });
     try {
@@ -911,7 +929,7 @@ router.post('/subjects', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.put('/subjects/:id', adminMiddleware, async (req, res) => {
+router.put('/subjects/:id', superAdminMiddleware, async (req, res) => {
     const id = req.params.id;
     const { tenMonHoc, capHoc, moTa } = req.body;
     if (!tenMonHoc) return res.status(400).json({ message: 'Tên môn học bắt buộc.' });
@@ -926,7 +944,7 @@ router.put('/subjects/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.delete('/subjects/:id', adminMiddleware, async (req, res) => {
+router.delete('/subjects/:id', superAdminMiddleware, async (req, res) => {
     const id = req.params.id;
     try {
         const pool = req.app.locals.pool;
@@ -944,92 +962,58 @@ router.delete('/subjects/:id', adminMiddleware, async (req, res) => {
 router.get('/stats/overview', adminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        const [userCount] = await pool.execute('SELECT COUNT(*) as count FROM NGUOIDUNG');
-        const [docCount] = await pool.execute('SELECT COUNT(*) as count FROM TAILIEU');
-        const [downloadSum] = await pool.execute('SELECT SUM(SoLuotTai) as total FROM TAILIEU');
-        const [reportCount] = await pool.execute('SELECT COUNT(*) as count FROM BAOCAOVIPHAM WHERE TrangThai = "ChoXuLy"');
-        const [pendingDocCount] = await pool.execute('SELECT COUNT(*) as count FROM TAILIEU WHERE TrangThaiKiemDuyet = "ChoDuyet"');
-        const [pendingPaymentCount] = await pool.execute('SELECT COUNT(*) as count FROM GIAODICH_NAPXU WHERE TrangThai = "ChoDuyet"');
-        const [pendingTeacherCount] = await pool.execute('SELECT COUNT(*) as count FROM YEU_CAU_GIAO_VIEN WHERE TrangThai = "ChoDuyet"');
-        const [pendingSubjectCount] = await pool.execute('SELECT COUNT(*) as count FROM DEXUAT_MONHOC WHERE TrangThai = "ChoDuyet"');
-        const [usersByRoleRows] = await pool.execute('SELECT VaiTro, COUNT(*) as count FROM NGUOIDUNG GROUP BY VaiTro');
-        const [docsByStatusRows] = await pool.execute('SELECT TrangThaiKiemDuyet, COUNT(*) as count FROM TAILIEU GROUP BY TrangThaiKiemDuyet');
-        const [docsBySubjectRows] = await pool.execute(`
-            SELECT MH.TenMonHoc, COUNT(TL.MaTL) as count 
-            FROM TAILIEU TL
-            JOIN MONHOC MH ON TL.MaMonHoc = MH.MaMonHoc
-            GROUP BY MH.TenMonHoc
-            ORDER BY count DESC
-            LIMIT 5
-        `);
-        const [topDepositors] = await pool.execute(`
-            SELECT ND.MaND, ND.HoTen, ND.AvatarURL, SUM(G.SoXu) as totalXu
-            FROM GIAODICH_NAPXU G
-            JOIN NGUOIDUNG ND ON G.MaND = ND.MaND
-            WHERE G.TrangThai = 'DaDuyet' AND ND.VaiTro != 'Admin'
-            GROUP BY ND.MaND, ND.HoTen, ND.AvatarURL
-            ORDER BY totalXu DESC
-            LIMIT 5
-        `);
-        const [topContributors] = await pool.execute(`
-            SELECT ND.MaND, ND.HoTen, ND.AvatarURL,
-                (SELECT COUNT(*) FROM TAILIEU TL WHERE TL.MaND_NguoiDang = ND.MaND AND TL.TrangThaiKiemDuyet = 'DaDuyet') AS countDoc,
-                (SELECT COUNT(*) FROM BINHLUAN BL WHERE BL.MaND = ND.MaND) AS countComment
-            FROM NGUOIDUNG ND
-            WHERE ND.VaiTro != 'Admin'
-            ORDER BY (countDoc * 10 + countComment) DESC
-            LIMIT 5
-        `);
+        const [rows] = await pool.execute('SELECT * FROM ADMIN_DASHBOARD_SUMMARY WHERE Id = 1');
+        
+        if (rows.length === 0) {
+            return res.status(200).json({
+                users: 0, documents: 0, downloads: 0, pendingReports: 0, pendingDocs: 0, 
+                pendingPayments: 0, pendingTeachers: 0, pendingSubjects: 0,
+                usersByRole: [], docsByStatus: [], docsBySubject: [], topDepositors: [], topContributors: []
+            });
+        }
+
+        const summary = rows[0];
+        const dataJSON = summary.DataJSON || {};
+
         res.status(200).json({
-            users: userCount[0].count,
-            documents: docCount[0].count,
-            downloads: downloadSum[0].total || 0,
-            pendingReports: reportCount[0].count,
-            pendingDocs: pendingDocCount[0].count,
-            pendingPayments: pendingPaymentCount[0].count,
-            pendingTeachers: pendingTeacherCount[0].count,
-            pendingSubjects: pendingSubjectCount[0].count,
-            usersByRole: usersByRoleRows,
-            docsByStatus: docsByStatusRows,
-            docsBySubject: docsBySubjectRows,
-            topDepositors: topDepositors,
-            topContributors: topContributors
+            users: summary.TotalUsers,
+            documents: summary.TotalDocuments,
+            downloads: summary.TotalDownloads,
+            pendingReports: summary.PendingReports,
+            pendingDocs: summary.PendingDocs,
+            pendingPayments: summary.PendingPayments,
+            pendingTeachers: summary.PendingTeachers,
+            pendingSubjects: summary.PendingSubjects,
+            usersByRole: dataJSON.usersByRole || [],
+            docsByStatus: dataJSON.docsByStatus || [],
+            docsBySubject: dataJSON.docsBySubject || [],
+            topDepositors: dataJSON.topDepositors || [],
+            topContributors: dataJSON.topContributors || []
         });
     } catch (error) {
         console.error('Lỗi API /stats/overview:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/stats/advanced', adminMiddleware, async (req, res) => {
+router.get('/stats/advanced', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
-        const currentYear = new Date().getFullYear();
-        const [revenueRows] = await pool.execute(`
-            SELECT MONTH(NgayTao) as month, SUM(SoTien) as revenue 
-            FROM GIAODICH_NAPXU 
-            WHERE TrangThai = 'DaDuyet' AND YEAR(NgayTao) = ?
-            GROUP BY MONTH(NgayTao) 
-            ORDER BY month ASC
-        `, [currentYear]);
-        const [userGrowthRows] = await pool.execute(`
-            SELECT MONTH(NgayTao) as month, COUNT(*) as newUsers 
-            FROM NGUOIDUNG 
-            WHERE YEAR(NgayTao) = ?
-            GROUP BY MONTH(NgayTao) 
-            ORDER BY month ASC
-        `, [currentYear]);
-        const [trendingSubjects] = await pool.execute(`
-            SELECT MH.TenMonHoc, COALESCE(SUM(TL.SoLuotTai), 0) as totalDownloads 
-            FROM MONHOC MH 
-            JOIN TAILIEU TL ON MH.MaMonHoc = TL.MaMonHoc 
-            WHERE TL.TrangThaiKiemDuyet = 'DaDuyet' 
-            GROUP BY MH.TenMonHoc 
-            ORDER BY totalDownloads DESC 
-            LIMIT 5
-        `);
+        const [rows] = await pool.execute('SELECT DataJSON FROM ADMIN_DASHBOARD_SUMMARY WHERE Id = 1');
+        
+        let revenueByMonth = [];
+        let userGrowth = [];
+        let trendingSubjects = [];
+        
+        if (rows.length > 0) {
+            const dataJSON = rows[0].DataJSON || {};
+            revenueByMonth = dataJSON.revenueByMonth || [];
+            userGrowth = dataJSON.userGrowth || [];
+            trendingSubjects = dataJSON.trendingSubjects || [];
+        }
+
         res.status(200).json({
-            revenueByMonth: revenueRows,
-            userGrowth: userGrowthRows,
+            revenueByMonth: revenueByMonth,
+            userGrowth: userGrowth,
             trendingSubjects: trendingSubjects
         });
     } catch (error) {
@@ -1037,7 +1021,7 @@ router.get('/stats/advanced', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/subject-suggestions', adminMiddleware, async (req, res) => {
+router.get('/subject-suggestions', superAdminMiddleware, async (req, res) => {
     try {
         const status = req.query.status || 'ChoDuyet';
         const pool = req.app.locals.pool;
@@ -1069,7 +1053,7 @@ router.get('/subject-suggestions', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.post('/subject-suggestions/:id/approve', adminMiddleware, async (req, res) => {
+router.post('/subject-suggestions/:id/approve', superAdminMiddleware, async (req, res) => {
     const id = Number.parseInt(req.params.id, 10);
     if (!Number.isInteger(id) || id <= 0) {
         return res.status(400).json({ message: 'Đề xuất không hợp lệ.' });
@@ -1112,6 +1096,7 @@ router.post('/subject-suggestions/:id/approve', adminMiddleware, async (req, res
             'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
             [suggestion.MaND_DeXuat, 'HeThong', `Đề xuất môn học "${suggestion.TenMonHoc}" đã được duyệt.`, '../user/userHome.html']
         );
+        sendNotificationToUser(suggestion.MaND_DeXuat, 'new_notification', { message: `Đề xuất môn học "${suggestion.TenMonHoc}" đã được duyệt.`, link: '../user/userHome.html' });
         await conn.commit();
         res.status(200).json({ message: 'Đã duyệt đề xuất và tạo môn học.', maMonHoc });
     } catch (error) {
@@ -1122,7 +1107,7 @@ router.post('/subject-suggestions/:id/approve', adminMiddleware, async (req, res
         conn.release();
     }
 });
-router.post('/subject-suggestions/:id/reject', adminMiddleware, async (req, res) => {
+router.post('/subject-suggestions/:id/reject', superAdminMiddleware, async (req, res) => {
     const id = Number.parseInt(req.params.id, 10);
     if (!Number.isInteger(id) || id <= 0) {
         return res.status(400).json({ message: 'Đề xuất không hợp lệ.' });
@@ -1154,6 +1139,7 @@ router.post('/subject-suggestions/:id/reject', adminMiddleware, async (req, res)
             'INSERT INTO THONGBAO (MaND, LoaiTB, NoiDung, LinkDich) VALUES (?, ?, ?, ?)',
             [suggestion.MaND_DeXuat, 'HeThong', `Đề xuất môn học "${suggestion.TenMonHoc}" đã bị từ chối.`, '../document/uploadDocument.html']
         );
+        sendNotificationToUser(suggestion.MaND_DeXuat, 'new_notification', { message: `Đề xuất môn học "${suggestion.TenMonHoc}" đã bị từ chối.`, link: '../document/uploadDocument.html' });
         await conn.commit();
         res.status(200).json({ message: 'Đã từ chối đề xuất môn học.' });
     } catch (error) {
@@ -1164,7 +1150,7 @@ router.post('/subject-suggestions/:id/reject', adminMiddleware, async (req, res)
         conn.release();
     }
 });
-router.get('/groups', adminMiddleware, async (req, res) => {
+router.get('/groups', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const countSql = `SELECT COUNT(*) as total FROM NHOM`;
@@ -1192,7 +1178,7 @@ router.get('/groups', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.put('/groups/:maNhom/status', adminMiddleware, async (req, res) => {
+router.put('/groups/:maNhom/status', superAdminMiddleware, async (req, res) => {
     const maNhom = req.params.maNhom;
     try {
         const pool = req.app.locals.pool;
@@ -1212,7 +1198,7 @@ router.put('/groups/:maNhom/status', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.delete('/groups/:maNhom', adminMiddleware, async (req, res) => {
+router.delete('/groups/:maNhom', superAdminMiddleware, async (req, res) => {
     const maNhom = req.params.maNhom;
     try {
         const pool = req.app.locals.pool;
@@ -1299,11 +1285,13 @@ router.put('/teacher-requests/:id/review', adminMiddleware, async (req, res) => 
                     'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
                     [reqRows[0].MaND, 'Yêu cầu nâng cấp tài khoản Giáo viên của bạn đã được phê duyệt.', 'HeThong']
                 );
+        sendNotificationToUser(reqRows[0].MaND, 'new_notification', { message: 'Yêu cầu nâng cấp tài khoản Giáo viên của bạn đã được phê duyệt.', link: null });
             } else if (trangThai === 'TuChoi') {
                 await connection.execute(
                     'INSERT INTO THONGBAO (MaND, NoiDung, LoaiTB) VALUES (?, ?, ?)',
                     [reqRows[0].MaND, `Yêu cầu nâng cấp tài khoản Giáo viên của bạn bị từ chối. Lý do: ${lyDoTuChoi || 'Không hợp lệ.'}`, 'HeThong']
                 );
+        sendNotificationToUser(reqRows[0].MaND, 'new_notification', { message: `Yêu cầu nâng cấp tài khoản Giáo viên của bạn bị từ chối. Lý do: ${lyDoTuChoi || 'Không hợp lệ.'}`, link: null });
             }
             await connection.commit();
             res.status(200).json({ message: 'Xử lý yêu cầu thành công.' });
@@ -1319,7 +1307,7 @@ router.put('/teacher-requests/:id/review', adminMiddleware, async (req, res) => 
     }
 });
 module.exports = router;
-router.get('/promos', adminMiddleware, async (req, res) => {
+router.get('/promos', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const countSql = `SELECT COUNT(*) as total FROM PROMO_CODE`;
@@ -1339,7 +1327,7 @@ router.get('/promos', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi khi lấy danh sách mã ưu đãi' });
     }
 });
-router.post('/promos', adminMiddleware, async (req, res) => {
+router.post('/promos', superAdminMiddleware, async (req, res) => {
     const { Code, DiscountPercent, IsActive, Description, IsFlashSale, NgayHetHan } = req.body;
     try {
         const pool = req.app.locals.pool;
@@ -1356,7 +1344,7 @@ router.post('/promos', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi khi tạo mã ưu đãi' });
     }
 });
-router.put('/promos/:id', adminMiddleware, async (req, res) => {
+router.put('/promos/:id', superAdminMiddleware, async (req, res) => {
     const { Code, DiscountPercent, Description, IsFlashSale, NgayHetHan } = req.body;
     const { id } = req.params;
     try {
@@ -1374,7 +1362,7 @@ router.put('/promos/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi khi cập nhật mã ưu đãi' });
     }
 });
-router.put('/promos/:id/toggle', adminMiddleware, async (req, res) => {
+router.put('/promos/:id/toggle', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const { id } = req.params;
@@ -1385,7 +1373,7 @@ router.put('/promos/:id/toggle', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'L?i khi c?p nh?t tr?ng th�i' });
     }
 });
-router.delete('/promos/:id', adminMiddleware, async (req, res) => {
+router.delete('/promos/:id', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const { id } = req.params;
@@ -1396,7 +1384,7 @@ router.delete('/promos/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'L?i khi x�a m� uu d�i' });
     }
 });
-router.get('/export/revenue', adminMiddleware, async (req, res) => {
+router.get('/export/revenue', superAdminMiddleware, async (req, res) => {
     try {
         const selectedCols = req.query.cols ? req.query.cols.split(',') : null;
 
@@ -1464,7 +1452,7 @@ router.get('/export/revenue', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/packages', adminMiddleware, async (req, res) => {
+router.get('/packages', superAdminMiddleware, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -1487,7 +1475,7 @@ router.get('/packages', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.post('/packages', adminMiddleware, async (req, res) => {
+router.post('/packages', superAdminMiddleware, async (req, res) => {
     const { MaGoi, TenGoi, SoTien, SoXu, KhuyenMai, TrangThai, ThuTu } = req.body;
     if (!MaGoi || !TenGoi || !SoTien || !SoXu) {
         return res.status(400).json({ message: 'Vui lòng điền đủ các thông tin bắt buộc.' });
@@ -1508,7 +1496,7 @@ router.post('/packages', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.put('/packages/:id', adminMiddleware, async (req, res) => {
+router.put('/packages/:id', superAdminMiddleware, async (req, res) => {
     const maGoi = req.params.id;
     const { TenGoi, SoTien, SoXu, KhuyenMai, TrangThai, ThuTu } = req.body;
     try {
@@ -1523,7 +1511,7 @@ router.put('/packages/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.put('/packages/:id/toggle', adminMiddleware, async (req, res) => {
+router.put('/packages/:id/toggle', superAdminMiddleware, async (req, res) => {
     const maGoi = req.params.id;
     try {
         const pool = req.app.locals.pool;
@@ -1540,7 +1528,7 @@ router.put('/packages/:id/toggle', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.delete('/packages/:id', adminMiddleware, async (req, res) => {
+router.delete('/packages/:id', superAdminMiddleware, async (req, res) => {
     const maGoi = req.params.id;
     try {
         const pool = req.app.locals.pool;
@@ -1551,7 +1539,7 @@ router.delete('/packages/:id', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/audit-logs', adminMiddleware, async (req, res) => {
+router.get('/audit-logs', superAdminMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         let page = parseInt(req.query.page) || 1;
@@ -1605,4 +1593,123 @@ router.get('/audit-logs', adminMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy dữ liệu audit logs.' });
     }
 });
+
+router.get('/quests', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT * FROM NHIEMVU ORDER BY NgayTao DESC');
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Lỗi lấy danh sách nhiệm vụ:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/quests', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { TenNV, MoTa, LoaiNV, MucTieu, ThuongXu, TanSuat, TrangThai } = req.body;
+        if (!TenNV || !LoaiNV) return res.status(400).json({ message: 'Tên nhiệm vụ và Loại nhiệm vụ là bắt buộc.' });
+
+        await pool.execute(
+            'INSERT INTO NHIEMVU (TenNV, MoTa, LoaiNV, MucTieu, ThuongXu, TanSuat, TrangThai) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [TenNV, MoTa || '', LoaiNV, MucTieu || 1, ThuongXu || 0, TanSuat || 'HangNgay', TrangThai || 'HoatDong']
+        );
+        res.status(201).json({ message: 'Tạo nhiệm vụ thành công.' });
+    } catch (error) {
+        console.error('Lỗi tạo nhiệm vụ:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/quests/:id', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { id } = req.params;
+        const { TenNV, MoTa, LoaiNV, MucTieu, ThuongXu, TanSuat, TrangThai } = req.body;
+
+        await pool.execute(
+            'UPDATE NHIEMVU SET TenNV=?, MoTa=?, LoaiNV=?, MucTieu=?, ThuongXu=?, TanSuat=?, TrangThai=? WHERE MaNV=?',
+            [TenNV, MoTa, LoaiNV, MucTieu, ThuongXu, TanSuat, TrangThai, id]
+        );
+        res.status(200).json({ message: 'Cập nhật nhiệm vụ thành công.' });
+    } catch (error) {
+        console.error('Lỗi cập nhật nhiệm vụ:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/quests/:id', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { id } = req.params;
+        await pool.execute('DELETE FROM NHIEMVU WHERE MaNV=?', [id]);
+        res.status(200).json({ message: 'Xóa nhiệm vụ thành công.' });
+    } catch (error) {
+        console.error('Lỗi xóa nhiệm vụ:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/badges', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const [rows] = await pool.execute('SELECT * FROM DANHHIEU ORDER BY NgayTao DESC');
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Lỗi lấy danh sách danh hiệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/badges', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { TenDanhHieu, IconClass, MauSac, MoTa } = req.body;
+        if (!TenDanhHieu || !IconClass || !MauSac) return res.status(400).json({ message: 'Thiếu thông tin bắt buộc.' });
+
+        await pool.execute(
+            'INSERT INTO DANHHIEU (TenDanhHieu, IconClass, MauSac, MoTa) VALUES (?, ?, ?, ?)',
+            [TenDanhHieu, IconClass, MauSac, MoTa || '']
+        );
+        res.status(201).json({ message: 'Tạo danh hiệu thành công.' });
+    } catch (error) {
+        console.error('Lỗi tạo danh hiệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/badges/:id', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { id } = req.params;
+        const { TenDanhHieu, IconClass, MauSac, MoTa } = req.body;
+
+        await pool.execute(
+            'UPDATE DANHHIEU SET TenDanhHieu=?, IconClass=?, MauSac=?, MoTa=? WHERE MaDanhHieu=?',
+            [TenDanhHieu, IconClass, MauSac, MoTa, id]
+        );
+        res.status(200).json({ message: 'Cập nhật danh hiệu thành công.' });
+    } catch (error) {
+        console.error('Lỗi cập nhật danh hiệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.delete('/badges/:id', superAdminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { id } = req.params;
+        await pool.execute('DELETE FROM DANHHIEU WHERE MaDanhHieu=?', [id]);
+        res.status(200).json({ message: 'Xóa danh hiệu thành công.' });
+    } catch (error) {
+        console.error('Lỗi xóa danh hiệu:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
 module.exports = router;
+
+
+
+

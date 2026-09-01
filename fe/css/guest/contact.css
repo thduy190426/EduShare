@@ -1,0 +1,8 @@
+@media (max-width: 768px) {
+      .contact-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+    #contactForm input:focus, #contactForm textarea:focus {
+      border-color: var(--primary-color) !important;
+    }

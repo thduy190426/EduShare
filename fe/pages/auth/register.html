@@ -156,6 +156,7 @@
 
   <script type="module" src="../../main/auth/register.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="../../main/auth/passwordMask.js"></script>
   <script>
     function enableSubmitBtn() {
       window.isCaptchaSolved = true;
@@ -166,36 +167,6 @@
       if (window.validateRegisterForm) window.validateRegisterForm();
     }
 
-    function setupPasswordMasking(visualId, realId, toggleBtnId) {
-      const visualInput = document.getElementById(visualId);
-      const realInput = document.getElementById(realId);
-      const toggleBtn = document.getElementById(toggleBtnId);
-      
-      let realValue = "";
-      let isVisible = false;
-      let maskTimeout = null;
-
-      if (!visualInput || !realInput) return;
-
-      visualInput.addEventListener('input', (e) => {
-        const visualValue = visualInput.value;
-        const cursor = visualInput.selectionStart;
-        
-        if (isVisible) {
-          realValue = visualValue;
-        } else {
-          if (visualValue.length > realValue.length) {
-            const diff = visualValue.length - realValue.length;
-            const added = visualValue.substring(cursor - diff, cursor);
-            realValue = realValue.substring(0, cursor - diff) + added + realValue.substring(cursor - diff);
-          } else if (visualValue.length < realValue.length) {
-            const diff = realValue.length - visualValue.length;
-            realValue = realValue.substring(0, cursor) + realValue.substring(cursor + diff);
-          } else {
-             const lastChar = visualValue.substring(cursor - 1, cursor);
-             if (lastChar !== '•') {
-                 realValue = realValue.substring(0, cursor - 1) + lastChar + realValue.substring(cursor);
-             }
           }
         }
         

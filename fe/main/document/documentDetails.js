@@ -300,54 +300,13 @@ function renderDocumentInfo(doc, hasPurchased) {
     if (ratingHint) ratingHint.textContent = `${Number(doc.SoDanhGia || 0).toLocaleString('vi-VN')} lượt đánh giá`;
     updateStarUI(Math.round(avgScore));
 
-    document.getElementById('preview-filename').textContent = doc.TenTL || getFileNameFromPath(doc.FileURL);
+
     let icon = 'fa-file';
     let badgeClass = 'badge-primary';
     let loaiFile = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
     if (loaiFile === 'pdf') { icon = 'fa-file-pdf'; badgeClass = 'badge-file-pdf'; }
     else if (loaiFile === 'pptx' || loaiFile === 'ppt') icon = 'fa-chart-column';
     else if (loaiFile === 'docx' || loaiFile === 'doc') icon = 'fa-pen-to-square';
-
-    const previewContainer = document.querySelector('.preview-pages');
-    if (previewContainer) {
-        previewContainer.style.background = '';
-        previewContainer.style.border = '';
-    }
-    if (loaiFile === 'pdf' || (doc.PreviewURL && doc.PreviewURL !== 'null')) {
-        let rawUrl = doc.FileURL || doc.PreviewURL;
-        if (rawUrl) {
-            let fileUrlFull = rawUrl.startsWith('http') ? rawUrl : `${API_URL.replace('/api', '')}${rawUrl}`;
-
-            if (loaiFile === 'pdf' && doc.MaTL && rawUrl && rawUrl.includes('uploads/')) {
-                fileUrlFull = `${API_URL}/documents/${doc.MaTL}/stream`;
-            }
-
-            renderPdfToCanvas(fileUrlFull, previewContainer);
-            previewContainer.style.width = '100%';
-            previewContainer.style.height = 'calc(100% - 44px)';
-            previewContainer.style.marginTop = '44px';
-            previewContainer.style.boxShadow = 'none';
-            previewContainer.style.overflowY = 'auto';
-            previewContainer.style.display = 'flex';
-            previewContainer.style.flexDirection = 'column';
-            previewContainer.style.alignItems = 'center';
-            previewContainer.style.gap = '10px';
-            previewContainer.style.backgroundColor = '#e5e7eb';
-            previewContainer.style.padding = '20px 0';
-        } else {
-            previewContainer.innerHTML = `
-              <i class="fa-solid fa-lock" style="font-size: 64px; color: #F59E0B; margin-bottom: 16px;"></i>
-              <p style="color: #6B7280; font-size: 16px; font-weight: 500;">Đây là tài liệu độc quyền.</p>
-              <p style="color: #9CA3AF; font-size: 14px; margin-top: 8px;">Bạn cần mua tài liệu này để xem nội dung.</p>
-            `;
-        }
-    } else {
-        previewContainer.innerHTML = `
-          <i class="fa-solid ${icon}" style="font-size: 64px; color: #9CA3AF; margin-bottom: 16px;"></i>
-          <p style="color: #6B7280; font-size: 16px; font-weight: 500;">Chưa hỗ trợ xem trước trực tiếp định dạng này.</p>
-          <p style="color: #9CA3AF; font-size: 14px; margin-top: 8px;">Vui lòng tải xuống để xem chi tiết.</p>
-        `;
-    }
 
     const badgesContainer = document.getElementById('doc-badges');
     badgesContainer.innerHTML = '';
@@ -393,11 +352,49 @@ function renderDocumentInfo(doc, hasPurchased) {
     }
 
     const btnDownload = document.getElementById('btn-download');
+    const btnAddCart = document.getElementById('btn-add-cart');
     if (btnDownload) {
         if (doc.LaTaiLieuDocQuyen && !hasPurchased) {
             if (!isAuthor && !isPrivileged) {
                 btnDownload.innerHTML = `<span><i class="fa-solid fa-lock"></i></span> Mở khoá (${doc.GiaXu || 0} Xu)`;
                 btnDownload.style.backgroundColor = '#F59E0B';
+                
+                if (btnAddCart) {
+                    btnAddCart.style.display = 'flex';
+                    btnAddCart.onclick = async () => {
+                        if (!token) return Swal.fire('Vui lòng đăng nhập để thêm vào giỏ hàng.');
+                        try {
+                            const res = await fetch(`${API_URL}/cart/add`, {
+                                method: 'POST',
+                                headers: { 
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ maTL: doc.MaTL })
+                            });
+                            const addData = await res.json();
+                            if (res.ok) {
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top-end',
+                                    icon: 'success',
+                                    title: 'Đã thêm tài liệu vào giỏ hàng',
+                                    showConfirmButton: false,
+                                    timer: 3000
+                                });
+                                if (typeof window.refreshSidebarBadges === 'function') {
+                                    window.refreshSidebarBadges();
+                                }
+                            } else {
+                                Swal.fire('Thất bại', addData.message, 'error');
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            Swal.fire('Lỗi máy chủ', 'Không thể thêm vào giỏ hàng lúc này.', 'error');
+                        }
+                    };
+                }
+
                 btnDownload.onclick = async () => {
                     if (!token) return Swal.fire('Vui lòng đăng nhập để mở khoá tài liệu.');
 
@@ -412,9 +409,13 @@ function renderDocumentInfo(doc, hasPurchased) {
 
                     if (result.isConfirmed) {
                         try {
+                            const idempotencyKey = window.generateIdempotencyKey();
                             const res = await fetch(`${API_URL}/documents/${doc.MaTL}/buy`, {
                                 method: 'POST',
-                                headers: { 'Authorization': `Bearer ${token}` }
+                                headers: { 
+                                    'Authorization': `Bearer ${token}`,
+                                    'X-Idempotency-Key': idempotencyKey
+                                }
                             });
                             const buyData = await res.json();
                             if (res.ok) {
@@ -430,16 +431,6 @@ function renderDocumentInfo(doc, hasPurchased) {
                     }
                 };
 
-                const previewContainer = document.querySelector('.preview-pages');
-                if (previewContainer) {
-                    previewContainer.innerHTML = `
-                      <i class="fa-solid fa-lock" style="font-size: 64px; color: #FCD34D; margin-bottom: 16px;"></i>
-                      <p style="color: #92400E; font-size: 16px; font-weight: 500;">Tài liệu PREMIUM đã bị khóa.</p>
-                      <p style="color: #B45309; font-size: 14px; margin-top: 8px;">Vui lòng mở khoá để xem trước và tải về.</p>
-                    `;
-                    previewContainer.style.background = '#FFFBEB';
-                    previewContainer.style.border = '1px solid #FDE68A';
-                }
             } else {
                 btnDownload.innerHTML = `<span><i class="fa-solid fa-download"></i></span> Tải xuống`;
                 btnDownload.style.backgroundColor = '';
@@ -467,6 +458,37 @@ function renderDocumentInfo(doc, hasPurchased) {
             btnVerify.style.borderColor = '#D1D5DB';
             document.getElementById('verify-text').textContent = 'Xác thực';
             if (verifyIcon) verifyIcon.className = 'fa-solid fa-certificate';
+        }
+    }
+
+    const previewContainer = document.getElementById('doc-preview-container');
+    const previewContent = document.getElementById('doc-preview-content');
+    
+    if (previewContainer && previewContent && doc.FileURL) {
+        const loaiFilePreview = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
+        const canPreview = !doc.LaTaiLieuDocQuyen || hasPurchased || isAuthor || isPrivileged;
+        
+        if (canPreview && (loaiFilePreview === 'pdf' || loaiFilePreview === 'docx' || loaiFilePreview === 'doc')) {
+            previewContainer.style.display = 'block';
+            const fullFileUrl = getAssetUrl(doc.FileURL);
+            
+            if (loaiFilePreview === 'pdf') {
+                previewContent.innerHTML = `<iframe src="${fullFileUrl}" width="100%" height="600px" style="border: none;"></iframe>`;
+            } else {
+                const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
+                previewContent.innerHTML = `<iframe src="${officeViewerUrl}" width="100%" height="600px" style="border: none;"></iframe>`;
+            }
+        } else if (!canPreview && (loaiFilePreview === 'pdf' || loaiFilePreview === 'docx' || loaiFilePreview === 'doc')) {
+             previewContainer.style.display = 'block';
+             previewContent.innerHTML = `
+                <div style="text-align: center; padding: 40px 20px;">
+                    <i class="fa-solid fa-lock" style="font-size: 48px; color: #F59E0B; margin-bottom: 16px;"></i>
+                    <h4 style="margin: 0 0 8px 0; color: #1E293B;">Tài liệu độc quyền</h4>
+                    <p style="color: #64748b; margin: 0;">Bạn cần mở khoá tài liệu này để xem trước nội dung.</p>
+                </div>
+             `;
+        } else {
+             previewContainer.style.display = 'none';
         }
     }
 }
@@ -503,51 +525,6 @@ function lockRatingUI(message = 'Cảm ơn bạn đã đánh giá') {
 
 function setupEventListeners() {
     
-    const btnZoomIn = document.getElementById('btn-zoom-in');
-    const btnZoomOut = document.getElementById('btn-zoom-out');
-    const btnFullscreen = document.getElementById('btn-fullscreen');
-    
-    if (btnZoomIn) {
-        btnZoomIn.addEventListener('click', () => {
-            if (currentZoom < 3.0) {
-                currentZoom += 0.25;
-                applyZoom();
-            }
-        });
-    }
-    if (btnZoomOut) {
-        btnZoomOut.addEventListener('click', () => {
-            if (currentZoom > 0.5) {
-                currentZoom -= 0.25;
-                applyZoom();
-            }
-        });
-    }
-    if (btnFullscreen) {
-        btnFullscreen.addEventListener('click', () => {
-            const container = document.querySelector('.preview-container');
-            if (!container) return;
-            if (!document.fullscreenElement) {
-                container.style.backgroundColor = '#f8fafc';
-                container.style.overflowY = 'auto';
-                container.requestFullscreen().catch(err => console.error(err));
-            } else {
-                document.exitFullscreen();
-            }
-        });
-        
-        document.addEventListener('fullscreenchange', () => {
-            const container = document.querySelector('.preview-container');
-            if (!document.fullscreenElement && container) {
-                container.style.backgroundColor = '';
-                container.style.overflowY = '';
-                if (currentPdfUrl) renderPdfToCanvas(currentPdfUrl, document.querySelector('.preview-pages'), true);
-            } else if (document.fullscreenElement && container && currentPdfUrl) {
-                renderPdfToCanvas(currentPdfUrl, document.querySelector('.preview-pages'), true);
-            }
-        });
-    }
-
     const btnVerify = document.getElementById('btn-verify');
     if (btnVerify) {
         btnVerify.addEventListener('click', async () => {
@@ -1456,126 +1433,191 @@ async function handleDownload() {
     }
 }
 
-let currentPdf = null;
-let currentZoom = 1.0;
-let currentPdfUrl = null;
-let isRendering = false;
-
-function updateZoomText() {
-    const zoomText = document.getElementById('zoom-level-text');
-    if (zoomText) zoomText.textContent = Math.round(currentZoom * 100) + '%';
-}
-
-function applyZoom() {
-    updateZoomText();
-    const canvases = document.querySelectorAll('.pdf-page-canvas');
-    canvases.forEach(canvas => {
-        const baseWidth = parseFloat(canvas.getAttribute('data-base-width'));
-        if (baseWidth) {
-            canvas.style.width = `${baseWidth * currentZoom}px`;
-            canvas.style.maxWidth = 'none';
-        }
-    });
-}
-
-async function renderPdfToCanvas(url, container, reRender = false) {
-    if (isRendering) return;
-    isRendering = true;
-
-    if (!reRender) {
-        container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang tải và xử lý tài liệu (PDF.js)...</div>';
-        currentZoom = 1.0;
-        currentPdfUrl = url;
-        currentPdf = null;
-        updateZoomText();
-    } else {
-        container.innerHTML = '<div style="margin:auto; padding: 20px; color:#6B7280;">Đang cập nhật...</div>';
-        updateZoomText();
-    }
-
-    try {
-        if (!window.pdfjsLib) {
-            console.error('PDF.js library is not loaded');
-            container.innerHTML = '<div style="margin:auto; color:red;">Lỗi tải thư viện đọc PDF.</div>';
-            isRendering = false;
-            return;
-        }
-
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-        if (!currentPdf) {
-            const loadingTask = pdfjsLib.getDocument(url);
-            currentPdf = await loadingTask.promise;
-        }
-
-        container.innerHTML = '';
-
-        for (let pageNum = 1; pageNum <= currentPdf.numPages; pageNum++) {
-            const page = await currentPdf.getPage(pageNum);
-
-            const containerWidth = container.clientWidth - 40;
-            const unscaledViewport = page.getViewport({ scale: 1.0 });
-            let baseScale = containerWidth / unscaledViewport.width;
-            
-            if (!document.fullscreenElement) {
-                if (baseScale > 1.5) baseScale = 1.5;
-                if (baseScale < 0.5) baseScale = 1.0;
-            } else {
-                if (baseScale > 2.5) baseScale = 2.5;
-            }
-
-            const renderScale = baseScale * 1.5;
-            const viewport = page.getViewport({ scale: renderScale });
-
-            const canvas = document.createElement('canvas');
-            canvas.className = 'pdf-page-canvas';
-            canvas.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-            canvas.style.marginBottom = '10px';
-            
-            const baseCssWidth = unscaledViewport.width * baseScale;
-            canvas.setAttribute('data-base-width', baseCssWidth);
-            canvas.style.width = `${baseCssWidth * currentZoom}px`;
-            canvas.style.maxWidth = 'none';
-
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            container.appendChild(canvas);
-
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-
-            await page.render(renderContext).promise;
-
-            if (pageNum === 1 && !reRender) {
-                // Ensure the container is scrolled to the top when the first page appears
-                container.scrollTop = 0;
-            }
-        }
-
-        if (!reRender) {
-            // Force scroll to top again after all pages are rendered to defeat any browser scroll-anchoring
-            container.scrollTop = 0;
-            window.scrollTo(0, 0);
-            setTimeout(() => { container.scrollTop = 0; window.scrollTo(0, 0); }, 100);
-            setTimeout(() => { container.scrollTop = 0; window.scrollTo(0, 0); }, 500);
-        }
-
-        container.oncontextmenu = e => { e.preventDefault(); return false; };
-        container.style.userSelect = 'none';
-        container.addEventListener('dragstart', e => e.preventDefault());
-
-    } catch (err) {
-        console.error('Error rendering PDF:', err);
-        container.innerHTML = '<div style="margin:auto; padding:20px; color:#EF4444;">Không thể hiển thị bản xem trước. Bạn có thể tải tài liệu để xem toàn bộ.</div>';
-    } finally {
-        isRendering = false;
-    }
-}
-
 if (window.innerWidth <= 768) {
     document.documentElement.classList.add('sidebar-collapsed');
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnSaveCollection = document.getElementById('btn-save-collection');
+    const modalSaveCol = document.getElementById('save-collection-modal');
+    const btnCloseSaveCol = document.getElementById('btn-close-save-collection');
+    const colListContainer = document.getElementById('save-collection-list');
+
+    if (btnSaveCollection && modalSaveCol && colListContainer) {
+        btnSaveCollection.addEventListener('click', async () => {
+            if (!token) return Swal.fire('Vui lòng đăng nhập để sử dụng tính năng này.');
+            modalSaveCol.style.display = 'flex';
+            modalSaveCol.style.opacity = '1';
+            document.body.style.overflow = 'hidden';
+            colListContainer.innerHTML = '<p style="text-align: center; color: #64748b; font-size: 14px;">Đang tải...</p>';
+            
+            try {
+                const res = await fetch(`${API_URL}/collections`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const collections = await res.json();
+                
+                colListContainer.innerHTML = '';
+                if (!res.ok) {
+                    colListContainer.innerHTML = '<p style="text-align:center;color:red;">Lỗi tải bộ sưu tập.</p>';
+                    return;
+                }
+                
+                if (collections.length === 0) {
+                    colListContainer.innerHTML = '<p style="text-align:center;color:#64748b;font-size:14px;padding:10px;">Bạn chưa có bộ sưu tập nào.</p>';
+                    return;
+                }
+                
+                collections.forEach(col => {
+                    const item = document.createElement('div');
+                    item.style.padding = '10px';
+                    item.style.borderBottom = '1px solid #eee';
+                    item.style.display = 'flex';
+                    item.style.justifyContent = 'space-between';
+                    item.style.alignItems = 'center';
+                    
+                    item.innerHTML = `
+                        <div>
+                            <div style="font-weight:500; font-size:14px; color:var(--text-primary);"><i class="fa-solid fa-folder" style="color:var(--primary); margin-right:6px;"></i>${col.TenBST}</div>
+                            <div style="font-size:12px; color:#64748b; margin-top:4px;">${col.DocCount} tài liệu</div>
+                        </div>
+                        <button class="btn-add-to-col" data-id="${col.MaBST}" style="padding:4px 10px; font-size:12px; border-radius:4px; border:1px solid var(--primary); background:transparent; color:var(--primary); cursor:pointer;">Lưu</button>
+                    `;
+                    
+                    const btnAdd = item.querySelector('.btn-add-to-col');
+                    btnAdd.addEventListener('click', async () => {
+                        btnAdd.disabled = true;
+                        btnAdd.innerText = 'Đang lưu...';
+                        try {
+                            const addRes = await fetch(`${API_URL}/collections/${col.MaBST}/documents`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ maTL: currentMaTL })
+                            });
+                            
+                            const addData = await addRes.json();
+                            if (addRes.ok) {
+                                btnAdd.style.background = '#10B981';
+                                btnAdd.style.color = 'white';
+                                btnAdd.style.borderColor = '#10B981';
+                                btnAdd.innerText = 'Đã lưu';
+                                setTimeout(() => { modalSaveCol.style.display = 'none'; }, 1000);
+                            } else {
+                                alert(addData.message || 'Lỗi thêm vào bộ sưu tập');
+                                btnAdd.disabled = false;
+                                btnAdd.innerText = 'Lưu';
+                            }
+                        } catch (e) {
+                            console.error(e);
+                            btnAdd.disabled = false;
+                            btnAdd.innerText = 'Lưu';
+                        }
+                    });
+                    
+                    colListContainer.appendChild(item);
+                });
+            } catch (err) {
+                console.error(err);
+                colListContainer.innerHTML = '<p style="text-align:center;color:red;">Lỗi tải bộ sưu tập.</p>';
+            }
+        });
+    }
+
+    if (btnCloseSaveCol) {
+        btnCloseSaveCol.addEventListener('click', () => {
+            modalSaveCol.style.opacity = '0';
+            setTimeout(() => {
+                modalSaveCol.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 300);
+        });
+    }
+
+    const btnOpenCreateCollection = document.getElementById('btn-open-create-collection');
+    const modalCreate = document.getElementById('create-collection-modal');
+    const btnCancelCreate = document.getElementById('btn-cancel-collection');
+    const btnSubmitCreate = document.getElementById('btn-submit-collection');
+
+    if (btnOpenCreateCollection && modalCreate) {
+        const inputName = document.getElementById('input-collection-name');
+        
+        const validateForm = () => {
+            const val = inputName.value.trim();
+            if (val) {
+                btnSubmitCreate.disabled = false;
+                btnSubmitCreate.style.opacity = '1';
+                btnSubmitCreate.style.cursor = 'pointer';
+            } else {
+                btnSubmitCreate.disabled = true;
+                btnSubmitCreate.style.opacity = '0.5';
+                btnSubmitCreate.style.cursor = 'not-allowed';
+            }
+        };
+
+        if (inputName) {
+            inputName.addEventListener('input', validateForm);
+        }
+
+        const closeCreateModal = () => {
+            modalCreate.style.opacity = '0';
+            setTimeout(() => {
+                modalCreate.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 300);
+        };
+
+        btnOpenCreateCollection.addEventListener('click', () => {
+            if (inputName) inputName.value = '';
+            document.getElementById('input-collection-desc').value = '';
+            validateForm();
+            
+            modalSaveCol.style.opacity = '0';
+            setTimeout(() => {
+                modalSaveCol.style.display = 'none';
+                modalCreate.style.display = 'flex';
+                modalCreate.style.opacity = '1';
+                document.body.style.overflow = 'hidden';
+            }, 300);
+        });
+
+        if (btnCancelCreate) {
+            btnCancelCreate.addEventListener('click', closeCreateModal);
+        }
+
+        if (btnSubmitCreate) {
+            btnSubmitCreate.addEventListener('click', async () => {
+                const tenBST = document.getElementById('input-collection-name').value;
+                const moTa = document.getElementById('input-collection-desc').value;
+                if (!tenBST.trim()) return alert('Vui lòng nhập tên bộ sưu tập');
+
+                try {
+                    btnSubmitCreate.disabled = true;
+                    const res = await fetch(`${API_URL}/collections`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ tenBST, moTa })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        closeCreateModal();
+                        setTimeout(() => {
+                            if (btnSaveCollection) btnSaveCollection.click();
+                        }, 300);
+                    } else {
+                        alert(data.message || 'Lỗi tạo bộ sưu tập');
+                    }
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    btnSubmitCreate.disabled = false;
+                }
+            });
+        }
+    }
+});

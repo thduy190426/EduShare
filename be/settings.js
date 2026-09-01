@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { adminMiddleware } = require('./middlewares/auth');
+const { superAdminMiddleware } = require('./middlewares/auth');
 
 router.get('/', async (req, res) => {
     try {
@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.put('/', adminMiddleware, async (req, res) => {
+router.put('/', superAdminMiddleware, async (req, res) => {
     const updates = req.body; 
 
     if (!updates || typeof updates !== 'object') {

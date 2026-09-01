@@ -463,13 +463,13 @@ async function fetchRecommendedDocuments() {
         if (!response.ok) throw new Error('Lỗi fetch dữ liệu gợi ý');
         const data = await response.json();
         if (!data.documents || data.documents.length === 0) {
-            grid.innerHTML = '<p style="text-align:center;width:100%;color:#6b7280;">Chưa có gợi ý nào cho bạn lúc này.</p>';
+            grid.innerHTML = renderInlineState('fa-sparkles', 'Chưa có gợi ý nào cho bạn lúc này.');
         } else {
             renderHomeDocuments(data.documents, 'recommendedDocGrid');
         }
     } catch (error) {
         console.error('Lỗi tải tài liệu gợi ý:', error);
-        document.getElementById('recommendedDocGrid').innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải dữ liệu gợi ý.</p>';
+        document.getElementById('recommendedDocGrid').innerHTML = renderInlineState('fa-triangle-exclamation', 'Không thể tải dữ liệu gợi ý lúc này.');
     }
 }
 async function fetchFollowingFeed() {
@@ -536,7 +536,7 @@ async function fetchTopContributors() {
     } catch (error) {
         console.error('Lỗi tải leaderboard:', error);
         const list = document.getElementById('leaderboardList');
-        if (list) list.innerHTML = '<p style="text-align:center;width:100%;color:red;">Không thể tải bảng xếp hạng.</p>';
+        if (list) list.innerHTML = '<p style="text-align:center;width:100%;color:red;column-span:all;">Không thể tải bảng xếp hạng.</p>';
     }
 }
 async function fetchTrendingDocuments() {
@@ -553,7 +553,7 @@ async function fetchTrendingDocuments() {
         console.error('Lỗi khi tải tài liệu xu hướng:', error);
         const grid = document.getElementById('trendingDocGrid');
         if (grid) {
-            grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Không thể tải dữ liệu tài liệu lúc này.</p>';
+            grid.innerHTML = renderInlineState('fa-triangle-exclamation', 'Không thể tải dữ liệu tài liệu lúc này.');
         }
     }
 }
@@ -571,7 +571,7 @@ async function fetchLatestDocuments() {
         console.error('Lỗi khi tải tài liệu mới nhất:', error);
         const grid = document.getElementById('homeDocGrid');
         if (grid) {
-            grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Không thể tải dữ liệu tài liệu lúc này.</p>';
+            grid.innerHTML = renderInlineState('fa-triangle-exclamation', 'Không thể tải dữ liệu tài liệu lúc này.');
         }
     }
 }
@@ -581,7 +581,7 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
     grid.innerHTML = '';
     const top4 = documents.slice(0, 4);
     if (top4.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chưa có tài liệu nào trên hệ thống.</p>';
+        grid.innerHTML = renderInlineState('fa-file', 'Chưa có tài liệu nào trên hệ thống.');
         return;
     }
     top4.forEach(doc => {
@@ -663,3 +663,5 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
         grid.appendChild(card);
     });
 }
+
+

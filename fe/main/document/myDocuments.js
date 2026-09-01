@@ -6,6 +6,7 @@ let currentTab = 'uploaded';
 let uploadedDocs = [];
 let bookmarkedDocs = [];
 let downloadedDocs = [];
+let recentlyViewedDocs = [];
 let subjects = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,9 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabs();
 
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'bookmarks') {
-        const bookmarkTab = document.querySelector('.tab-item[data-tab="bookmarks"]');
-        if (bookmarkTab) bookmarkTab.click();
+    if (urlParams.get('tab')) {
+        const tab = urlParams.get('tab');
+        const tabEl = document.querySelector(`.tab-item[data-tab="${tab}"]`);
+        if (tabEl) tabEl.click();
     }
 
     fetchAllData();
@@ -84,10 +86,11 @@ async function fetchAllData() {
     try {
         const headers = { 'Authorization': `Bearer ${token}` };
 
-        const [uploadRes, bookmarkRes, downloadRes, subjectRes] = await Promise.all([
+        const [uploadRes, bookmarkRes, downloadRes, recentRes, subjectRes] = await Promise.all([
             fetch(`${API_URL}/users/my-documents`, { headers }),
             fetch(`${API_URL}/users/bookmarks`, { headers }),
             fetch(`${API_URL}/users/download-history`, { headers }),
+            fetch(`${API_URL}/users/recently-viewed`, { headers }),
             fetch(`${API_URL}/documents/subjects`)
         ]);
 
@@ -107,6 +110,13 @@ async function fetchAllData() {
             const dlData = await downloadRes.json();
             downloadedDocs = dlData.documents || [];
             document.getElementById('count-downloads').textContent = downloadedDocs.length;
+        }
+
+        if (recentRes.ok) {
+            const rcData = await recentRes.json();
+            recentlyViewedDocs = rcData.documents || [];
+            const countEl = document.getElementById('count-recently-viewed');
+            if (countEl) countEl.textContent = recentlyViewedDocs.length;
         }
 
         if (subjectRes.ok) {
@@ -141,6 +151,7 @@ function renderTable() {
     if (currentTab === 'uploaded') docsToRender = uploadedDocs;
     else if (currentTab === 'bookmarks') docsToRender = bookmarkedDocs;
     else if (currentTab === 'downloads') docsToRender = downloadedDocs;
+    else if (currentTab === 'recentlyViewed') docsToRender = recentlyViewedDocs;
 
     const statusFilter = document.getElementById('filter-status')?.value || 'all';
     const subjectFilter = document.getElementById('filter-subject')?.value || 'all';
@@ -202,6 +213,7 @@ function renderTable() {
         let dateField = doc.NgayDang;
         if (currentTab === 'bookmarks' && doc.NgayLuu) dateField = doc.NgayLuu;
         if (currentTab === 'downloads' && doc.NgayTai) dateField = doc.NgayTai;
+        if (currentTab === 'recentlyViewed' && doc.NgayXem) dateField = doc.NgayXem;
         const dateObj = new Date(dateField);
         const timeStr = `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}:${String(dateObj.getSeconds()).padStart(2, '0')}`;
         const dateOnlyStr = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`;

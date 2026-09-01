@@ -56,6 +56,8 @@ async function run() {
         await addColumnIfMissing('NGUOIDUNG', 'KhoaNganh', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'TwoFactorSecret', 'VARCHAR(255) DEFAULT NULL');
         await addColumnIfMissing('NGUOIDUNG', 'IsTwoFactorEnabled', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('NGUOIDUNG', 'FailedLoginAttempts', 'INT DEFAULT 0');
+        await addColumnIfMissing('NGUOIDUNG', 'LockoutUntil', 'DATETIME DEFAULT NULL');
         await pool.execute('ALTER TABLE NGUOIDUNG MODIFY COLUMN GioiTinh VARCHAR(20) DEFAULT NULL');
         await pool.execute(`
             UPDATE NGUOIDUNG
@@ -127,6 +129,18 @@ async function run() {
                 FOREIGN KEY (MaTL) REFERENCES TAILIEU(MaTL)
             )
         `);
+
+        await createTableIfMissing('LICH_SU_XEM', `
+            CREATE TABLE LICH_SU_XEM (
+                MaND INT NOT NULL,
+                MaTL INT NOT NULL,
+                NgayXem DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (MaND, MaTL),
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE,
+                FOREIGN KEY (MaTL) REFERENCES TAILIEU(MaTL) ON DELETE CASCADE
+            )
+        `);
+
         await createTableIfMissing('LICH_SU_XU', `
             CREATE TABLE LICH_SU_XU (
                 MaGD INT AUTO_INCREMENT PRIMARY KEY,
@@ -256,6 +270,33 @@ async function run() {
                 PRIMARY KEY (MaND, MaNV),
                 FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND) ON DELETE CASCADE,
                 FOREIGN KEY (MaNV) REFERENCES NHIEMVU(MaNV) ON DELETE CASCADE
+            )
+        `);
+
+        await createTableIfMissing('ADMIN_DASHBOARD_SUMMARY', `
+            CREATE TABLE ADMIN_DASHBOARD_SUMMARY (
+                Id INT PRIMARY KEY DEFAULT 1,
+                TotalUsers INT DEFAULT 0,
+                TotalDocuments INT DEFAULT 0,
+                TotalDownloads INT DEFAULT 0,
+                PendingReports INT DEFAULT 0,
+                PendingDocs INT DEFAULT 0,
+                PendingPayments INT DEFAULT 0,
+                PendingTeachers INT DEFAULT 0,
+                PendingSubjects INT DEFAULT 0,
+                TotalRevenue INT DEFAULT 0,
+                DataJSON JSON DEFAULT NULL,
+                LastUpdated DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+
+        await createTableIfMissing('IDEMPOTENCY_KEYS', `
+            CREATE TABLE IDEMPOTENCY_KEYS (
+                IdempotencyKey VARCHAR(100) PRIMARY KEY,
+                MaND INT NOT NULL,
+                ApiEndpoint VARCHAR(255),
+                NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND)
             )
         `);
     } finally {

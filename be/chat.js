@@ -41,14 +41,14 @@ router.get('/contacts', authMiddleware, async (req, res) => {
                 M.DaChinhSua as LatestMessageEdited,
                 IFNULL(C.DaGhim, 0) as IsPinned,
                 IFNULL(C.DaChan, 0) as IsBlocked,
-                (SELECT COUNT(*) FROM TINNHAN WHERE NguoiGui = ND.MaND AND NguoiNhan = ? AND DaDoc = FALSE AND (C.NgayXoa IS NULL OR NgayGui > C.NgayXoa)) as UnreadCount
+                (SELECT COUNT(*) FROM TINNHAN WHERE NguoiGui = ND.MaND AND NguoiNhan = ? AND DaDoc = FALSE AND DaXoa_NguoiNhan = FALSE AND (C.NgayXoa IS NULL OR NgayGui > C.NgayXoa)) as UnreadCount
             FROM NGUOIDUNG ND
             INNER JOIN (
                 SELECT 
                     IF(NguoiGui = ?, NguoiNhan, NguoiGui) as PartnerId,
                     MAX(MaTN) as MaxMaTN
                 FROM TINNHAN
-                WHERE NguoiGui = ? OR NguoiNhan = ?
+                WHERE (NguoiGui = ? AND DaXoa_NguoiGui = FALSE) OR (NguoiNhan = ? AND DaXoa_NguoiNhan = FALSE)
                 GROUP BY PartnerId
             ) as LastMsg ON ND.MaND = LastMsg.PartnerId
             INNER JOIN TINNHAN M ON LastMsg.MaxMaTN = M.MaTN
@@ -78,7 +78,7 @@ router.get('/history/:partnerId', authMiddleware, async (req, res) => {
                 SELECT MaTN, NguoiGui, NguoiNhan, NoiDung, DaDoc, NgayGui, LoaiTinNhan, DaThuHoi, Reactions, DaChinhSua, DaNhan, TraLoiCho_MaTN
                 FROM TINNHAN
                 LEFT JOIN CAIDAT_CHAT C ON C.MaND = ? AND C.MaND_DoiTac = ?
-                WHERE ((NguoiGui = ? AND NguoiNhan = ?) OR (NguoiGui = ? AND NguoiNhan = ?))
+                WHERE ((NguoiGui = ? AND NguoiNhan = ? AND DaXoa_NguoiGui = FALSE) OR (NguoiGui = ? AND NguoiNhan = ? AND DaXoa_NguoiNhan = FALSE))
                   AND (C.NgayXoa IS NULL OR NgayGui > C.NgayXoa)
                 ORDER BY NgayGui DESC
                 LIMIT ?
@@ -252,6 +252,30 @@ router.put('/unsend/:messageId', authMiddleware, async (req, res) => {
         res.status(200).json({ message: 'Thu hồi thành công.' });
     } catch (error) {
         console.error('Lỗi khi thu hồi tin nhắn:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.put('/delete-message-for-me/:messageId', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.MaND;
+        const messageId = req.params.messageId;
+        const pool = req.app.locals.pool;
+
+        const [msgRows] = await pool.execute('SELECT NguoiGui, NguoiNhan FROM TINNHAN WHERE MaTN = ?', [messageId]);
+        if (msgRows.length === 0) return res.status(404).json({ message: 'Tin nhắn không tồn tại' });
+        
+        const msg = msgRows[0];
+        if (msg.NguoiGui === userId) {
+            await pool.execute('UPDATE TINNHAN SET DaXoa_NguoiGui = TRUE WHERE MaTN = ?', [messageId]);
+        } else if (msg.NguoiNhan === userId) {
+            await pool.execute('UPDATE TINNHAN SET DaXoa_NguoiNhan = TRUE WHERE MaTN = ?', [messageId]);
+        } else {
+            return res.status(403).json({ message: 'Không có quyền xóa' });
+        }
+        res.status(200).json({ message: 'Xóa thành công.' });
+    } catch (error) {
+        console.error('Lỗi khi xóa tin nhắn:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

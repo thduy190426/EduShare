@@ -81,6 +81,11 @@
       .auth-form-wrapper { max-width: 440px; margin: 0 auto; }
     }
     
+    @media (max-width: 768px) {
+      .auth-right { padding: 32px 24px; }
+      .auth-form-wrapper { max-width: 100%; }
+    }
+    
     @media (max-width: 480px) {
       .auth-right { padding: 24px 16px; }
       .auth-header h2 { font-size: 24px; }

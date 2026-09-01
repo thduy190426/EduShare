@@ -284,7 +284,23 @@ function renderUsers(users) {
         btn.addEventListener('click', (e) => window.toggleEmail(e.currentTarget));
     });
     document.querySelectorAll('.role-select').forEach(select => {
-        select.addEventListener('change', (e) => window.changeRole(e.currentTarget.dataset.id, e.currentTarget.value));
+        select.addEventListener('change', (e) => {
+            const role = e.currentTarget.value;
+            const adminSelect = e.currentTarget.nextElementSibling;
+            if (role === 'Admin') {
+                adminSelect.style.display = 'inline-block';
+                adminSelect.disabled = false;
+            } else {
+                adminSelect.style.display = 'none';
+                adminSelect.disabled = true;
+            }
+            window.changeRole(e.currentTarget.dataset.id, role, adminSelect.value);
+        });
+    });
+    document.querySelectorAll('.admin-role-select').forEach(select => {
+        select.addEventListener('change', (e) => {
+            window.changeRole(e.currentTarget.dataset.id, 'Admin', e.currentTarget.value);
+        });
     });
     document.querySelectorAll('.btn-toggle-status').forEach(btn => {
         btn.addEventListener('click', (e) => window.toggleStatus(e.currentTarget.dataset.id, e.currentTarget.dataset.status));

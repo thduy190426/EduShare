@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giỏ hàng - EduShare</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <link rel="stylesheet" href="../../css/user/userProfile.css">
+    <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+    <link rel="stylesheet" href="../../css/shared/footer.css">
+    <link rel="stylesheet" href="../../css/user/cart.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-graduation-cap"></i> EduShare</a>
+    <div class="nav-actions">
+      <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo">
+        <i class="fa-solid fa-bell"></i>
+        <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+      </button>
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">U</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Đang tải...</span>
+          <span class="user-role" id="navUserRole"></span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside class="sidebar" id="app-sidebar"></aside>
+
+    <main class="content-area">
+      <nav aria-label="breadcrumb" class="breadcrumb-container">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Giỏ hàng</li>
+        </ol>
+      </nav>
+
+      <div class="page-header" style="margin-bottom: 24px;">
+                <h1 class="page-title">Giỏ hàng của bạn</h1>
+                <p class="page-subtitle">Kiểm tra và thanh toán tài liệu</p>
+            </div>
+
+            <div class="cart-container">
+                <div class="cart-items-list" id="cart-list">
+                    <div class="loading-spinner"></div>
+                </div>
+
+                <div class="cart-summary">
+                    <h3 style="margin-bottom: 24px; font-size: 18px;"><i class="fa-solid fa-receipt" style="margin-right: 8px; color: var(--primary);"></i> Tóm tắt đơn hàng</h3>
+                    
+                    <div class="summary-row">
+                        <span><i class="fa-solid fa-file-lines" style="color: var(--text-secondary); margin-right: 6px;"></i> Số lượng tài liệu:</span>
+                        <span id="summary-count" style="font-weight: 500; color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="summary-row">
+                        <span><i class="fa-solid fa-coins" style="color: var(--text-secondary); margin-right: 6px;"></i> Tạm tính:</span>
+                        <span id="summary-subtotal" style="font-weight: 500; color: var(--text-primary);">0 Xu</span>
+                    </div>
+                    <div class="summary-row" id="discount-row" style="display: none; color: var(--success);">
+                        <span><i class="fa-solid fa-tag" style="color: var(--success); margin-right: 6px;"></i> Giảm giá:</span>
+                        <span id="summary-discount">-0 Xu</span>
+                    </div>
+
+                    <div class="promo-box">
+                        <input type="text" id="promo-input" class="form-control" placeholder="Mã khuyến mãi" style="flex: 1; text-transform: uppercase;">
+                        <button id="btn-apply-promo" class="btn btn-outline-primary" style="padding: 8px 16px;">Áp dụng</button>
+                    </div>
+
+                    <div class="summary-total">
+                        <span><i class="fa-solid fa-wallet" style="color: var(--primary); margin-right: 6px;"></i> Tổng cộng:</span>
+                        <span id="summary-total">0 Xu</span>
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px;">
+                            <span><i class="fa-solid fa-piggy-bank" style="color: var(--text-secondary); margin-right: 6px;"></i> Số dư của bạn:</span>
+                            <span id="user-balance" style="font-weight: 600;">Đang tải...</span>
+                        </div>
+                        <button id="btn-checkout" class="btn btn-primary" style="width: 100%; justify-content: center; font-size: 16px; padding: 12px; border-radius: 8px;">
+                            <i class="fa-solid fa-credit-card" style="margin-right: 8px;"></i> Thanh toán ngay
+                        </button>
+                    </div>
+                </div>
+            </div>
+      </div>
+      
+      <footer class="footer" style="margin-top: 48px;">
+        <div class="container">
+          <div class="footer-grid">
+            <div class="footer-branding">
+              <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-graduation-cap"></i> EduShare</a>
+              <p class="footer-desc">Nền tảng chia sẻ tài liệu học tập miễn phí giúp cộng đồng học sinh, sinh viên và giảng viên dễ dàng tiếp cận nguồn tri thức phong phú.</p>
+            </div>
+            <div class="footer-col">
+              <h4>Về chúng tôi</h4>
+              <div class="footer-links">
+                <a href="../guest/about.html">Giới thiệu</a>
+                <a href="../guest/terms.html">Điều khoản dịch vụ</a>
+                <a href="../guest/privacy.html">Chính sách bảo mật</a>
+                <a href="../guest/contact.html">Liên hệ</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Hỗ trợ</h4>
+              <div class="footer-links">
+                <a href="../guest/helpCenter.html">Trung tâm trợ giúp</a>
+                <a href="../guest/guide.html">Hướng dẫn đăng tài liệu</a>
+                <a href="../guest/copyright.html">Quy định bản quyền</a>
+              </div>
+            </div>
+            <div class="footer-col">
+              <h4>Cộng đồng</h4>
+              <div class="footer-links">
+                <a href="../guest/forum.html">Diễn đàn</a>
+                <a href="../group/groupList.html">Nhóm học tập</a>
+                <a href="../guest/blog.html">Blog</a>
+              </div>
+            </div>
+          </div>
+          <div class="footer-bottom">
+            &copy; 2026 EduShare. Tất cả các quyền được bảo lưu.
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script type="module" src="../../main/user/cart.js"></script>
+</body>
+</html>

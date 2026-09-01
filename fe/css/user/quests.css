@@ -171,9 +171,15 @@ body, input, button, textarea, select {
     }
 
 .quests-container {
-    max-width: 800px;
-    margin: 40px auto;
-    padding: 20px;
+    width: 100%;
+    margin: 40px 0;
+    padding: 0;
+}
+
+#questsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+    gap: 24px;
 }
 
 .quests-header {
@@ -200,7 +206,6 @@ body, input, button, textarea, select {
     background: var(--bg-card, #ffffff);
     border-radius: 16px;
     padding: 25px;
-    margin-bottom: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     display: flex;
     align-items: center;
@@ -219,13 +224,45 @@ body, input, button, textarea, select {
 }
 
 .quest-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-color, #1f2937);
     margin-bottom: 8px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 10px;
+}
+
+.quest-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-color, #1f2937);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.quest-name i {
+    margin-top: 4px;
+}
+
+.quest-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 4px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.dark-mode .quest-badge {
+    background: rgba(67, 56, 202, 0.2);
+    color: #818cf8;
 }
 
 .quest-desc {

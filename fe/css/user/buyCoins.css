@@ -320,3 +320,6 @@ body {
   cursor: not-allowed;
   pointer-events: none;
 }
+
+*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+

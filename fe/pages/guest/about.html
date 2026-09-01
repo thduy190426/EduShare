@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -63,15 +63,15 @@
       <h2><i class="fa-solid fa-users" style="color: var(--primary-color); margin-right: 10px;"></i>Những con số nổi bật</h2>
       <div style="display: flex; gap: 20px; text-align: center; margin: 30px 0; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 150px; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.3s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
-          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">500K+</div>
+          <div id="stat-users" style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">...</div>
           <div style="color: #64748b; margin-top: 5px; font-weight: 500;">Thành viên</div>
         </div>
         <div style="flex: 1; min-width: 150px; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.3s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
-          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">1M+</div>
+          <div id="stat-documents" style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">...</div>
           <div style="color: #64748b; margin-top: 5px; font-weight: 500;">Tài liệu chia sẻ</div>
         </div>
         <div style="flex: 1; min-width: 150px; padding: 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; transition: transform 0.3s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
-          <div style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">50+</div>
+          <div id="stat-schools" style="font-size: 2rem; font-weight: 700; color: var(--primary-color);">...</div>
           <div style="color: #64748b; margin-top: 5px; font-weight: 500;">Trường Đại học</div>
         </div>
       </div>
@@ -125,6 +125,28 @@
     </div>
   </footer>
 
+  <script src="../../main/shared/utils.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const response = await fetch(`${API_URL}/public/stats`);
+        if (response.ok) {
+          const data = await response.json();
+          document.getElementById('stat-users').innerText = formatNumber(data.totalUsers) + '+';
+          document.getElementById('stat-documents').innerText = formatNumber(data.totalDocuments) + '+';
+          document.getElementById('stat-schools').innerText = formatNumber(data.totalSchools) + '+';
+        }
+      } catch (error) {
+        console.error('Error fetching public stats:', error);
+      }
+    });
+
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return num.toString();
+    }
+  </script>
 </body>
 </html>
 
