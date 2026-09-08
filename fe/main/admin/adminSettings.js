@@ -50,6 +50,16 @@ async function loadSettings(token) {
                 document.getElementById('desc_MAX_REPORTS_AUTO_HIDE').textContent = settings.MAX_REPORTS_AUTO_HIDE.moTa;
                 initialSettings.MAX_REPORTS_AUTO_HIDE = settings.MAX_REPORTS_AUTO_HIDE.giaTri;
             }
+            if (settings.MAX_REPORTS_AUTO_BAN) {
+                document.getElementById('MAX_REPORTS_AUTO_BAN').value = settings.MAX_REPORTS_AUTO_BAN.giaTri;
+                document.getElementById('desc_MAX_REPORTS_AUTO_BAN').textContent = settings.MAX_REPORTS_AUTO_BAN.moTa;
+                initialSettings.MAX_REPORTS_AUTO_BAN = settings.MAX_REPORTS_AUTO_BAN.giaTri;
+            }
+            if (settings.BAD_WORDS) {
+                document.getElementById('BAD_WORDS').value = settings.BAD_WORDS.giaTri;
+                document.getElementById('desc_BAD_WORDS').textContent = settings.BAD_WORDS.moTa;
+                initialSettings.BAD_WORDS = settings.BAD_WORDS.giaTri;
+            }
             if (settings.MAX_UPLOAD_SIZE_MB) {
                 document.getElementById('MAX_UPLOAD_SIZE_MB').value = settings.MAX_UPLOAD_SIZE_MB.giaTri;
                 document.getElementById('desc_MAX_UPLOAD_SIZE_MB').textContent = settings.MAX_UPLOAD_SIZE_MB.moTa;
@@ -111,6 +121,8 @@ function validateForm() {
     const currentRate = document.getElementById('XU_TO_VND_RATE').value;
     const currentDocs = document.getElementById('MAX_DOCS_PER_GROUP').value;
     const currentReports = document.getElementById('MAX_REPORTS_AUTO_HIDE').value;
+    const currentBanReports = document.getElementById('MAX_REPORTS_AUTO_BAN').value;
+    const currentBadWords = document.getElementById('BAD_WORDS').value;
     const currentUploadSize = document.getElementById('MAX_UPLOAD_SIZE_MB').value;
     const currentAvatarSize = document.getElementById('MAX_AVATAR_SIZE_MB').value;
     const currentAvatarChanges = document.getElementById('MAX_AVATAR_CHANGES').value;
@@ -124,6 +136,8 @@ function validateForm() {
     const isChanged = currentRate !== initialSettings.XU_TO_VND_RATE ||
                       currentDocs !== initialSettings.MAX_DOCS_PER_GROUP ||
                       currentReports !== initialSettings.MAX_REPORTS_AUTO_HIDE ||
+                      currentBanReports !== initialSettings.MAX_REPORTS_AUTO_BAN ||
+                      currentBadWords !== initialSettings.BAD_WORDS ||
                       currentUploadSize !== initialSettings.MAX_UPLOAD_SIZE_MB ||
                       currentAvatarSize !== initialSettings.MAX_AVATAR_SIZE_MB ||
                       currentAvatarChanges !== initialSettings.MAX_AVATAR_CHANGES ||
@@ -134,7 +148,7 @@ function validateForm() {
                       currentDocReward !== initialSettings.DOC_APPROVAL_REWARD_XU ||
                       currentMaxDocPrice !== initialSettings.MAX_DOC_PRICE_XU;
 
-    const isValid = currentRate > 0 && currentDocs > 0 && currentReports > 0 && 
+    const isValid = currentRate > 0 && currentDocs > 0 && currentReports > 0 && currentBanReports > 0 && currentBadWords.trim().length > 0 && 
                     currentUploadSize > 0 && currentAvatarSize > 0 && 
                     currentAvatarChanges > 0 && currentAvatarReset > 0 &&
                     currentDefaultPageSize > 0 && currentOtpExpiry > 0 && currentJwtExpiry > 0 &&
@@ -158,6 +172,8 @@ function setupForm(token) {
             XU_TO_VND_RATE: document.getElementById('XU_TO_VND_RATE').value,
             MAX_DOCS_PER_GROUP: document.getElementById('MAX_DOCS_PER_GROUP').value,
             MAX_REPORTS_AUTO_HIDE: document.getElementById('MAX_REPORTS_AUTO_HIDE').value,
+            MAX_REPORTS_AUTO_BAN: document.getElementById('MAX_REPORTS_AUTO_BAN').value,
+            BAD_WORDS: document.getElementById('BAD_WORDS').value,
             MAX_UPLOAD_SIZE_MB: document.getElementById('MAX_UPLOAD_SIZE_MB').value,
             MAX_AVATAR_SIZE_MB: document.getElementById('MAX_AVATAR_SIZE_MB').value,
             MAX_AVATAR_CHANGES: document.getElementById('MAX_AVATAR_CHANGES').value,
@@ -189,6 +205,8 @@ function setupForm(token) {
                 initialSettings.XU_TO_VND_RATE = updates.XU_TO_VND_RATE;
                 initialSettings.MAX_DOCS_PER_GROUP = updates.MAX_DOCS_PER_GROUP;
                 initialSettings.MAX_REPORTS_AUTO_HIDE = updates.MAX_REPORTS_AUTO_HIDE;
+                initialSettings.MAX_REPORTS_AUTO_BAN = updates.MAX_REPORTS_AUTO_BAN;
+                initialSettings.BAD_WORDS = updates.BAD_WORDS;
                 initialSettings.MAX_UPLOAD_SIZE_MB = updates.MAX_UPLOAD_SIZE_MB;
                 initialSettings.MAX_AVATAR_SIZE_MB = updates.MAX_AVATAR_SIZE_MB;
                 initialSettings.MAX_AVATAR_CHANGES = updates.MAX_AVATAR_CHANGES;

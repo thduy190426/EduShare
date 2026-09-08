@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, adminMiddleware } = require('./middlewares/auth');
-const { sendNotificationToUser } = require('./services/socket');
+const { authMiddleware, adminMiddleware } = require('../middlewares/auth');
+const { sendNotificationToUser } = require('../services/socket');
 
 router.get('/', async (req, res) => {
     try {

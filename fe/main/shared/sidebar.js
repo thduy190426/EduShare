@@ -27,7 +27,9 @@ const SIDEBAR_ITEMS = [
     { label: 'Mã ưu đãi', icon: 'fa-ticket', href: '../admin/adminPromos.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
     { label: 'Gói nạp', icon: 'fa-box-open', href: '../admin/adminPackages.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
     { label: 'Nhật ký (Logs)', icon: 'fa-clipboard-list', href: '../admin/adminAuditLogs.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
-    { label: 'Cấu hình hệ thống', icon: 'fa-gear', href: '../admin/adminSettings.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' }
+    { label: 'Cấu hình hệ thống', icon: 'fa-gear', href: '../admin/adminSettings.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Sao lưu dữ liệu', icon: 'fa-database', href: '../admin/adminBackups.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' },
+    { label: 'Gửi Mail Hàng Loạt', icon: 'fa-envelope-open-text', href: '../admin/adminMassMail.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], group: 'admin' }
 ];
 
 async function renderSidebar() {
@@ -68,7 +70,7 @@ async function renderSidebar() {
             const badgeId = item.badge ? `id="badge-${item.badge}"` : '';
             const badgeHtml = item.badge ? `<span class="badge" ${badgeId} style="display:none;">0</span>` : '';
             html += `
-                <a href="${item.href}" class="menu-item ${isActive}">
+                <a href="${item.href}" class="menu-item ${isActive}" draggable="false">
                     <span class="menu-icon"><i class="fa-solid ${item.icon}"></i></span>
                     <span class="menu-text">${item.label}</span>
                     ${badgeHtml}
@@ -86,7 +88,7 @@ async function renderSidebar() {
             const badgeId = item.badge ? `id="badge-${item.badge}"` : '';
             const badgeHtml = item.badge ? `<span class="badge" ${badgeId} style="display:none;">0</span>` : '';
             html += `
-                <a href="${item.href}" class="menu-item ${isActive}">
+                <a href="${item.href}" class="menu-item ${isActive}" draggable="false">
                     <span class="menu-icon"><i class="fa-solid ${item.icon}"></i></span>
                     <span class="menu-text">${item.label}</span>
                     ${badgeHtml}
@@ -104,7 +106,7 @@ async function renderSidebar() {
             <div class="sidebar-toggle" id="btn-toggle-sidebar">
                 <i class="fa-solid ${toggleIconClass}" id="icon-toggle-sidebar" style="font-size: 14px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--border); background-color: var(--white); color: var(--text-secondary); box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: all 0.2s ease;"></i>
             </div>
-            <a href="#" id="btn-logout-sidebar" class="menu-item" style="color: var(--danger);">
+            <a href="#" id="btn-logout-sidebar" class="menu-item" style="color: var(--danger);" draggable="false">
                 <span class="menu-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
                 <span class="menu-text">Đăng xuất</span>
             </a>
@@ -117,6 +119,7 @@ async function renderSidebar() {
     }, 120);
 
     setupSidebarNavigation(sidebarEl);
+    setupSidebarResizer(sidebarEl);
 
     const btnLogout = document.getElementById('btn-logout-sidebar');
     if (btnLogout) {
@@ -173,28 +176,26 @@ async function renderSidebar() {
     const btnToggle = document.getElementById('btn-toggle-sidebar');
     
     let isManuallyCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-    let isHoveringSidebar = false;
-    let ignoreHoverUntilLeave = false;
 
     const updateSidebarState = () => {
         const iconEl = document.getElementById('icon-toggle-sidebar');
+        const savedWidth = localStorage.getItem('custom-sidebar-width');
         
-        if (isManuallyCollapsed && (!isHoveringSidebar || ignoreHoverUntilLeave)) {
+        if (isManuallyCollapsed) {
             document.documentElement.classList.add('sidebar-collapsed');
+            document.documentElement.style.removeProperty('--sidebar-width');
             if (iconEl) {
                 iconEl.classList.remove('fa-arrow-left', 'fa-bars');
                 iconEl.classList.add('fa-arrow-right');
             }
         } else {
             document.documentElement.classList.remove('sidebar-collapsed');
+            if (savedWidth) {
+                document.documentElement.style.setProperty('--sidebar-width', savedWidth);
+            }
             if (iconEl) {
-                if (isManuallyCollapsed) {
-                    iconEl.classList.remove('fa-arrow-left', 'fa-bars');
-                    iconEl.classList.add('fa-arrow-right');
-                } else {
-                    iconEl.classList.remove('fa-arrow-right', 'fa-bars');
-                    iconEl.classList.add('fa-arrow-left');
-                }
+                iconEl.classList.remove('fa-arrow-right', 'fa-bars');
+                iconEl.classList.add('fa-arrow-left');
             }
         }
     };
@@ -203,26 +204,10 @@ async function renderSidebar() {
         document.documentElement.classList.add('sidebar-collapsed');
     }
 
-    sidebarEl.addEventListener('mouseenter', () => {
-        isHoveringSidebar = true;
-        updateSidebarState();
-    });
-
-    sidebarEl.addEventListener('mouseleave', () => {
-        isHoveringSidebar = false;
-        ignoreHoverUntilLeave = false;
-        updateSidebarState();
-    });
-
     if (btnToggle) {
         btnToggle.addEventListener('click', () => {
             isManuallyCollapsed = !isManuallyCollapsed;
             localStorage.setItem('sidebar-collapsed', isManuallyCollapsed);
-            
-            if (isManuallyCollapsed) {
-                ignoreHoverUntilLeave = true;
-            }
-            
             updateSidebarState();
         });
     }
@@ -269,6 +254,8 @@ function setupSidebarNavigation(sidebarEl) {
             event.preventDefault();
             document.documentElement.classList.remove('sidebar-animated');
             document.documentElement.classList.add('page-is-leaving');
+            
+            navLinks.forEach(nav => nav.classList.remove('active'));
             link.classList.add('active');
 
             window.setTimeout(() => {
@@ -450,15 +437,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (decoded) userRole = decoded.VaiTro;
     }
 
+    const savedWidth = localStorage.getItem('custom-sidebar-width');
+    if (savedWidth && localStorage.getItem('sidebar-collapsed') !== 'true' && window.innerWidth > 992) {
+        document.documentElement.style.setProperty('--sidebar-width', savedWidth);
+    }
+
     renderSidebar();
     renderNavbarUserProfile();
     setupUserProfileNavigation();
     setupNotificationNavigation();
     setupRealtimeNotifications();
 
-    if (window.location.pathname.includes('/admin/')) {
-        makeAdminTablesResizableAndSticky();
-    }
+    makeAdminTablesResizableAndSticky();
     
     setupCommandPalette(userRole);
 });
@@ -747,3 +737,48 @@ window.refreshSidebarBadges = async function() {
         }
     }
 };
+
+function setupSidebarResizer(sidebarEl) {
+    if (window.innerWidth <= 992) return;
+
+    let resizer = document.getElementById('sidebar-resizer');
+    if (!resizer) {
+        resizer = document.createElement('div');
+        resizer.id = 'sidebar-resizer';
+        resizer.className = 'sidebar-resizer';
+        sidebarEl.appendChild(resizer);
+    }
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+        if (document.documentElement.classList.contains('sidebar-collapsed')) return;
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = parseInt(getComputedStyle(sidebarEl, null).getPropertyValue('width'), 10);
+        resizer.classList.add('is-resizing');
+        document.body.style.userSelect = 'none';
+        document.documentElement.classList.remove('sidebar-animated');
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const width = startWidth + (e.clientX - startX);
+        if (width >= 200 && width <= 400) {
+            document.documentElement.style.setProperty('--sidebar-width', width + 'px');
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('is-resizing');
+            document.body.style.userSelect = '';
+            document.documentElement.classList.add('sidebar-animated');
+            const finalWidth = getComputedStyle(sidebarEl, null).getPropertyValue('width');
+            localStorage.setItem('custom-sidebar-width', finalWidth);
+        }
+    });
+}

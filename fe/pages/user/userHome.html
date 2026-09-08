@@ -13,6 +13,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
+  <link rel="stylesheet" href="../../css/shared/searchWidget.css">
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
 <body>
   
@@ -22,7 +25,7 @@
       <i class="fa-solid fa-book"></i> EduShare
     </a>
     
-    <div class="nav-search">
+    <div class="nav-search" data-intro="Bạn có thể tìm kiếm tài liệu, môn học, giáo trình một cách nhanh chóng tại đây." data-title="Thanh Tìm Kiếm" data-step="1">
       <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
       <input type="text" placeholder="Tìm kiếm tài liệu, môn học, giáo trình...">
     </div>
@@ -37,7 +40,7 @@
         <i class="fa-solid fa-bell"></i>
         <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
       </button>
-            <div class="user-profile" id="userProfileNav">
+            <div class="user-profile" id="userProfileNav" data-intro="Quản lý thông tin cá nhân, xem lịch sử giao dịch và cài đặt bảo mật." data-title="Hồ Sơ Cá Nhân" data-step="5">
         <div class="avatar" id="navAvatar">?</div>
         <div class="user-info">
           <span class="user-name" id="navUserName">Đang tải...</span>
@@ -49,7 +52,7 @@
 
   <div class="main-layout">
     
-    <aside id="app-sidebar" class="sidebar"></aside>
+    <aside id="app-sidebar" class="sidebar" data-intro="Menu điều hướng chính. Xem tài liệu của bạn, nhóm học tập và các tiện ích khác." data-title="Thanh Công Cụ Chức Năng" data-step="2"></aside>
 
     
     <main class="content-area">
@@ -60,7 +63,7 @@
             <h1 class="hero-title">Chào buổi sáng, <span id="heroUserName">Người dùng</span>!</h1>
             <p class="hero-subtitle">Bạn đang có <strong id="heroUserCoin" style="color: #F59E0B;">0</strong> EduCoin <i class="fa-solid fa-circle-info" title="EduCoin là điểm thưởng dùng để mở khóa tài liệu. Bạn có thể kiếm thêm xu bằng cách đăng tải tài liệu hữu ích cho cộng đồng." style="cursor: help; color: rgba(255,255,255,0.7); margin-left: 4px; font-size: 14px;"></i>. Hãy tiếp tục chia sẻ tài liệu để nhận thêm xu nhé.</p>
             <div class="hero-action" style="margin-top: 24px;">
-              <a href="../document/uploadDocument.html" class="btn-hero-primary"><i class="fa-solid fa-cloud-arrow-up"></i> Tải tài liệu lên</a>
+              <a href="../document/uploadDocument.html" class="btn-hero-primary" data-intro="Đóng góp tài liệu lên hệ thống để nhận EduCoin và chia sẻ kiến thức với mọi người." data-title="Tải Tài Liệu Lên" data-step="3"><i class="fa-solid fa-cloud-arrow-up"></i> Tải tài liệu lên</a>
             </div>
           </div>
         </div>
@@ -73,6 +76,28 @@
           <div class="leaderboard-list" id="leaderboardList">
 
           </div>
+        </div>
+      </div>
+
+      <div class="ai-assistant-container compact" id="aiAssistantContainer" data-intro="Trợ lý AI sẽ giúp bạn tóm tắt tài liệu, giải đáp câu hỏi và tìm kiếm nhanh chóng." data-title="Trợ Lý AI" data-step="4">
+        <div class="ai-input-wrapper">
+          <div class="ai-icon-inline"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <input type="text" id="aiAssistantInput" placeholder="Hỏi Trợ lý AI EduShare về tài liệu, môn học..." autocomplete="off">
+          <span class="ai-badge-inline">BETA</span>
+          <button type="button" id="btn-ai-submit" title="Gửi câu hỏi" disabled>
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+        </div>
+        <div class="ai-suggestions">
+          <button type="button" class="ai-chip" data-query="Tóm tắt tài liệu"><i class="fa-solid fa-bolt"></i> Tóm tắt tài liệu</button>
+          <button type="button" class="ai-chip" data-query="Đề cương ôn tập"><i class="fa-solid fa-book-open"></i> Đề cương ôn tập</button>
+          <button type="button" class="ai-chip" data-query="Giải bài tập"><i class="fa-solid fa-calculator"></i> Giải bài tập</button>
+        </div>
+        <div class="ai-result-area" id="aiResultArea" style="display: none;">
+          <div class="ai-typing-indicator" id="aiTypingIndicator" style="display: none;">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="ai-response-content" id="aiResponseContent"></div>
         </div>
       </div>
 
@@ -183,11 +208,11 @@
 
       </div>
     </div>
-  </div>
-
-  <script type="module" src="../../main/user/home.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    </div>
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+    <script type="module" src="../../main/user/home.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
 </body>
 </html>
-

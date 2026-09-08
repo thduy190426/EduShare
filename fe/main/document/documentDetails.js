@@ -12,12 +12,82 @@ let currentUserMaND = null;
 let currentUserRole = null;
 let allComments = [];
 let documentOwnerId = null;
+let hasDownloadedDoc = false;
+let isDownloading = false;
+let currentDocMetadata = null;
+
+function checkCommentEligibility() {
+    const btnSubmitComment = document.getElementById('btn-submit-comment');
+    const placeholder = document.getElementById('comment-placeholder');
+    const editorContainer = document.getElementById('comment-editor-container');
+
+    if (!token) return;
+
+    if (currentUserRole === 'SinhVien' && currentUserMaND !== documentOwnerId) {
+        if (!hasDownloadedDoc || !hasSubmittedRating) {
+            if (placeholder) {
+                placeholder.innerHTML = 'Bạn cần tải và đánh giá tài liệu trước khi bình luận.';
+                placeholder.style.pointerEvents = 'none';
+                placeholder.style.cursor = 'not-allowed';
+                placeholder.style.opacity = '0.7';
+            }
+            if (editorContainer) {
+                editorContainer.innerHTML = '';
+            }
+            if (btnSubmitComment) {
+                btnSubmitComment.style.display = 'none';
+            }
+            const replyBtns = document.querySelectorAll('.reply-btn');
+            replyBtns.forEach(btn => btn.style.display = 'none');
+        } else {
+            if (placeholder && !window.commentEditor) {
+                placeholder.innerHTML = 'Viết bình luận hoặc đặt câu hỏi về tài liệu này...';
+                placeholder.style.pointerEvents = 'auto';
+                placeholder.style.cursor = 'text';
+                placeholder.style.opacity = '1';
+            }
+            if (btnSubmitComment) {
+                btnSubmitComment.style.display = 'inline-flex';
+            }
+            const replyBtns = document.querySelectorAll('.reply-btn');
+            replyBtns.forEach(btn => btn.style.display = 'inline-flex');
+        }
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     if ('scrollRestoration' in history) {
         history.scrollRestoration = 'manual';
     }
     window.scrollTo(0, 0);
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.more-options-btn');
+        const isMenuClick = e.target.closest('.comment-options-menu');
+        
+        if (isMenuClick) {
+            setTimeout(() => {
+                document.querySelectorAll('.comment-options-menu').forEach(m => m.style.display = 'none');
+            }, 100);
+            return;
+        }
+
+        if (!btn) {
+            document.querySelectorAll('.comment-options-menu').forEach(m => m.style.display = 'none');
+            return;
+        }
+
+        e.stopPropagation();
+        const wrapper = btn.closest('.comment-options-wrapper');
+        const menu = wrapper.querySelector('.comment-options-menu');
+        const isVisible = menu.style.display === 'flex';
+        
+        document.querySelectorAll('.comment-options-menu').forEach(m => m.style.display = 'none');
+        
+        if (!isVisible) {
+            menu.style.display = 'flex';
+        }
+    });
 
     const urlParams = new URLSearchParams(window.location.search);
     currentMaTL = urlParams.get('id');
@@ -32,9 +102,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const payload = decodeJWT(token);
             if (payload) {
-                currentUserMaND = payload.MaND;
-                currentUserRole = payload.VaiTro;
-                if (payload.VaiTro === 'GiaoVien' || payload.VaiTro === 'Admin') {
+                currentUserMaND = payload.MaND || parseInt(payload.nameid);
+                currentUserRole = payload.VaiTro || payload.role;
+                if (currentUserRole === 'GiaoVien' || currentUserRole === 'Admin') {
                     const btnVerify = document.getElementById('btn-verify');
                     if (btnVerify) btnVerify.style.display = 'flex';
                 }
@@ -98,7 +168,8 @@ async function fetchDocumentDetails() {
         }
 
         const data = await response.json();
-        renderDocumentInfo(data.document, data.hasPurchased);
+        currentDocMetadata = data.document;
+        renderDocumentInfo(data.document, data.hasPurchased, data.isPremium);
         const bcTitle = document.getElementById('bc-doc-title');
         if (bcTitle && data.document.TenTL) bcTitle.textContent = data.document.TenTL;
         updateSEO(data.document.TenTL, data.document.TextSEO || data.document.MoTa);
@@ -141,11 +212,12 @@ async function fetchDocumentDetails() {
         const ratingHint = document.querySelector('.rating-count');
         if (data.hasRated) {
             lockRatingUI('Cảm ơn bạn đã đánh giá');
-        } else if (token && currentUserRole === 'SinhVien' && currentUserMaND !== data.document.MaND_NguoiDang && ratingHint) {
-            ratingHint.textContent = 'Vui lòng đánh giá trước khi tải xuống';
         } else if (token && ratingHint) {
             ratingHint.textContent = 'Bấm vào sao để đánh giá';
         }
+
+        hasDownloadedDoc = data.hasDownloaded;
+        checkCommentEligibility();
     } catch (error) {
         console.error(error);
         Swal.fire('Không thể tải chi tiết tài liệu. Tài liệu có thể không tồn tại hoặc chưa được duyệt.');
@@ -208,10 +280,23 @@ function renderRelatedDocuments(documents) {
             ? '<span class="related-official" style="background: #FEF3C7; color: #B45309;"><i class="fa-solid fa-crown" style="color: #F59E0B;"></i></span>'
             : '';
 
-        item.innerHTML = `
+        const thumbUrl = doc.ThumbnailURL;
+        let thumbHtml = `
             <div class="related-thumb ${thumbClass}">
                 <i class="fa-solid ${icon}"></i>
-            </div>
+            </div>`;
+            
+        if (thumbUrl) {
+            const fullThumbUrl = thumbUrl.startsWith('http') ? thumbUrl : `${API_URL}${thumbUrl}`;
+            thumbHtml = `
+            <div class="related-thumb" style="padding: 0; overflow: hidden; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <img src="${fullThumbUrl}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fa-solid ${icon}" style="font-size: 24px; color: #94a3b8; display: none;"></i>
+            </div>`;
+        }
+
+        item.innerHTML = `
+            ${thumbHtml}
             <div class="related-info">
                 <div class="related-name">${escapeHTML(doc.TenTL)} ${officialBadge} ${premiumBadge}</div>
                 <div class="related-meta">${escapeHTML(doc.TenMonHoc || 'Không có môn học')}</div>
@@ -226,7 +311,7 @@ function renderRelatedDocuments(documents) {
     });
 }
 
-function renderDocumentInfo(doc, hasPurchased) {
+function renderDocumentInfo(doc, hasPurchased, isPremium) {
     if (doc.IsDeleted) {
         document.querySelector('.document-header').insertAdjacentHTML('beforebegin', `
             <div style="background-color: #FEF3C7; color: #92400E; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #F59E0B; display: flex; align-items: center; gap: 10px;">
@@ -464,29 +549,58 @@ function renderDocumentInfo(doc, hasPurchased) {
     const previewContainer = document.getElementById('doc-preview-container');
     const previewContent = document.getElementById('doc-preview-content');
     
-    if (previewContainer && previewContent && doc.FileURL) {
+    if (previewContainer && previewContent) {
         const loaiFilePreview = doc.LoaiFile ? doc.LoaiFile.toLowerCase() : '';
-        const canPreview = !doc.LaTaiLieuDocQuyen || hasPurchased || isAuthor || isPrivileged;
+        const canPreview = isPremium || hasPurchased || isAuthor || isPrivileged;
         
-        if (canPreview && (loaiFilePreview === 'pdf' || loaiFilePreview === 'docx' || loaiFilePreview === 'doc')) {
+        if (canPreview && (loaiFilePreview === 'pdf' || loaiFilePreview === 'docx' || loaiFilePreview === 'doc' || loaiFilePreview === 'pptx' || loaiFilePreview === 'ppt') && doc.FileURL) {
             previewContainer.style.display = 'block';
             const fullFileUrl = getAssetUrl(doc.FileURL);
             
             if (loaiFilePreview === 'pdf') {
-                previewContent.innerHTML = `<iframe src="${fullFileUrl}" width="100%" height="600px" style="border: none;"></iframe>`;
+                previewContent.innerHTML = `<div style="text-align: center; padding: 40px;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--primary);"></i><p style="margin-top: 10px; color: var(--text-secondary);">Đang tối ưu hiển thị tài liệu...</p></div>`;
+                
+                (async () => {
+                    try {
+                        const { PDFDocument } = window.PDFLib;
+                        const res = await fetch(fullFileUrl);
+                        if (!res.ok) throw new Error("Fetch failed");
+                        const arrayBuffer = await res.arrayBuffer();
+                        const pdfDoc = await PDFDocument.load(arrayBuffer);
+                        pdfDoc.setTitle(doc.TenTL);
+                        const pdfBytes = await pdfDoc.save();
+                        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        const blobUrl = URL.createObjectURL(blob);
+                        
+                        previewContent.innerHTML = `<iframe src="${blobUrl}" width="100%" height="600px" style="border: none; border-radius: 8px;"></iframe>`;
+                    } catch(e) {
+                        console.error("Lỗi fix title PDF, dùng bản gốc", e);
+                        previewContent.innerHTML = `<iframe src="${fullFileUrl}" width="100%" height="600px" style="border: none; border-radius: 8px;"></iframe>`;
+                    }
+                })();
             } else {
                 const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fullFileUrl)}`;
                 previewContent.innerHTML = `<iframe src="${officeViewerUrl}" width="100%" height="600px" style="border: none;"></iframe>`;
             }
-        } else if (!canPreview && (loaiFilePreview === 'pdf' || loaiFilePreview === 'docx' || loaiFilePreview === 'doc')) {
+        } else if (!canPreview && (loaiFilePreview === 'pdf' || loaiFilePreview === 'docx' || loaiFilePreview === 'doc' || loaiFilePreview === 'pptx' || loaiFilePreview === 'ppt')) {
              previewContainer.style.display = 'block';
-             previewContent.innerHTML = `
-                <div style="text-align: center; padding: 40px 20px;">
-                    <i class="fa-solid fa-lock" style="font-size: 48px; color: #F59E0B; margin-bottom: 16px;"></i>
-                    <h4 style="margin: 0 0 8px 0; color: #1E293B;">Tài liệu độc quyền</h4>
-                    <p style="color: #64748b; margin: 0;">Bạn cần mở khoá tài liệu này để xem trước nội dung.</p>
-                </div>
-             `;
+             if (loaiFilePreview === 'pdf') {
+                 const previewUrl = `${API_URL}/documents/${doc.MaTL}/preview-pdf`;
+                 previewContent.innerHTML = `
+                    <div style="background-color: #FEF3C7; color: #92400E; padding: 12px 16px; font-size: 14px; text-align: center; border-bottom: 1px solid #FDE68A;">
+                       <i class="fa-solid fa-eye" style="margin-right: 6px;"></i> Bạn đang xem trước một phần của tài liệu. Hãy nâng cấp Premium để xem toàn bộ nội dung.
+                    </div>
+                    <iframe src="${previewUrl}" width="100%" height="600px" style="border: none; border-radius: 0 0 8px 8px;"></iframe>
+                 `;
+             } else {
+                 previewContent.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px;">
+                        <i class="fa-solid fa-lock" style="font-size: 48px; color: #F59E0B; margin-bottom: 16px;"></i>
+                        <h4 style="margin: 0 0 8px 0; color: #1E293B;">Giới hạn xem trước</h4>
+                        <p style="color: #64748b; margin: 0;">Tài liệu Word/PowerPoint đang bị giới hạn xem trước. Vui lòng tải xuống để xem rõ toàn bộ nội dung.</p>
+                    </div>
+                 `;
+             }
         } else {
              previewContainer.style.display = 'none';
         }
@@ -524,6 +638,21 @@ function lockRatingUI(message = 'Cảm ơn bạn đã đánh giá') {
 }
 
 function setupEventListeners() {
+    const btnMoreOptions = document.getElementById('btn-more-options');
+    const moreOptionsMenu = document.getElementById('more-options-menu');
+    if (btnMoreOptions && moreOptionsMenu) {
+        btnMoreOptions.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = moreOptionsMenu.style.display === 'none';
+            moreOptionsMenu.style.display = isHidden ? 'flex' : 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!btnMoreOptions.contains(e.target) && !moreOptionsMenu.contains(e.target)) {
+                moreOptionsMenu.style.display = 'none';
+            }
+        });
+    }
     
     const btnVerify = document.getElementById('btn-verify');
     if (btnVerify) {
@@ -597,6 +726,36 @@ function setupEventListeners() {
             }).catch(err => {
                 console.error('Lỗi khi copy link:', err);
                 Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'error', title: 'Không thể copy link.' });
+            });
+        });
+    }
+
+    const btnEmbed = document.getElementById('btn-embed');
+    if (btnEmbed) {
+        btnEmbed.addEventListener('click', () => {
+            const embedUrl = `${window.location.origin}/pages/document/embed.html?id=${currentMaTL}`;
+            const iframeCode = `<iframe src="${embedUrl}" width="100%" height="600px" style="border: 1px solid #e2e8f0; border-radius: 8px;"></iframe>`;
+            
+            Swal.fire({
+                title: 'Mã nhúng tài liệu (Embed)',
+                html: `
+                    <p style="font-size: 14px; text-align: left; color: #64748b; margin-bottom: 8px;">Copy đoạn mã HTML dưới đây và dán vào website của bạn:</p>
+                    <textarea id="embed-textarea" readonly style="width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 13px; resize: none; background: #f8fafc;">${iframeCode}</textarea>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-copy"></i> Copy Mã Nhúng',
+                cancelButtonText: 'Đóng',
+                confirmButtonColor: '#2563EB',
+                preConfirm: () => {
+                    const textarea = document.getElementById('embed-textarea');
+                    textarea.select();
+                    document.execCommand('copy');
+                    return true;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, icon: 'success', title: 'Đã copy mã nhúng!' });
+                }
             });
         });
     }
@@ -727,9 +886,9 @@ function setupEventListeners() {
                 if (res.ok) {
                     const newScore = parseFloat(data.average).toFixed(1);
                     document.getElementById('doc-rating-score').textContent = newScore;
-                    const ratingHint = document.querySelector('.rating-count');
                     updateStarUI(Math.round(newScore));
                     lockRatingUI('Cảm ơn bạn đã đánh giá');
+                    checkCommentEligibility();
                     Swal.fire('Cảm ơn bạn đã đánh giá.');
                 } else {
                     Swal.fire(data.message);
@@ -832,6 +991,92 @@ function setupEventListeners() {
                 submitComment(noiDung, null);
             });
         });
+    }
+
+    const btnCitation = document.getElementById('btn-citation');
+    const citationModal = document.getElementById('citationModal');
+    const btnCloseCitationModal = document.getElementById('btn-close-citation-modal');
+    const citationFormatSelect = document.getElementById('citation-format');
+    const citationContent = document.getElementById('citation-content');
+    const btnCopyCitation = document.getElementById('btn-copy-citation');
+
+    if (btnCitation && citationModal) {
+        btnCitation.addEventListener('click', () => {
+            citationModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            requestAnimationFrame(() => {
+                citationModal.style.opacity = '1';
+                citationModal.querySelector('.modal-content').style.transform = 'scale(1)';
+            });
+            updateCitationText();
+        });
+
+        if (btnCloseCitationModal) {
+            btnCloseCitationModal.addEventListener('click', () => {
+                closeCitationModal();
+            });
+        }
+
+        citationModal.addEventListener('click', (e) => {
+            if (e.target === citationModal) {
+                closeCitationModal();
+            }
+        });
+
+        if (citationFormatSelect) {
+            citationFormatSelect.addEventListener('change', () => {
+                updateCitationText();
+            });
+        }
+
+        if (btnCopyCitation) {
+            btnCopyCitation.addEventListener('click', () => {
+                if (!citationContent) return;
+                const textToCopy = citationContent.textContent;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = btnCopyCitation.innerHTML;
+                    btnCopyCitation.innerHTML = '<i class="fa-solid fa-check" style="color: #10B981;"></i> Đã copy';
+                    setTimeout(() => {
+                        btnCopyCitation.innerHTML = originalText;
+                    }, 2000);
+                });
+            });
+        }
+
+        function closeCitationModal() {
+            citationModal.style.opacity = '0';
+            citationModal.querySelector('.modal-content').style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                citationModal.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 300);
+        }
+
+        function updateCitationText() {
+            if (!currentDocMetadata || !citationContent) return;
+            const format = citationFormatSelect ? citationFormatSelect.value : 'APA';
+            const title = currentDocMetadata.TenTL || '';
+            const author = currentDocMetadata.TenNguoiDang || 'Người dùng';
+            const year = currentDocMetadata.NgayTao ? new Date(currentDocMetadata.NgayTao).getFullYear() : new Date().getFullYear();
+            const url = window.location.href;
+
+            let text = '';
+            switch (format) {
+                case 'APA':
+                    text = `${author}. (${year}). ${title}. EduShare. ${url}`;
+                    break;
+                case 'MLA':
+                    text = `${author}. "${title}." EduShare, ${year}, ${url}.`;
+                    break;
+                case 'Harvard':
+                    text = `${author}, ${year}. ${title}. [trực tuyến] EduShare. Có tại: ${url}.`;
+                    break;
+                case 'Chicago':
+                    text = `${author}. "${title}." EduShare. ${year}. ${url}.`;
+                    break;
+            }
+            citationContent.textContent = text;
+        }
     }
 }
 
@@ -1061,13 +1306,26 @@ function renderComments(comments, documentOwnerId) {
         const pinnedBadge = comment.DaGhim ? `<span style="font-size: 11px; background: #FEF3C7; color: #B45309; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i class="fa-solid fa-thumbtack" style="margin-right: 4px;"></i> Đã ghim</span>` : '';
         const editedBadge = comment.DaChinhSua ? `<span style="font-size: 11px; color: #6B7280; margin-left: 8px;">(Đã chỉnh sửa)</span>` : '';
 
-        const deleteBtnHtml = canDelete ? `<span class="comment-action delete-btn" data-id="${comment.MaBL}" style="color: #EF4444; margin-left: 12px;"><i class="fa-solid fa-trash-can" style="margin-right: 4px;"></i> Xóa</span>` : '';
+        const deleteBtnHtml = canDelete ? `<div class="comment-action delete-btn" data-id="${comment.MaBL}" style="color: #EF4444; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s;"><i class="fa-solid fa-trash-can"></i> Xóa</div>` : '';
         const editBtnHtml = isCommentOwner ? `<span class="comment-action edit-btn" data-id="${comment.MaBL}" style="color: #3B82F6; margin-left: 12px;"><i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Chỉnh sửa</span>` : '';
 
         let pinBtnHtml = '';
         if (isDocOwner) {
             const pinText = comment.DaGhim ? 'Bỏ ghim' : 'Ghim';
-            pinBtnHtml = `<span class="comment-action pin-btn" data-id="${comment.MaBL}" data-pinned="${comment.DaGhim ? '1' : '0'}" style="color: #F59E0B; margin-left: 12px;"><i class="fa-solid fa-thumbtack" style="margin-right: 4px;"></i> ${pinText}</span>`;
+            pinBtnHtml = `<div class="comment-action pin-btn" data-id="${comment.MaBL}" data-pinned="${comment.DaGhim ? '1' : '0'}" style="color: #F59E0B; padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s;"><i class="fa-solid fa-thumbtack"></i> ${pinText}</div>`;
+        }
+
+        let moreOptionsHtml = '';
+        if (canDelete || isDocOwner) {
+            moreOptionsHtml = `
+            <div class="comment-options-wrapper" style="position: relative; display: inline-block; margin-left: 12px;">
+                <span class="comment-action more-options-btn" style="cursor: pointer; color: #6B7280; display: inline-flex; align-items: center;"><i class="fa-solid fa-ellipsis"></i></span>
+                <div class="comment-options-menu" style="display: none; flex-direction: column; position: absolute; left: 0; top: 100%; margin-top: 4px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); min-width: 120px; overflow: hidden; z-index: 50;">
+                    ${pinBtnHtml}
+                    ${deleteBtnHtml}
+                </div>
+            </div>
+            `;
         }
 
         item.innerHTML = `
@@ -1083,8 +1341,7 @@ function renderComments(comments, documentOwnerId) {
               <div class="comment-actions">
                 <span class="comment-action reply-btn" data-id="${comment.MaBL}"><i class="fa-solid fa-reply" style="margin-right: 4px;"></i> Phản hồi</span>
                 ${editBtnHtml}
-                ${deleteBtnHtml}
-                ${pinBtnHtml}
+                ${moreOptionsHtml}
               </div>
             </div>
             <div class="comment-edit-form" id="comment-edit-form-${comment.MaBL}" style="display: none; flex: 1; flex-direction: column;">
@@ -1379,13 +1636,15 @@ async function handleDownload() {
         return;
     }
 
-    if (currentUserRole === 'SinhVien' && !hasSubmittedRating && currentUserMaND !== documentOwnerId) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Yêu cầu đánh giá',
-            text: 'Theo quy định, bạn cần đánh giá tài liệu (bấm vào các ngôi sao bên phải) trước khi tải xuống.'
-        });
-        return;
+    if (isDownloading) return;
+    isDownloading = true;
+    const btnDownload = document.getElementById('btn-download');
+    const originalDownloadHTML = btnDownload ? btnDownload.innerHTML : '';
+    
+    if (btnDownload) {
+        btnDownload.innerHTML = '<span><i class="fa-solid fa-spinner fa-spin"></i></span> Đang tải...';
+        btnDownload.style.pointerEvents = 'none';
+        btnDownload.style.opacity = '0.7';
     }
 
     try {
@@ -1419,9 +1678,16 @@ async function handleDownload() {
 
             const countEl = document.getElementById('doc-downloads');
             countEl.textContent = (parseInt(countEl.textContent.replace(/,/g, '')) + 1).toLocaleString();
-            const ratingHint = document.querySelector('.rating-count');
-            if (ratingHint && !hasSubmittedRating) {
-                ratingHint.textContent = 'Bấm vào sao để đánh giá.';
+            
+            hasDownloadedDoc = true;
+            checkCommentEligibility();
+
+            if (!hasSubmittedRating && currentUserRole === 'SinhVien' && currentUserMaND !== documentOwnerId) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Tải thành công',
+                    text: 'Vui lòng đánh giá tài liệu (bấm vào các ngôi sao) để có thể bình luận!'
+                });
             }
         } else {
             const errData = await res.json();
@@ -1430,6 +1696,15 @@ async function handleDownload() {
     } catch (err) {
         console.error(err);
         Swal.fire('Lỗi kết nối máy chủ.');
+    } finally {
+        setTimeout(() => {
+            isDownloading = false;
+            if (btnDownload) {
+                btnDownload.innerHTML = originalDownloadHTML;
+                btnDownload.style.pointerEvents = 'auto';
+                btnDownload.style.opacity = '1';
+            }
+        }, 5000);
     }
 }
 
@@ -1621,3 +1896,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+
+document.addEventListener('DOMContentLoaded', () => {
+});
+
+const donateInterval = setInterval(() => {
+    const btnDonateAuthor = document.getElementById('btn-donate-author');
+    if (btnDonateAuthor && typeof documentOwnerId !== 'undefined' && typeof currentUserMaND !== 'undefined') {
+        clearInterval(donateInterval);
+        
+        if (token && currentUserMaND !== documentOwnerId) {
+            (async () => {
+                try {
+                    const res = await fetch(`${API_URL}/users/profile`, { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.SoDuXu >= 10) {
+                            btnDonateAuthor.style.display = 'inline-flex';
+                            if (!btnDonateAuthor.dataset.hasListener) {
+                                btnDonateAuthor.addEventListener('click', handleDonateXuAuthor);
+                                btnDonateAuthor.dataset.hasListener = 'true';
+                            }
+                        }
+                    }
+                } catch (e) { console.error(e); }
+            })();
+        }
+    }
+}, 500);
+
+async function handleDonateXuAuthor() {
+    const { value: formValues } = await Swal.fire({
+        title: 'Tặng Xu cho Tác giả',
+        html:
+            '<input id="swal-input-amount" class="swal2-input" placeholder="Số Xu (tối thiểu 10)" type="number" min="10">' +
+            '<textarea id="swal-input-message" class="swal2-textarea" placeholder="Lời nhắn (tùy chọn)"></textarea>' +
+            '<div style="font-size: 13px; color: #64748b; margin-top: 10px; text-align: left;">* Phí giao dịch 10% sẽ được trừ vào số Xu người nhận được. Giao dịch từ 500 Xu trở lên cần xác thực OTP.</div>',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Tặng Xu',
+        cancelButtonText: 'Hủy',
+        preConfirm: () => {
+            const amount = document.getElementById('swal-input-amount').value;
+            const message = document.getElementById('swal-input-message').value;
+            if (!amount || amount < 10) {
+                Swal.showValidationMessage('Số Xu tối thiểu là 10');
+                return false;
+            }
+            return { amount: parseInt(amount), message };
+        }
+    });
+
+    if (formValues) {
+        processDonateAuthor(formValues.amount, formValues.message);
+    }
+}
+
+async function processDonateAuthor(amount, message, otp = null) {
+    try {
+        const body = { receiverId: documentOwnerId, amount, message };
+        if (otp) body.otp = otp;
+
+        const res = await fetch(`${API_URL}/payment/donate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            Swal.fire('Thành công', `Đã tặng thành công ${amount} Xu! Người nhận đã nhận được ${data.receiveAmount} Xu (Trừ ${data.tax} Xu thuế).`, 'success');
+        } else if (res.status === 400 && data.requireOTP) {
+            const resOtp = await fetch(`${API_URL}/payment/donate/request-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ amount, receiverId: documentOwnerId })
+            });
+            const dataOtp = await resOtp.json();
+            if (resOtp.ok) {
+                const { value: otpValue } = await Swal.fire({
+                    title: 'Xác thực OTP',
+                    text: 'Mã OTP đã được gửi đến email của bạn. Vui lòng nhập mã để tiếp tục (Có hiệu lực 5 phút).',
+                    input: 'text',
+                    inputPlaceholder: 'Nhập mã OTP',
+                    showCancelButton: true,
+                    confirmButtonText: 'Xác nhận',
+                    preConfirm: (val) => {
+                        if (!val) {
+                            Swal.showValidationMessage('Vui lòng nhập mã OTP');
+                            return false;
+                        }
+                        return val;
+                    }
+                });
+                if (otpValue) {
+                    processDonateAuthor(amount, message, otpValue);
+                }
+            } else {
+                Swal.fire('Lỗi', dataOtp.message || 'Lỗi gửi OTP', 'error');
+            }
+        } else {
+            Swal.fire('Thất bại', data.message || 'Có lỗi xảy ra', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi', 'Không thể kết nối máy chủ', 'error');
+    }
+}

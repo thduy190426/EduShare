@@ -13,6 +13,8 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
 </head>
 <body>
   
@@ -50,19 +52,19 @@
         </ol>
       </nav>
       
-      <div class="page-header">
+      <div class="page-header" data-intro="Nhấn vào đây để tạo nhóm học tập mới của riêng bạn. Bạn có thể là Quản trị viên (Trưởng nhóm) quản lý nhóm này." data-title="Tạo Nhóm Mới" data-step="1">
         <h1 class="page-title">Nhóm học tập</h1>
         <button class="btn-primary" id="btn-create-group">
           <span><i class="fa-solid fa-plus"></i></span> Tạo nhóm mới
         </button>
       </div>
 
-      <div class="tabs-container">
+      <div class="tabs-container" data-intro="Chuyển đổi giữa việc khám phá tất cả các nhóm trên EduShare và những nhóm bạn đã tham gia." data-title="Điều Hướng Nhóm" data-step="2">
         <div class="tab-item active" id="tab-all-groups"><i class="fa-solid fa-compass"></i> Khám phá nhóm</div>
         <div class="tab-item" id="tab-my-groups"><i class="fa-solid fa-users"></i> Nhóm của tôi</div>
       </div>
 
-      <div class="filter-bar">
+      <div class="filter-bar" data-intro="Bạn có thể lọc nhóm theo số lượng thành viên, môn học, tính riêng tư hoặc tìm kiếm trực tiếp bằng tên nhóm." data-title="Bộ Lọc Tìm Kiếm" data-step="3">
         <div class="filter-controls">
           <select class="filter-select" id="filter-member-count">
             <option value="">Thành viên: Tất cả</option>
@@ -135,6 +137,10 @@
             <label class="form-label"><i class="fa-solid fa-align-left" style="margin-right:4px;"></i> Mô tả (tùy chọn)</label>
             <textarea id="new-group-desc" class="form-control" rows="3" placeholder="Nhập mô tả về nhóm..."></textarea>
           </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-scroll" style="margin-right:4px;"></i> Nội quy nhóm (tùy chọn)</label>
+            <textarea id="new-group-rules" class="form-control" rows="3" placeholder="Nhập nội quy nhóm (hiển thị trước khi xin gia nhập)..."></textarea>
+          </div>
           <div class="modal-footer">
             <button id="btn-cancel-create-group" class="btn-outline-primary" style="padding: 8px 16px; flex: none;"><i class="fa-solid fa-xmark" style="margin-right:4px;"></i> Hủy</button>
             <button id="btn-confirm-create-group" class="btn-primary" style="padding: 8px 16px; opacity: 0.6; pointer-events: none;" disabled><i class="fa-solid fa-check" style="margin-right:4px;"></i> Tạo nhóm</button>
@@ -163,6 +169,10 @@
             <label class="form-label">Mô tả (tùy chọn)</label>
             <textarea id="edit-group-desc" class="form-control" rows="3" placeholder="Nhập mô tả về nhóm..."></textarea>
           </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fa-solid fa-scroll" style="margin-right: 4px;"></i> Nội quy nhóm (Tùy chọn)</label>
+            <textarea id="edit-group-rules" class="form-control" rows="3" placeholder="Nhập nội quy nhóm (hiển thị trước khi xin gia nhập)..."></textarea>
+          </div>
           <div class="modal-footer">
             <button id="btn-cancel-edit-group" class="btn-outline-primary" style="padding: 8px 16px; flex: none;">Hủy</button>
             <button id="btn-confirm-edit-group" class="btn-primary" style="padding: 8px 16px;">Cập nhật</button>
@@ -173,9 +183,20 @@
     </main>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
   <script type="module" src="../../main/group/groups.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_group_list_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_group_list_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
 </body>
 </html>
-

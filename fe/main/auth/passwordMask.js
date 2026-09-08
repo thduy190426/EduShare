@@ -10,19 +10,15 @@ function setupPasswordMasking(visualId, realId, toggleBtnId) {
 
     if (!visualInput || !realInput) return;
 
-    // Apply basic transition styles
     visualInput.style.transition = 'letter-spacing 0.3s ease, color 0.3s ease';
     
-    // Sync initial value if any (e.g., from browser autofill)
     if (realInput.value && !visualInput.value) {
         realValue = realInput.value;
         visualInput.value = '*'.repeat(realValue.length);
         visualInput.style.letterSpacing = '2px';
     }
 
-    // Toggle visibility
     if (toggleBtn) {
-        // Clone to remove old listeners
         const newToggleBtn = toggleBtn.cloneNode(true);
         toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
         const newToggleIcon = newToggleBtn.querySelector('i');
@@ -80,9 +76,9 @@ function setupPasswordMasking(visualId, realId, toggleBtnId) {
         let masked = "";
         for(let i = 0; i < realValue.length; i++) {
             if (i === cursor - 1 && e.inputType !== 'deleteContentBackward' && e.inputType !== 'deleteContentForward') {
-                masked += realValue[i]; // Show the last typed character
+                masked += realValue[i];
             } else {
-                masked += '*'; // Asterisk for masked
+                masked += '*';
             }
         }
         visualInput.value = masked;
@@ -98,7 +94,7 @@ function setupPasswordMasking(visualId, realId, toggleBtnId) {
                     visualInput.setSelectionRange(cur, cur);
                 }
             }
-        }, 300); // 300ms delay for modern feel
+        }, 300);
     });
 
     visualInput.addEventListener('paste', (e) => {

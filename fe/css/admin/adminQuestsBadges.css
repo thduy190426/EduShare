@@ -4,3 +4,11 @@
         .modal-overlay.closing { opacity: 0; }
         .modal-content { transition: transform 0.25s ease; transform: scale(1); }
         .modal-overlay.closing .modal-content { transform: scale(0.95); }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                max-width: 90% !important;
+                margin: 0 auto !important;
+                padding: 16px !important;
+            }
+        }

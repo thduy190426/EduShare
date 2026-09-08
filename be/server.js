@@ -169,6 +169,25 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json());
+
+let idleTimeout = null;
+const IDLE_TIME = 5 * 60 * 1000;
+
+function resetIdleTimeout() {
+    if (idleTimeout) clearTimeout(idleTimeout);
+    idleTimeout = setTimeout(() => {
+        console.log('Hệ thống đã nhàn rỗi trong 5 phút. Đang tự động tắt...');
+        process.exit(0);
+    }, IDLE_TIME);
+}
+
+resetIdleTimeout();
+
+app.use((req, res, next) => {
+    resetIdleTimeout();
+    next();
+});
+
 app.use(requestLogger);
 app.use('/uploads', express.static('public/uploads'));
 
@@ -215,19 +234,22 @@ if (process.env.NODE_ENV !== 'test') {
 
 logger.divider('Routes');
 const routes = [
-    ['/api/documents', require('./upload')],
-    ['/api/admin', require('./admin')],
-    ['/api/users', require('./users')],
-    ['/api/notifications', require('./notifications')],
-    ['/api/groups', require('./groups')],
-    ['/api/subjects', require('./subjects')],
-    ['/api/payment', require('./payment')],
-    ['/api/settings', require('./settings')],
-    ['/api/chat', require('./chat')],
-    ['/api/badges', require('./badges')],
-    ['/api/quests', require('./quests')],
-    ['/api/collections', require('./collections')],
-    ['/api/cart', require('./cart')],
+    ['/api/auth', require('./routes/users')],
+    ['/api/admin', require('./routes/admin')],
+    ['/api/admin/backups', require('./routes/backups')],
+    ['/api/users', require('./routes/users')],
+    ['/api/documents', require('./routes/upload')],
+    ['/api/notifications', require('./routes/notifications')],
+    ['/api/groups', require('./routes/groups')],
+    ['/api/subjects', require('./routes/subjects')],
+    ['/api/payment', require('./routes/payment')],
+    ['/api/settings', require('./routes/settings')],
+    ['/api/chat', require('./routes/chat')],
+    ['/api/badges', require('./routes/badges')],
+    ['/api/quests', require('./routes/quests')],
+    ['/api/collections', require('./routes/collections')],
+    ['/api/cart', require('./routes/cart')],
+    ['/api/ai', require('./routes/ai')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -376,6 +398,10 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
             if (user.TrangThai === 'BiKhoa') {
                 return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
             }
+            if (user.TrangThai === 'VoHieuHoa') {
+                await pool.execute('UPDATE NGUOIDUNG SET TrangThai = "HoatDong" WHERE MaND = ?', [user.MaND]);
+                user.TrangThai = 'HoatDong';
+            }
             if (user.AuthType !== 'Google') {
                 await pool.execute('UPDATE NGUOIDUNG SET AuthType = "Google" WHERE MaND = ?', [user.MaND]);
                 user.AuthType = 'Google';
@@ -444,6 +470,121 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
     }
 });
 
+app.get('/api/auth/github/url', (req, res) => {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) {
+        return res.status(500).json({ message: 'GITHUB_CLIENT_ID not configured' });
+    }
+    const redirectUri = encodeURIComponent('http://localhost:3001/pages/auth/github-callback.html');
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user:email`;
+    res.json({ url });
+});
+
+app.post('/api/auth/github', loginLimiter, async (req, res) => {
+    const { code } = req.body;
+    if (!code) {
+        return res.status(400).json({ message: 'Missing Github code' });
+    }
+
+    try {
+        const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            },
+            body: JSON.stringify({
+                client_id: process.env.GITHUB_CLIENT_ID,
+                client_secret: process.env.GITHUB_CLIENT_SECRET,
+                code: code
+            })
+        });
+
+        const tokenData = await tokenResponse.json();
+        if (tokenData.error) {
+            logger.error('Github token error', tokenData);
+            return res.status(400).json({ message: 'Đăng nhập Github thất bại.' });
+        }
+
+        const accessToken = tokenData.access_token;
+
+        const userResponse = await fetch('https://api.github.com/user', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        const githubUser = await userResponse.json();
+
+        const emailsResponse = await fetch('https://api.github.com/user/emails', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        const emails = await emailsResponse.json();
+        const primaryEmail = emails.find(e => e.primary)?.email || emails[0]?.email;
+
+        if (!primaryEmail) {
+            return res.status(400).json({ message: 'Không thể lấy được email từ Github' });
+        }
+
+        const email = primaryEmail;
+        const name = githubUser.name || githubUser.login;
+        const avatarUrl = githubUser.avatar_url;
+        
+        let [users] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
+        let user = users[0];
+
+        if (user) {
+            if (user.TrangThai === 'BiKhoa') {
+                return res.status(403).json({ message: 'Tài khoản đã bị khóa.' });
+            }
+            if (user.TrangThai === 'VoHieuHoa') {
+                await pool.execute('UPDATE NGUOIDUNG SET TrangThai = "HoatDong" WHERE MaND = ?', [user.MaND]);
+                user.TrangThai = 'HoatDong';
+            }
+            if (user.AuthType !== 'Github') {
+                await pool.execute('UPDATE NGUOIDUNG SET AuthType = "Github" WHERE MaND = ?', [user.MaND]);
+                user.AuthType = 'Github';
+            }
+        } else {
+            const [result] = await pool.execute(
+                'INSERT INTO NGUOIDUNG (HoTen, Email, MatKhau, VaiTro, AvatarURL, TrangThai, AuthType) VALUES (?, ?, ?, "SinhVien", ?, "HoatDong", "Github")',
+                [name, email, '', avatarUrl]
+            );
+            user = {
+                MaND: result.insertId,
+                HoTen: name,
+                VaiTro: 'SinhVien',
+                AvatarURL: avatarUrl
+            };
+            logger.success(`New user registered via Github - id: ${result.insertId}`);
+        }
+
+        const jwtToken = jwt.sign(
+            { MaND: user.MaND, VaiTro: user.VaiTro, HoTen: user.HoTen, Email: user.Email, AvatarURL: user.AvatarURL },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        logger.success(`Github Login OK - id: ${user.MaND} role: ${user.VaiTro}`);
+
+        res.json({
+            message: 'Đăng nhập thành công',
+            token: jwtToken,
+            user: {
+                MaND: user.MaND,
+                HoTen: user.HoTen,
+                VaiTro: user.VaiTro,
+                AvatarURL: user.AvatarURL
+            }
+        });
+
+    } catch (error) {
+        logger.error('Github auth error', error);
+        res.status(400).json({ message: 'Đăng nhập Github thất bại. Vui lòng thử lại.' });
+    }
+});
+
 app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
     const { accessToken } = req.body;
     if (!accessToken) {
@@ -473,6 +614,10 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
             user = users[0];
             if (user.TrangThai === 'BiKhoa') {
                 return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
+            }
+            if (user.TrangThai === 'VoHieuHoa') {
+                await pool.execute('UPDATE NGUOIDUNG SET TrangThai = "HoatDong" WHERE MaND = ?', [user.MaND]);
+                user.TrangThai = 'HoatDong';
             }
             if (user.AuthType !== 'Facebook') {
                 await pool.execute('UPDATE NGUOIDUNG SET AuthType = "Facebook" WHERE MaND = ?', [user.MaND]);
@@ -568,6 +713,11 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
         if (user.TrangThai === 'BiKhoa') {
             logger.warn(`Blocked login attempt — email: ${email}`);
             return res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa.' });
+        }
+        if (user.TrangThai === 'VoHieuHoa') {
+            await pool.execute('UPDATE NGUOIDUNG SET TrangThai = "HoatDong" WHERE MaND = ?', [user.MaND]);
+            user.TrangThai = 'HoatDong';
+            logger.info(`Reactivated account via local login — email: ${email}`);
         }
 
         if (user.LockoutUntil && new Date(user.LockoutUntil) > new Date()) {

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-const { authMiddleware } = require('./middlewares/auth');
-const { sendNotificationToUser } = require('./services/socket');
+const { authMiddleware } = require('../middlewares/auth');
+const { sendNotificationToUser } = require('../services/socket');
 
 const parseId = (value) => {
     const id = Number.parseInt(value, 10);

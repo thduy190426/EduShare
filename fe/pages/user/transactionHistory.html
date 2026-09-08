@@ -59,8 +59,21 @@
         </div>
       </div>
 
-      <div class="card" id="transaction-card">
-        <table class="transaction-table">
+      <div class="filter-section" style="display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="filter-group" style="display: flex; flex-direction: column; gap: 5px;">
+          <label for="filter-start-date" style="font-size: 14px; font-weight: 500; color: #475569;">Từ ngày</label>
+          <input type="date" id="filter-start-date" class="form-control" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-family: inherit;">
+        </div>
+        <div class="filter-group" style="display: flex; flex-direction: column; gap: 5px;">
+          <label for="filter-end-date" style="font-size: 14px; font-weight: 500; color: #475569;">Đến ngày</label>
+          <input type="date" id="filter-end-date" class="form-control" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; font-family: inherit;">
+        </div>
+        <button id="btn-filter" class="btn btn-primary" style="padding: 8px 16px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; height: 38px;"><i class="fa-solid fa-filter"></i> Lọc</button>
+        <button id="btn-reset-filter" class="btn btn-secondary" style="padding: 8px 16px; background-color: #e2e8f0; color: #475569; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; height: 38px;"><i class="fa-solid fa-rotate-right"></i> Đặt lại</button>
+      </div>
+
+      <div class="card table-card" id="transaction-card">
+        <table class="transaction-table data-table">
           <thead>
             <tr>
               <th><i class="fa-regular fa-clock" style="margin-right: 6px;"></i> Thời gian</th>

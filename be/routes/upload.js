@@ -9,14 +9,15 @@ const https = require('https');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
+const fontkit = require('@pdf-lib/fontkit');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const officeParser = require('officeparser');
 const Tesseract = require('tesseract.js');
-const { convertPdfToImages } = require('./pdf-to-img');
-const { sendNotificationToUser } = require('./services/socket');
-const { updateQuestProgress } = require('./services/questService');
-const { generateAISummary } = require('./services/aiService');
+const { convertPdfToImages } = require('../services/pdf-to-img');
+const { sendNotificationToUser } = require('../services/socket');
+const { updateQuestProgress } = require('../services/questService');
+const { generateAISummary } = require('../services/aiService');
 
 async function extractTextFromFile(filePath, mimeType) {
     try {
@@ -115,11 +116,28 @@ const generatePreviewPdf = async (buffer) => {
     try {
         const originalDoc = await PDFDocument.load(buffer);
         const previewDoc = await PDFDocument.create();
-        const numPages = Math.min(3, originalDoc.getPageCount());
-        const copiedPages = await previewDoc.copyPages(originalDoc, Array.from({ length: numPages }, (_, i) => i));
-        const font = await previewDoc.embedFont(StandardFonts.Helvetica);
+        previewDoc.registerFontkit(fontkit);
+        const totalPages = originalDoc.getPageCount();
+        const allowedPages = Math.max(1, Math.ceil(totalPages * 0.35));
+        
+        const copiedPages = await previewDoc.copyPages(originalDoc, Array.from({ length: Math.min(allowedPages, totalPages) }, (_, i) => i));
+        
+        let font;
+        let customFontLoaded = false;
+        try {
+            const fontBytes = fs.readFileSync(path.join(__dirname, '../assets/Roboto-Regular.ttf'));
+            font = await previewDoc.embedFont(fontBytes);
+            customFontLoaded = true;
+        } catch (fontErr) {
+            console.error('Không thể load font custom, dùng font mặc định', fontErr);
+            font = await previewDoc.embedFont(StandardFonts.Helvetica);
+        }
+        
+        let firstPageSize = { width: 595.28, height: 841.89 }; // A4 default
+
         for (const page of copiedPages) {
             const { width, height } = page.getSize();
+            firstPageSize = { width, height };
             page.drawText('PREVIEW - EDUSHARE', {
                 x: width / 2 - 150,
                 y: height / 2,
@@ -131,6 +149,40 @@ const generatePreviewPdf = async (buffer) => {
             });
             previewDoc.addPage(page);
         }
+
+        if (totalPages > allowedPages) {
+            const message1 = customFontLoaded ? 'Trang tài liệu này đã bị làm mờ.' : 'Trang tai lieu nay da bi lam mo.';
+            const message2 = customFontLoaded ? 'Vui lòng nâng cấp Premium để xem toàn bộ nội dung.' : 'Vui long nang cap Premium de xem toan bo noi dung.';
+            
+            for (let i = allowedPages; i < totalPages; i++) {
+                const blankPage = previewDoc.addPage([firstPageSize.width, firstPageSize.height]);
+                
+                blankPage.drawRectangle({
+                    x: 0,
+                    y: 0,
+                    width: firstPageSize.width,
+                    height: firstPageSize.height,
+                    color: rgb(0.95, 0.95, 0.95),
+                });
+                
+                blankPage.drawText(message1, {
+                    x: firstPageSize.width / 2 - 140,
+                    y: firstPageSize.height / 2 + 20,
+                    size: 20,
+                    font: font,
+                    color: rgb(0.5, 0.5, 0.5)
+                });
+
+                blankPage.drawText(message2, {
+                    x: firstPageSize.width / 2 - (customFontLoaded ? 220 : 210),
+                    y: firstPageSize.height / 2 - 20,
+                    size: 18,
+                    font: font,
+                    color: rgb(0.4, 0.4, 0.4)
+                });
+            }
+        }
+
         const previewBytes = await previewDoc.save();
         return Buffer.from(previewBytes);
     } catch (e) {
@@ -154,10 +206,10 @@ const deleteFromCloudinary = async (fileUrl) => {
     }
 };
 const router = express.Router();
-const { authMiddleware, teacherMiddleware } = require('./middlewares/auth');
-const { uploadLimiter, rateLimiter, reportLimiter, downloadLimiter, commentLimiter } = require('./middlewares/rateLimit');
-const { scanFileVirus } = require('./services/virusScanner');
-const { moderationMiddleware } = require('./middlewares/moderation');
+const { authMiddleware, teacherMiddleware } = require('../middlewares/auth');
+const { uploadLimiter, rateLimiter, reportLimiter, downloadLimiter, commentLimiter } = require('../middlewares/rateLimit');
+const { scanFileVirus } = require('../services/virusScanner');
+const { moderationMiddleware } = require('../middlewares/moderation');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, os.tmpdir()),
     filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
@@ -619,7 +671,7 @@ router.get('/:maTL/related', async (req, res) => {
         const [relatedDocs] = await pool.execute(`
             SELECT
                 TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile,
-                TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
+                TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.LaTaiLieuDocQuyen,
                 TL.MaND_NguoiDang, ND.HoTen AS TenNguoiDang, ND.AvatarURL,
                 COALESCE(MH.TenMonHoc, 'Khong xac dinh') AS TenMonHoc,
                 COALESCE(ROUND(AVG(DG.SoSao), 1), 0) AS DiemDanhGia,
@@ -633,7 +685,7 @@ router.get('/:maTL/related', async (req, res) => {
               AND (TL.MaMonHoc <=> ? OR TL.LoaiFile = ?)
             GROUP BY
                 TL.MaTL, TL.TenTL, TL.MoTa, TL.FileURL, TL.PreviewURL, TL.ThumbnailURL, TL.LoaiFile,
-                TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc,
+                TL.SoLuotTai, TL.SoLuotXem, TL.NgayDang, TL.LaTaiLieuChinhThuc, TL.LaTaiLieuDocQuyen,
                 TL.MaND_NguoiDang, ND.HoTen, ND.AvatarURL, MH.TenMonHoc
             ORDER BY
                 CASE WHEN TL.MaMonHoc <=> ? THEN 0 ELSE 1 END,
@@ -713,6 +765,22 @@ router.get('/feed', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy bảng tin.' });
     }
 });
+router.get('/trending-searches', async (req, res) => {
+    try {
+        const trendingSearches = [
+            'Giải tích 1', 
+            'Đề thi Toeic', 
+            'Kinh tế vi mô', 
+            'Lập trình web', 
+            'Trí tuệ nhân tạo'
+        ];
+        res.status(200).json({ trendingSearches });
+    } catch (error) {
+        console.error('Lỗi API /documents/trending-searches:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ khi lấy xu hướng tìm kiếm.' });
+    }
+});
+
 const viewTracker = new Map();
 setInterval(() => {
     const now = Date.now();
@@ -756,6 +824,7 @@ router.get('/:maTL', async (req, res) => {
         let hasRated = false;
         let hasDownloaded = false;
         let hasPurchased = false;
+        let isPremium = false;
         let canViewFullDoc = false;
         const authHeader = req.header('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -768,9 +837,23 @@ router.get('/:maTL', async (req, res) => {
                 if (ratingRows.length > 0) hasRated = true;
                 const [downloadRows] = await pool.execute('SELECT 1 FROM LICH_SU_TAI WHERE MaTL = ? AND MaND = ?', [maTL, decoded.MaND]);
                 if (downloadRows.length > 0) hasDownloaded = true;
+                const [premRows] = await pool.execute('SELECT Premium_Until, Premium_Quota FROM NGUOIDUNG WHERE MaND = ?', [decoded.MaND]);
+                if (premRows.length > 0) {
+                    const prem = premRows[0];
+                    if (prem.Premium_Until && new Date(prem.Premium_Until) > new Date()) {
+                        isPremium = true;
+                    }
+                }
+
                 if (taiLieu.LaTaiLieuDocQuyen) {
                     const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, decoded.MaND]);
-                    if (purchaseRows.length > 0) hasPurchased = true;
+                    if (purchaseRows.length > 0) {
+                        hasPurchased = true;
+                    } else {
+                        if (isPremium && premRows[0].Premium_Quota > 0) {
+                            hasPurchased = true;
+                        }
+                    }
                 }
                 if (decoded.VaiTro === 'Admin' || decoded.VaiTro === 'GiaoVien' || taiLieu.MaND_NguoiDang === decoded.MaND) {
                     canViewFullDoc = true;
@@ -789,10 +872,10 @@ router.get('/:maTL', async (req, res) => {
         if (taiLieu.IsDeleted && !hasPurchased && !canViewFullDoc) {
             return res.status(404).json({ message: 'Tài liệu này đã bị gỡ khỏi hệ thống.' });
         }
-        if (taiLieu.LaTaiLieuDocQuyen && !hasPurchased && !canViewFullDoc) {
+        if (!isPremium && !hasPurchased && !canViewFullDoc) {
             taiLieu.FileURL = null;
         }
-        res.status(200).json({ document: taiLieu, comments, isBookmarked, hasRated, hasDownloaded, hasPurchased });
+        res.status(200).json({ document: taiLieu, comments, isBookmarked, hasRated, hasDownloaded, hasPurchased, isPremium });
     } catch (error) {
         console.error('Lỗi khi lấy chi tiết tài liệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
@@ -936,7 +1019,20 @@ router.get('/:maTL/download', authMiddleware, downloadLimiter, async (req, res) 
         if (doc.LaTaiLieuDocQuyen && doc.MaND_NguoiDang !== maND && req.user.VaiTro !== 'Admin' && req.user.VaiTro !== 'GiaoVien') {
             const [purchaseRows] = await pool.execute('SELECT 1 FROM TAILIEU_DAMUA WHERE MaTL = ? AND MaND = ?', [maTL, maND]);
             if (purchaseRows.length === 0) {
-                return res.status(403).json({ message: 'Bạn cần mở khoá tài liệu PREMIUM này trước khi tải.' });
+                const [premRows] = await pool.execute('SELECT Premium_Until, Premium_Quota FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+                let isPremiumAllowed = false;
+                if (premRows.length > 0) {
+                    const prem = premRows[0];
+                    if (prem.Premium_Until && new Date(prem.Premium_Until) > new Date() && prem.Premium_Quota > 0) {
+                        isPremiumAllowed = true;
+                        await pool.execute('UPDATE NGUOIDUNG SET Premium_Quota = Premium_Quota - 1 WHERE MaND = ?', [maND]);
+                        await pool.execute('INSERT INTO TAILIEU_DAMUA (MaND, MaTL) VALUES (?, ?)', [maND, maTL]);
+                        await pool.execute('INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, ?, ?, ?)', [maND, 'MuaTaiLieu', 0, `Dùng 1 lượt Premium Quota tải tài liệu ${maTL}`]);
+                    }
+                }
+                if (!isPremiumAllowed) {
+                    return res.status(403).json({ message: 'Bạn cần mở khoá tài liệu PREMIUM này trước khi tải hoặc gói Premium của bạn đã hết lượt.' });
+                }
             }
         }
         const fileName = `Tailieu_${doc.MaTL}.${doc.LoaiFile}`;
@@ -1428,6 +1524,65 @@ router.post('/:maTL/report', authMiddleware, reportLimiter, async (req, res) => 
                 '../admin/adminViolationReports.html',
                 maND
             );
+        }
+
+        const [settingRows2] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "MAX_REPORTS_AUTO_BAN"');
+        const MAX_REPORTS_AUTO_BAN = settingRows2.length > 0 ? parseInt(settingRows2[0].GiaTri, 10) : 5;
+        
+        const authorId = docs[0].MaND_NguoiDang;
+        const [totalReportRows] = await pool.execute(`
+            SELECT COUNT(*) as total 
+            FROM BAOCAOVIPHAM BC
+            JOIN TAILIEU TL ON BC.MaTL = TL.MaTL
+            WHERE TL.MaND_NguoiDang = ? AND BC.TrangThai = 'ChoXuLy'
+        `, [authorId]);
+        const totalReports = totalReportRows[0].total;
+
+        if (totalReports >= MAX_REPORTS_AUTO_BAN) {
+            const [userStatusRows] = await pool.execute('SELECT TrangThai, Email, HoTen FROM NGUOIDUNG WHERE MaND = ?', [authorId]);
+            if (userStatusRows.length > 0 && userStatusRows[0].TrangThai !== 'BiKhoa') {
+                await pool.execute('UPDATE NGUOIDUNG SET TrangThai = "BiKhoa" WHERE MaND = ?', [authorId]);
+                
+                const userEmail = userStatusRows[0].Email;
+                const nodemailer = require('nodemailer');
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        user: process.env.NODEMAILER_USER,
+                        pass: process.env.NODEMAILER_PASS
+                    }
+                });
+                await transporter.sendMail({
+                    from: `"EduShare Admin" <${process.env.NODEMAILER_USER}>`,
+                    to: userEmail,
+                    subject: 'Tài khoản của bạn đã bị khóa - EduShare',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+                            <h2 style="color: #ef4444; text-align: center;">Thông báo khóa tài khoản</h2>
+                            <p>Chào <strong>${userStatusRows[0].HoTen}</strong>,</p>
+                            <p>Tài khoản của bạn đã bị hệ thống tự động khóa do nhận quá nhiều báo cáo vi phạm tiêu chuẩn cộng đồng (<strong>${totalReports} báo cáo</strong>).</p>
+                            <p>Việc này nhằm đảm bảo môi trường chia sẻ tài liệu an toàn và lành mạnh cho mọi người.</p>
+                            <p>Nếu bạn cho rằng đây là sự nhầm lẫn, vui lòng liên hệ Admin để được hỗ trợ giải quyết.</p>
+                            <p>Trân trọng,<br>Đội ngũ EduShare.</p>
+                        </div>
+                    `
+                }).catch(err => console.error('Error sending ban email:', err));
+
+                try {
+                    const { getIo } = require('../services/socket');
+                    const io = getIo();
+                    io.emit('force_logout', { userId: authorId, reason: 'Tài khoản của bạn đã bị khóa do vi phạm tiêu chuẩn cộng đồng.' });
+                } catch(e) {
+                    console.error("Socket error on force logout:", e);
+                }
+                
+                await notifyActiveAdmins(
+                    pool,
+                    `Hệ thống vừa tự động KHÓA tài khoản của người dùng ID ${authorId} do đạt ngưỡng báo cáo vi phạm (${totalReports} báo cáo).`,
+                    '../admin/adminUserManagement.html',
+                    maND
+                );
+            }
         }
         res.status(201).json({ message: 'Đã gửi báo cáo vi phạm.' });
     } catch (error) {

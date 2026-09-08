@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { superAdminMiddleware } = require('./middlewares/auth');
+const { superAdminMiddleware } = require('../middlewares/auth');
 
 router.get('/', async (req, res) => {
     try {

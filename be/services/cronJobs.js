@@ -179,6 +179,70 @@ function initCronJobs(pool) {
         }
     });
     console.log('Đã khởi tạo Cron Job cập nhật Dashboard (5 phút/lần).');
+
+    cron.schedule('0 2 * * *', async () => {
+        try {
+            const [rows] = await pool.execute('SELECT TenCauHinh, GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh IN ("AUTO_BACKUP_ENABLED", "AUTO_BACKUP_SCHEDULE", "MAX_BACKUPS_RETAIN")');
+            let enabled = 0, schedule = 'daily', maxRetain = 5;
+            rows.forEach(r => {
+                if (r.TenCauHinh === 'AUTO_BACKUP_ENABLED') enabled = parseInt(r.GiaTri);
+                if (r.TenCauHinh === 'AUTO_BACKUP_SCHEDULE') schedule = r.GiaTri;
+                if (r.TenCauHinh === 'MAX_BACKUPS_RETAIN') maxRetain = parseInt(r.GiaTri);
+            });
+
+            if (!enabled) return;
+
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const dayOfMonth = now.getDate();
+
+            if (schedule === 'weekly' && dayOfWeek !== 0) return;
+            if (schedule === 'monthly' && dayOfMonth !== 1) return;
+
+            const fs = require('fs');
+            const path = require('path');
+            const { exec } = require('child_process');
+            const util = require('util');
+            const execPromise = util.promisify(exec);
+
+            const BACKUP_DIR = path.join(__dirname, '..', 'public', 'uploads', 'backups');
+            if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+            const timestamp = now.toISOString().replace(/[:.]/g, '-');
+            const filename = `backup_auto_${timestamp}.sql`;
+            const filepath = path.join(BACKUP_DIR, filename);
+
+            const host = process.env.DB_HOST || 'localhost';
+            const user = process.env.DB_USER || 'root';
+            const password = process.env.DB_PASSWORD || '';
+            const database = process.env.DB_NAME || 'edushare_db';
+
+            let dumpCmd = `mysqldump -h ${host} -u ${user} `;
+            if (password) dumpCmd += `-p"${password}" `;
+            dumpCmd += `${database} > "${filepath}"`;
+
+            await execPromise(dumpCmd);
+            console.log(`Đã sao lưu tự động thành công: ${filename}`);
+
+            if (maxRetain > 0) {
+                const files = fs.readdirSync(BACKUP_DIR).filter(f => f.endsWith('.sql'));
+                const statsList = files.map(f => ({ name: f, time: fs.statSync(path.join(BACKUP_DIR, f)).mtime.getTime() }));
+                statsList.sort((a, b) => b.time - a.time); 
+
+                if (statsList.length > maxRetain) {
+                    const toDelete = statsList.slice(maxRetain);
+                    for (const file of toDelete) {
+                        fs.unlinkSync(path.join(BACKUP_DIR, file.name));
+                        console.log(`Đã xóa bản sao lưu cũ: ${file.name}`);
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Lỗi khi chạy cronjob tự động sao lưu:', error);
+        }
+    });
+    console.log('Đã khởi tạo Cron Job tự động sao lưu (2h sáng hàng ngày).');
 }
 
 module.exports = { initCronJobs };

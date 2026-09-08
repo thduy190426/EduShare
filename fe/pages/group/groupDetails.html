@@ -17,9 +17,11 @@
   <link rel="stylesheet" href="../../css/group/groupDetails.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.3/purify.min.js" defer></script>
-  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
   <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
   <link rel="stylesheet" href="../../css/shared/footer.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
 </head>
 <body>
   <nav class="navbar">
@@ -50,7 +52,7 @@
         </ol>
       </nav>
       <div class="container">
-        <div class="group-header-section" id="group-header-section" style="position: relative;">
+        <div class="group-header-section" id="group-header-section" style="position: relative;" data-intro="Đây là khu vực thông tin nhóm, bạn có thể xem tên nhóm, số thành viên và tham gia nhóm tại đây." data-title="Thông Tin Nhóm" data-step="1">
           <input type="file" id="cover-upload-input" accept="image/*" style="display: none;">
           <button id="btn-change-cover" style="display: none; position: absolute; right: 20px; top: 20px; background: rgba(255,255,255,0.9); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-weight: 500; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"><i class="fa-solid fa-camera" style="margin-right: 6px;"></i> Đổi ảnh bìa</button>
           <div class="group-header-info" id="group-header-info"></div>
@@ -81,7 +83,7 @@
     </div>
 
     <div class="main-col">
-      <div class="tabs-container" style="position: relative;">
+      <div class="tabs-container" style="position: relative;" data-intro="Chuyển đổi giữa Kho Tài liệu, Thảo luận chung và Chat Nhóm để tương tác với mọi người." data-title="Điều Hướng Chức Năng Nhóm" data-step="2">
         <div class="tab-item active" data-target="docs-tab"><i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu nhóm</div>
         <div class="tab-item" data-target="discussions-tab"><i class="fa-solid fa-comments" style="margin-right: 6px;"></i> Thảo luận</div>
         <div class="tab-item" data-target="chat-tab"><i class="fa-solid fa-message" style="margin-right: 6px;"></i> Chat Nhóm</div>
@@ -96,7 +98,7 @@
               <i class="fa-solid fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #9CA3AF;"></i>
               <input type="text" id="search-group-doc" class="form-control" placeholder="Tìm kiếm tài liệu..." style="padding-left: 36px; width: 100%;">
             </div>
-            <button class="btn-primary" id="btn-share-doc" style="white-space: nowrap;">
+            <button class="btn-primary" id="btn-share-doc" style="white-space: nowrap;" data-intro="Đóng góp tài liệu vào kho dữ liệu chung của nhóm học tập tại đây." data-title="Chia sẻ Tài liệu" data-step="3">
               <span><i class="fa-solid fa-plus"></i></span> Chia sẻ tài liệu
             </button>
           </div>
@@ -160,6 +162,10 @@
         <p id="group-desc" style="font-size:14px; color:var(--text-secondary); line-height:1.6; margin-bottom: 16px;">
           Đang tải...
         </p>
+        <div id="group-rules-container" style="display: none; margin-bottom: 16px; padding: 12px; background: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 4px;">
+          <h4 style="font-size: 14px; font-weight: 600; color: #92400E; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-scroll"></i> Nội quy nhóm</h4>
+          <p id="group-rules" style="font-size: 13px; color: #92400E; line-height: 1.5; white-space: pre-wrap; margin: 0;"></p>
+        </div>
         <div style="font-size:13px; color:var(--text-secondary); display:flex; flex-direction:column; gap:8px;">
           <div id="group-date"><i class="fa-solid fa-calendar" style="margin-right: 6px;"></i> Ngày tạo: </div>
           <div><i class="fa-solid fa-earth-americas" style="margin-right: 6px;"></i> Loại nhóm: Công khai</div>
@@ -249,6 +255,10 @@
       <div class="form-group">
         <label class="form-label"><i class="fa-solid fa-align-left" style="margin-right: 6px;"></i> Mô tả</label>
         <textarea id="edit-group-desc" class="form-control" rows="4" placeholder="Nhập mô tả về nhóm..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-scroll" style="margin-right: 6px;"></i> Nội quy nhóm (Tùy chọn)</label>
+        <textarea id="edit-group-rules" class="form-control" rows="4" placeholder="Nhập nội quy nhóm (hiển thị trước khi xin gia nhập)..."></textarea>
       </div>
       <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
         <input type="checkbox" id="edit-group-is-private" style="width: 16px; height: 16px; cursor: pointer;">
@@ -420,9 +430,20 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
   <script type="module" src="../../main/group/groups.js"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_group_detail_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_group_detail_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
 
   <div id="removeGroupMsgModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); z-index: 1050; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;">
     <div class="modal-content" style="background: var(--white); width: 100%; max-width: 400px; border-radius: var(--radius-card); padding: 24px; display: flex; flex-direction: column; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">

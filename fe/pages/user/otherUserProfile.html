@@ -15,6 +15,9 @@
   <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
   <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
   <link rel="stylesheet" href="../../css/shared/footer.css">
+
+  
+  <link rel="stylesheet" href="../../css/shared/donate-button.css">
 </head>
 
 <body>
@@ -89,10 +92,12 @@
           </div>
         </div>
 
-        <div>
+        <div style="display: flex; gap: 10px;">
+          <button id="btn-donate" class="btn-primary btn-donate-xu" style="padding: 10px 20px; font-weight: 600; min-width: 120px; display: none;">
+            <i class="fa-solid fa-gift" style="margin-right: 5px;"></i> Tặng Xu
+          </button>
           <button id="btn-follow" class="btn-primary"
             style="padding: 10px 20px; font-weight: 600; min-width: 150px; display: none;">
-
           </button>
         </div>
       </div>

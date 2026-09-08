@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML } from '../shared/utils.js';
+import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML, renderDocumentListSkeleton, renderTransactionSkeleton } from '../shared/utils.js';
 
 const token = getToken();
 
@@ -224,8 +224,25 @@ async function initProfile() {
         if (elSoDuXu) {
             if (profile.VaiTro === 'SinhVien') {
                 elSoDuXu.textContent = (profile.SoDuXu || 0).toLocaleString();
+                
+                const premiumStatus = document.getElementById('header-premium-status');
+                const premiumText = document.getElementById('header-premium-text');
+                const btnBuyPremium = document.getElementById('btn-buy-premium');
+                
+                if (profile.isPremium) {
+                    if (premiumStatus) premiumStatus.style.display = 'inline-block';
+                    if (premiumText) premiumText.textContent = `Premium (${profile.Premium_Quota || 0} lượt tải)`;
+                    if (btnBuyPremium) btnBuyPremium.style.display = 'none';
+                } else {
+                    if (premiumStatus) premiumStatus.style.display = 'none';
+                    if (btnBuyPremium) btnBuyPremium.style.display = 'inline-block';
+                }
             } else {
                 elSoDuXu.parentElement.style.display = 'none';
+                const premiumStatus = document.getElementById('header-premium-status');
+                const btnBuyPremium = document.getElementById('btn-buy-premium');
+                if (premiumStatus) premiumStatus.style.display = 'none';
+                if (btnBuyPremium) btnBuyPremium.style.display = 'none';
             }
         }
 
@@ -715,12 +732,13 @@ async function fetchMyDocuments(page = 1) {
         const tab = document.getElementById('tab-my-docs');
         if (tab) tab.innerHTML = `<i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi (${data.total || 0})`;
         const container = document.getElementById('my-docs-container');
-        container.innerHTML = '';
+        if (container) container.innerHTML = renderDocumentListSkeleton(5);
 
         if (data.documents.length === 0) {
-            container.innerHTML = '<p>Bạn chưa đăng tài liệu nào.</p>';
+            if (container) container.innerHTML = '<p>Bạn chưa đăng tài liệu nào.</p>';
             return;
         }
+        if (container) container.innerHTML = '';
 
         data.documents.forEach((doc, index) => {
             const el = document.createElement('div');
@@ -781,12 +799,13 @@ async function fetchBookmarks(page = 1) {
         const tab = document.getElementById('tab-bookmarks');
         if (tab) tab.innerHTML = `<i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu (${data.total || 0})`;
         const container = document.getElementById('bookmarks-container');
-        container.innerHTML = '';
+        if (container) container.innerHTML = renderDocumentListSkeleton(5);
 
         if (data.documents.length === 0) {
-            container.innerHTML = '<p>Bạn chưa lưu tài liệu nào.</p>';
+            if (container) container.innerHTML = '<p>Bạn chưa lưu tài liệu nào.</p>';
             return;
         }
+        if (container) container.innerHTML = '';
 
         data.documents.forEach((doc, index) => {
             const el = document.createElement('div');
@@ -837,12 +856,13 @@ async function fetchPurchasedDocuments(page = 1) {
         const tab = document.getElementById('tab-purchased');
         if (tab) tab.innerHTML = `<i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM (${data.total || 0})`;
         const container = document.getElementById('purchased-container');
-        container.innerHTML = '';
+        if (container) container.innerHTML = renderDocumentListSkeleton(5);
 
         if (!data.documents || data.documents.length === 0) {
-            container.innerHTML = '<p>Bạn chưa mua tài liệu PREMIUM nào.</p>';
+            if (container) container.innerHTML = '<p>Bạn chưa mua tài liệu PREMIUM nào.</p>';
             return;
         }
+        if (container) container.innerHTML = '';
 
         data.documents.forEach((doc, index) => {
             const el = document.createElement('div');
@@ -896,12 +916,13 @@ async function fetchTransactions() {
         const container = document.getElementById('transactions-container');
         if (!container) return;
 
-        container.innerHTML = '';
+        container.innerHTML = renderTransactionSkeleton(5);
 
         if (!data.transactions || data.transactions.length === 0) {
             container.innerHTML = '<p>Bạn chưa có giao dịch nào.</p>';
             return;
         }
+        container.innerHTML = '';
 
         data.transactions.forEach((txn, index) => {
             const el = document.createElement('div');
@@ -947,12 +968,13 @@ async function fetchMyReports(page = 1) {
         const tab = document.getElementById('tab-my-reports');
         if (tab) tab.innerHTML = `<i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm (${data.total || 0})`;
         const container = document.getElementById('my-reports-container');
-        container.innerHTML = '';
+        if (container) container.innerHTML = renderDocumentListSkeleton(5);
 
         if (!data.reports || data.reports.length === 0) {
-            container.innerHTML = '<p>Bạn chưa gửi báo cáo nào.</p>';
+            if (container) container.innerHTML = '<p>Bạn chưa gửi báo cáo nào.</p>';
             return;
         }
+        if (container) container.innerHTML = '';
 
         data.reports.forEach((report, index) => {
             const el = document.createElement('div');
@@ -1946,4 +1968,274 @@ function parseDeviceInfo(ua) {
     if (ua.includes("like Mac")) os = "iOS";
 
     return `${browser} trên ${os}`;
+}
+
+
+
+
+
+  const btnDeactivate = document.getElementById('btn-deactivate-account');
+  if (btnDeactivate) {
+    btnDeactivate.addEventListener('click', async () => {
+      const result = await Swal.fire({
+        title: 'Vô hiệu hóa tài khoản?',
+        text: 'Bạn sẽ không thể đăng nhập lại. Tài liệu của bạn vẫn sẽ tồn tại. Vui lòng gõ chữ \'VOHIEUHOA\' để xác nhận:',
+        input: 'text',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Vô hiệu hóa',
+        cancelButtonText: 'Hủy',
+        inputValidator: (value) => {
+          if (value !== 'VOHIEUHOA') {
+            return 'Vui lòng gõ đúng chữ VOHIEUHOA!';
+          }
+        }
+      });
+
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${API_URL}/users/deactivate`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            await Swal.fire('Thành công', 'Tài khoản đã bị vô hiệu hóa', 'success');
+            clearAuthSession();
+            window.location.href = '../auth/login.html';
+          } else {
+            const err = await res.json();
+            Swal.fire('Lỗi', err.message || 'Không thể vô hiệu hóa tài khoản', 'error');
+          }
+        } catch (error) {
+          Swal.fire('Lỗi', 'Lỗi kết nối server', 'error');
+        }
+      }
+    });
+  }
+
+  let myCollections = [];
+
+  async function loadCollections() {
+      try {
+          const res = await fetch(`${API_URL}/collections/my`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+              const data = await res.json();
+              myCollections = data.collections || [];
+              renderCollections();
+          }
+      } catch (err) {
+          console.error('Lỗi tải bộ sưu tập:', err);
+      }
+  }
+
+  function renderCollections() {
+      const container = document.getElementById('collections-container');
+      
+      const existingCards = container.querySelectorAll('.collection-card');
+      existingCards.forEach(c => c.remove());
+      
+      const emptyMsg = container.querySelector('.empty-message');
+      if (emptyMsg) emptyMsg.remove();
+
+      if (myCollections.length === 0) {
+          const msg = document.createElement('p');
+          msg.className = 'empty-message';
+          msg.textContent = 'Bạn chưa có bộ sưu tập nào.';
+          msg.style.color = 'var(--text-secondary)';
+          container.appendChild(msg);
+          return;
+      }
+
+      const grid = document.createElement('div');
+      grid.className = 'collection-card';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+      grid.style.gap = '20px';
+
+      myCollections.forEach(col => {
+          const card = document.createElement('div');
+          card.style.border = '1px solid var(--border)';
+          card.style.borderRadius = 'var(--radius-card)';
+          card.style.padding = '16px';
+          card.style.background = 'var(--white)';
+          card.style.cursor = 'pointer';
+          card.style.transition = 'transform 0.2s, box-shadow 0.2s';
+          card.onclick = () => { window.location.href = `../collection/collectionDetails.html?id=${col.MaBoSieuTap}`; };
+          
+          card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = 'var(--shadow-md)'; };
+          card.onmouseleave = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = 'none'; };
+
+          const header = document.createElement('div');
+          header.style.display = 'flex';
+          header.style.justifyContent = 'space-between';
+          header.style.alignItems = 'flex-start';
+          header.style.marginBottom = '12px';
+
+          const title = document.createElement('h4');
+          title.textContent = col.TenBoSieuTap;
+          title.style.margin = '0';
+          title.style.fontSize = '16px';
+          title.style.color = 'var(--text-primary)';
+
+          const visibility = document.createElement('span');
+          visibility.innerHTML = col.CheDoHienThi === 'public' 
+              ? '<i class="fa-solid fa-earth-americas" style="color:var(--text-secondary)" title="Công khai"></i>' 
+              : '<i class="fa-solid fa-lock" style="color:var(--text-secondary)" title="Riêng tư"></i>';
+
+          header.appendChild(title);
+          header.appendChild(visibility);
+
+          const desc = document.createElement('p');
+          desc.textContent = col.MoTa || 'Không có mô tả';
+          desc.style.fontSize = '13px';
+          desc.style.color = 'var(--text-secondary)';
+          desc.style.margin = '0 0 16px 0';
+          desc.style.display = '-webkit-box';
+          desc.style.webkitLineClamp = '2';
+          desc.style.webkitBoxOrient = 'vertical';
+          desc.style.overflow = 'hidden';
+
+          const footer = document.createElement('div');
+          footer.style.display = 'flex';
+          footer.style.justifyContent = 'space-between';
+          footer.style.alignItems = 'center';
+          footer.style.fontSize = '12px';
+          footer.style.color = 'var(--text-secondary)';
+
+          const count = document.createElement('span');
+          count.innerHTML = `<i class="fa-solid fa-file-lines" style="margin-right: 4px;"></i> ${col.documentCount || 0} tài liệu`;
+
+          const date = document.createElement('span');
+          date.textContent = new Date(col.NgayTao).toLocaleDateString('vi-VN');
+
+          footer.appendChild(count);
+          footer.appendChild(date);
+
+          card.appendChild(header);
+          card.appendChild(desc);
+          card.appendChild(footer);
+          grid.appendChild(card);
+      });
+
+      container.appendChild(grid);
+  }
+
+  const btnCreateCollection = document.getElementById('btn-create-collection');
+  if (btnCreateCollection) {
+      btnCreateCollection.addEventListener('click', () => {
+          document.getElementById('input-collection-name').value = '';
+          document.getElementById('input-collection-desc').value = '';
+          document.getElementById('input-collection-visibility').value = 'public';
+          document.getElementById('create-collection-modal').style.display = 'flex';
+      });
+  }
+
+  const btnSubmitCollection = document.getElementById('btn-submit-collection');
+  if (btnSubmitCollection) {
+      btnSubmitCollection.addEventListener('click', async () => {
+          const name = document.getElementById('input-collection-name').value.trim();
+          const desc = document.getElementById('input-collection-desc').value.trim();
+          const visibility = document.getElementById('input-collection-visibility').value;
+
+          if (!name) {
+              Swal.fire('Lỗi', 'Vui lòng nhập tên bộ sưu tập', 'error');
+              return;
+          }
+
+          try {
+              const res = await fetch(`${API_URL}/collections`, {
+                  method: 'POST',
+                  headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ name, description: desc, visibility })
+              });
+
+              if (res.ok) {
+                  Swal.fire('Thành công', 'Đã tạo bộ sưu tập', 'success');
+                  document.getElementById('create-collection-modal').style.display = 'none';
+                  loadCollections();
+              } else {
+                  const err = await res.json();
+                  Swal.fire('Lỗi', err.message || 'Lỗi khi tạo bộ sưu tập', 'error');
+              }
+          } catch (err) {
+              Swal.fire('Lỗi', 'Không thể kết nối tới server', 'error');
+          }
+      });
+  }
+
+  const tabCollections = document.getElementById('tab-collections');
+  if (tabCollections) {
+      tabCollections.addEventListener('click', () => {
+          document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+          tabCollections.classList.add('active');
+          document.querySelectorAll('.doc-list').forEach(d => d.style.display = 'none');
+          document.getElementById('collections-container').style.display = 'block';
+          loadCollections();
+      });
+  }
+
+
+window.buyPremium = async function() {
+    const soDu = currentProfile ? currentProfile.SoDuXu : 0;
+    const isEnough = soDu >= 1000;
+
+    const result = await Swal.fire({
+        title: 'Nâng cấp Premium',
+        html: `
+        <div style="text-align:center; font-size:15px; font-family: 'Inter', sans-serif;">
+            <i class="fa-solid fa-crown" style="font-size: 48px; color: #EAB308; margin-bottom: 16px;"></i>
+            <p style="color: var(--text-secondary); margin-bottom: 16px;">Nâng cấp lên <b>Gói Premium (30 ngày)</b> để mở khóa:</p>
+            <div style="background: var(--bg-secondary); border-radius: 12px; padding: 16px; display: inline-block; text-align: left; margin-bottom: 20px;">
+                <p style="margin: 0 0 8px 0;"><i class="fa-solid fa-check" style="color: #10B981; margin-right: 8px;"></i>Xem và tải tài liệu <b>độc quyền</b></p>
+                <p style="margin: 0;"><i class="fa-solid fa-check" style="color: #10B981; margin-right: 8px;"></i>Tải lên đến <b>100 tài liệu</b></p>
+            </div>
+            <p style="font-size: 18px; font-weight: 600; color: #D97706; margin: 0;">Giá: 1,000 Xu</p>
+            <p id="swal-sodu-status" style="font-size: 13px; margin-top: 8px;"></p>
+        </div>`,
+        showCancelButton: true,
+        confirmButtonText: 'Mua ngay',
+        cancelButtonText: 'Huỷ',
+        confirmButtonColor: '#EAB308',
+        didOpen: () => {
+            const confirmBtn = Swal.getConfirmButton();
+            const statusText = document.getElementById('swal-sodu-status');
+            if (!isEnough) {
+                confirmBtn.disabled = true;
+                confirmBtn.style.opacity = '0.5';
+                confirmBtn.style.cursor = 'not-allowed';
+                statusText.innerHTML = `<span style="color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Số dư hiện tại: ${soDu} Xu - Không đủ Xu</span>`;
+            } else {
+                statusText.innerHTML = `<span style="color: #10B981;"><i class="fa-solid fa-circle-check"></i> Số dư hiện tại: ${soDu} Xu - Hợp lệ</span>`;
+            }
+        }
+    });
+
+    if (result.isConfirmed && isEnough) {
+        try {
+            Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const res = await fetch(`${API_URL}/payment/buy-premium`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                Swal.fire('Thành công', data.message, 'success').then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Lỗi', data.message || 'Lỗi khi mua gói', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Lỗi', 'Không thể kết nối tới server', 'error');
+        }
+    }
 }

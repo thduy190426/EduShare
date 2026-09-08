@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
     <link rel="stylesheet" href="../../css/shared/footer.css">
     <link rel="stylesheet" href="../../css/user/cart.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+    <link rel="stylesheet" href="../../css/shared/intro-custom.css">
 </head>
 <body>
   <nav class="navbar">
@@ -49,11 +51,11 @@
             </div>
 
             <div class="cart-container">
-                <div class="cart-items-list" id="cart-list">
+                <div class="cart-items-list" id="cart-list" data-intro="Đây là danh sách các tài liệu Premium bạn đã thêm vào giỏ hàng." data-title="Giỏ Hàng" data-step="1">
                     <div class="loading-spinner"></div>
                 </div>
 
-                <div class="cart-summary">
+                <div class="cart-summary" data-intro="Kiểm tra lại tổng số xu cần thanh toán. Bạn cũng có thể nhập mã giảm giá (nếu có) trước khi Thanh toán." data-title="Tóm Tắt & Thanh Toán" data-step="2">
                     <h3 style="margin-bottom: 24px; font-size: 18px;"><i class="fa-solid fa-receipt" style="margin-right: 8px; color: var(--primary);"></i> Tóm tắt đơn hàng</h3>
                     
                     <div class="summary-row">
@@ -135,6 +137,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
     <script type="module" src="../../main/user/cart.js"></script>
+    <script type="module">
+        import { startIntroTour } from '../../main/shared/intro-helper.js';
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('seen_cart_tour')) {
+                setTimeout(() => {
+                    startIntroTour();
+                    localStorage.setItem('seen_cart_tour', 'true');
+                }, 1500);
+            }
+        });
+    </script>
 </body>
 </html>

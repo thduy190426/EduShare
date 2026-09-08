@@ -51,8 +51,7 @@
           <div class="form-group">
             <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu:</label>
             <div class="input-wrapper">
-              <input type="text" id="loginPasswordVisual" class="form-control" placeholder="Nhập mật khẩu" autocomplete="off" required>
-              <input type="password" id="loginPassword" style="display:none;" autocomplete="current-password">
+              <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu" autocomplete="current-password" required>
               <span class="toggle-password" id="toggleLoginPassword">
                 <i class="fa-solid fa-eye" id="toggleLoginIcon"></i>
               </span>
@@ -91,6 +90,13 @@
               </div>
               <span style="margin-left: 24px;">Đăng nhập bằng Facebook</span>
             </button>
+
+            <button type="button" class="btn btn-github" id="githubLoginBtn" style="width: 250px; height: 40px; background: #ffffff; border: 1px solid #dadce0; border-radius: 4px; color: #3c4043; font-size: 14px; font-weight: 500; font-family: 'Roboto', 'Inter', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: flex-start; padding: 0 12px; margin: 0; transition: background-color 0.2s;">
+              <div style="display: flex; align-items: center; justify-content: center; width: 18px; height: 18px;">
+                <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="Github" style="width: 100%; height: 100%; object-fit: contain;">
+              </div>
+              <span style="margin-left: 24px;">Đăng nhập bằng Github</span>
+            </button>
           </div>
         </form>
 
@@ -101,7 +107,7 @@
     </div>
   </div>
 
-  <script src="../../main/auth/passwordMask.js"></script>
+
   <script type="module" src="../../main/auth/login.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script>
@@ -114,11 +120,6 @@
       if (window.validateLoginForm) window.validateLoginForm();
     }
 
-        document.addEventListener('DOMContentLoaded', () => {
-      if(typeof setupPasswordMasking === 'function') {
-        setupPasswordMasking('loginPasswordVisual', 'loginPassword', 'toggleLoginPassword');
-      }
-    });
   </script>
 </body>
 </html>

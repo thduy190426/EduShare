@@ -15,6 +15,8 @@
   <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
   <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
   <link rel="stylesheet" href="../../css/shared/footer.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
 </head>
 
 <body>
@@ -80,12 +82,12 @@
       </div>
 
       <div class="packages-wrapper">
-        <div class="promo-section" style="max-width: 600px; margin: 0 auto 30px; display: flex; gap: 10px; padding: 15px 20px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow-card); position: relative; z-index: 4;">
+        <div class="promo-section" style="max-width: 600px; margin: 0 auto 30px; display: flex; gap: 10px; padding: 15px 20px; background: var(--white); border-radius: 12px; box-shadow: var(--shadow-card); position: relative; z-index: 4;" data-intro="Nhập mã ưu đãi của bạn tại đây để nhận giảm giá trước khi mua các gói xu." data-title="Mã Khuyến Mãi" data-step="1">
           <input type="text" id="promo-code-input" class="form-input" placeholder="Nhập mã ưu đãi tại đây" style="flex: 1; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border); font-size: 15px; outline: none; transition: border-color 0.2s;">
           <button id="btn-apply-promo" class="btn-primary" disabled style="padding: 12px 24px; white-space: nowrap; border-radius: 8px; font-weight: 600;"><i class="fa-solid fa-ticket" style="margin-right: 6px;"></i> Áp dụng</button>
         </div>
 
-        <div class="packages-container" id="packages-container">
+        <div class="packages-container" id="packages-container" data-intro="Lựa chọn một trong các gói xu này để nạp vào tài khoản. Giá trị gói càng cao thì ưu đãi xu tặng thêm càng lớn!" data-title="Chọn Gói Nạp" data-step="2">
 
         </div>
       </div>
@@ -183,8 +185,20 @@
     </div>
   </div>
 
-  <script type="module" src="../../main/shared/sidebar.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
   <script type="module" src="../../main/user/buyCoins.js"></script>
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_buy_coins_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_buy_coins_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
 </body>
 </html>
-

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Sao lưu - EduShare Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/admin/adminDashboard.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../../css/shared/sidebar.css">
+  <link rel="stylesheet" href="../../css/admin/adminBackups.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+</head>
+<body>
+  
+  <nav class="navbar">
+    <a href="adminDashboard.html" class="logo">
+      <i class="fa-solid fa-book"></i> EduShare <span class="logo-badge">Admin</span>
+    </a>
+    <div class="nav-actions">
+      <div class="user-profile" id="userProfileNav">
+        <div class="avatar" id="navAvatar">A</div>
+        <div class="user-info">
+          <span class="user-name" id="navUserName">Admin</span>
+          <span class="user-role" id="navUserRole">Quản trị viên</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-layout">
+    <aside id="app-sidebar" class="sidebar"></aside>
+
+    <main class="content-area">
+      <div class="page-header">
+        <h1 class="page-title"><i class="fa-solid fa-database"></i> Sao lưu Dữ liệu</h1>
+        <button id="btnCreateBackup" class="btn-primary">
+            <i class="fa-solid fa-download"></i> Tạo bản sao lưu
+        </button>
+      </div>
+
+      <div class="settings-card auto-backup-card">
+        <h3 class="section-title"><i class="fa-solid fa-clock"></i> Cài đặt tự động sao lưu</h3>
+        <form id="autoBackupForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="AUTO_BACKUP_ENABLED">Trạng thái tự động sao lưu</label>
+              <select id="AUTO_BACKUP_ENABLED" name="AUTO_BACKUP_ENABLED" class="form-control">
+                <option value="1">Bật (Tự động sao lưu)</option>
+                <option value="0">Tắt</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="AUTO_BACKUP_SCHEDULE">Chu kỳ sao lưu</label>
+              <select id="AUTO_BACKUP_SCHEDULE" name="AUTO_BACKUP_SCHEDULE" class="form-control">
+                <option value="daily">Hàng ngày</option>
+                <option value="weekly">Hàng tuần</option>
+                <option value="monthly">Hàng tháng</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="MAX_BACKUPS_RETAIN">Giữ lại tối đa (File)</label>
+              <input type="number" id="MAX_BACKUPS_RETAIN" name="MAX_BACKUPS_RETAIN" min="1" max="30" class="form-control" value="5">
+            </div>
+          </div>
+          <button type="submit" class="btn-save" id="btnSaveConfig"><i class="fa-solid fa-save"></i> Lưu cài đặt</button>
+        </form>
+      </div>
+
+      <div class="backups-list-container">
+        <h3 class="section-title"><i class="fa-solid fa-list"></i> Danh sách bản sao lưu</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="backupsTable">
+            <thead>
+              <tr>
+                <th>Tên file</th>
+                <th>Kích thước</th>
+                <th>Ngày tạo</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="backupsTableBody">
+              <tr>
+                <td colspan="4" class="text-center py-4">Đang tải dữ liệu...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module" src="../../main/admin/adminBackups.js"></script>
+</body>
+</html>

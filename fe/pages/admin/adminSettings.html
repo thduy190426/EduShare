@@ -59,6 +59,24 @@
                         <span class="description" id="desc_DOC_APPROVAL_REWARD_XU">Đang tải...</span>
                     </div>
 
+                                        <div class="settings-form-group">
+                        <label for="TAX_RATE_PERCENT">Tỷ lệ thu thuế khi Tặng/Mua (%)</label>
+                        <input type="number" id="TAX_RATE_PERCENT" name="TAX_RATE_PERCENT" min="0" max="100" required>
+                        <span class="description" id="desc_TAX_RATE_PERCENT">Đang tải...</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label for="MIN_DONATE_XU">Số Xu tặng tối thiểu</label>
+                        <input type="number" id="MIN_DONATE_XU" name="MIN_DONATE_XU" min="1" required>
+                        <span class="description" id="desc_MIN_DONATE_XU">Đang tải...</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label for="QUEST_REWARD_XU">Thưởng hoàn thành nhiệm vụ (Xu)</label>
+                        <input type="number" id="QUEST_REWARD_XU" name="QUEST_REWARD_XU" min="0" required>
+                        <span class="description" id="desc_QUEST_REWARD_XU">Đang tải...</span>
+                    </div>
+
                     <div class="settings-form-group">
                         <label for="MAX_DOC_PRICE_XU">Giá bán tối đa cho tài liệu (Xu)</label>
                         <input type="number" id="MAX_DOC_PRICE_XU" name="MAX_DOC_PRICE_XU" min="0" required>
@@ -79,6 +97,24 @@
                         <label for="MAX_REPORTS_AUTO_HIDE">Giới hạn Báo cáo tự động ẩn</label>
                         <input type="number" id="MAX_REPORTS_AUTO_HIDE" name="MAX_REPORTS_AUTO_HIDE" min="1" required>
                         <span class="description" id="desc_MAX_REPORTS_AUTO_HIDE">Đang tải...</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label for="MAX_REPORTS_AUTO_BAN">Giới hạn Báo cáo tự động Khóa tài khoản</label>
+                        <input type="number" id="MAX_REPORTS_AUTO_BAN" name="MAX_REPORTS_AUTO_BAN" min="1" required>
+                        <span class="description" id="desc_MAX_REPORTS_AUTO_BAN">Đang tải...</span>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <label for="BAD_WORDS">Danh sách từ khóa bị cấm (ngăn cách bằng dấu phẩy)</label>
+                        <textarea id="BAD_WORDS" name="BAD_WORDS" rows="4" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+                        <span class="description" id="desc_BAD_WORDS">Đang tải...</span>
+                    </div>
+
+                                        <div class="settings-form-group">
+                        <label for="PREVIEW_PAGES_COUNT">Số trang xem trước mặc định (Preview)</label>
+                        <input type="number" id="PREVIEW_PAGES_COUNT" name="PREVIEW_PAGES_COUNT" min="1" required>
+                        <span class="description" id="desc_PREVIEW_PAGES_COUNT">Đang tải...</span>
                     </div>
 
                     <div class="settings-form-group">

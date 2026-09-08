@@ -1,6 +1,7 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting, renderDocumentSkeleton, renderGroupSkeleton } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, getTimeBasedGreeting, renderDocumentSkeleton, renderGroupSkeleton, renderSubjectSkeleton } from '../shared/utils.js';
+import { setupSearchWidget } from '../shared/searchWidget.js';
 document.addEventListener('DOMContentLoaded', () => {
     renderBreadcrumb([{ name: 'Trang chủ' }]);
 
@@ -13,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchTopContributors();
     fetchLatestDocuments();
     fetchRecommendedGroups();
-    setupSearch();
+    setupSearchWidget();
     const btnCustomize = document.getElementById('btn-customize-subjects');
     if (btnCustomize) {
         btnCustomize.addEventListener('click', (e) => {
@@ -21,32 +22,101 @@ document.addEventListener('DOMContentLoaded', () => {
             openSubjectPicker();
         });
     }
+
+    setupAIAssistant();
 });
-let mySubjects = [];
-let selectedSubjectId = '';
-function setupSearch() {
-    const searchInput = document.querySelector('.nav-search input');
-    const searchIcon = document.querySelector('.nav-search .search-icon');
-    if (!searchInput || !searchIcon) return;
-    const performSearch = () => {
-        const query = searchInput.value.trim();
-        if (query) {
-            window.location.href = `../document/searchResults.html?q=${encodeURIComponent(query)}`;
+
+function setupAIAssistant() {
+    const input = document.getElementById('aiAssistantInput');
+    const btnSubmit = document.getElementById('btn-ai-submit');
+    const resultArea = document.getElementById('aiResultArea');
+    const responseContent = document.getElementById('aiResponseContent');
+    const typingIndicator = document.getElementById('aiTypingIndicator');
+
+    if (!input || !btnSubmit) return;
+
+    const askAI = async () => {
+        const query = input.value.trim();
+        if (!query) return;
+
+        const token = getToken();
+        if (!token) {
+            Swal.fire('Vui lòng đăng nhập để sử dụng Trợ lý AI.');
+            return;
+        }
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        
+        resultArea.style.display = 'block';
+        responseContent.style.display = 'none';
+        typingIndicator.style.display = 'flex';
+
+        try {
+            const res = await fetch(`${API_URL}/ai/ask`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ query })
+            });
+
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                let htmlContent = escapeHTML(data.answer)
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>')
+                    .replace(/\n\n/g, '<br><br>')
+                    .replace(/\n- /g, '<br>• ');
+                
+                responseContent.innerHTML = htmlContent;
+            } else {
+                responseContent.innerHTML = `<span style="color: var(--danger);"><i class="fa-solid fa-circle-exclamation"></i> ${data.message || 'Lỗi xử lý câu hỏi.'}</span>`;
+            }
+        } catch (error) {
+            console.error('Error asking AI:', error);
+            responseContent.innerHTML = `<span style="color: var(--danger);"><i class="fa-solid fa-circle-exclamation"></i> Không thể kết nối tới server AI.</span>`;
+        } finally {
+            typingIndicator.style.display = 'none';
+            responseContent.style.display = 'block';
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
         }
     };
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            performSearch();
+
+    input.addEventListener('input', () => {
+        btnSubmit.disabled = input.value.trim().length === 0;
+    });
+
+    btnSubmit.addEventListener('click', askAI);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !btnSubmit.disabled) {
+            askAI();
         }
     });
-    searchIcon.addEventListener('click', performSearch);
-    searchIcon.style.cursor = 'pointer';
+
+    const suggestionChips = document.querySelectorAll('.ai-chip');
+    suggestionChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+            const query = chip.getAttribute('data-query');
+            if (query) {
+                input.value = query;
+                btnSubmit.disabled = false;
+                input.focus();
+            }
+        });
+    });
 }
+let mySubjects = [];
+let selectedSubjectId = '';
 async function fetchMySubjects() {
     const token = getToken();
     const grid = document.getElementById('mySubjectGrid');
     if (!token || !grid) return;
-    grid.innerHTML = renderDocumentSkeleton(4);
+    grid.innerHTML = renderSubjectSkeleton(4);
     try {
         const response = await fetch(`${API_URL}/subjects/my`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -310,6 +380,14 @@ async function fetchUserProfileForHero() {
             }
             if (heroBanner) {
                 heroBanner.style.display = 'flex';
+            }
+
+            if (!profile.HasCompletedOnboarding) {
+                setTimeout(() => {
+                    if (typeof window.startOnboardingTour === 'function') {
+                        window.startOnboardingTour();
+                    }
+                }, 1000);
             }
         }
     } catch (error) {
@@ -664,4 +742,44 @@ function renderHomeDocuments(documents, containerId = 'homeDocGrid') {
     });
 }
 
+window.startOnboardingTour = async function() {
+    if (typeof introJs !== 'function') return;
+    
+    const intro = introJs();
+    intro.setOptions({
+        nextLabel: 'Tiếp theo <i class="fa-solid fa-arrow-right fa-sm" style="margin-left: 4px;"></i>',
+        prevLabel: '<i class="fa-solid fa-arrow-left fa-sm" style="margin-right: 4px;"></i> Quay lại',
+        skipLabel: 'Bỏ qua',
+        doneLabel: 'Hoàn thành <i class="fa-solid fa-check fa-sm" style="margin-left: 4px;"></i>',
+        showProgress: true,
+        showBullets: false,
+        exitOnOverlayClick: false,
+        exitOnEsc: false
+    });
 
+    let completed = false;
+
+    const handleCompletion = async () => {
+        if (completed) return;
+        completed = true;
+        await markOnboardingCompleted();
+    };
+
+    intro.oncomplete(handleCompletion);
+    intro.onexit(handleCompletion);
+
+    intro.start();
+};
+
+window.markOnboardingCompleted = async function() {
+    const token = getToken();
+    if (!token) return;
+    try {
+        await fetch(`${API_URL}/users/complete-onboarding`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+    } catch (e) {
+        console.error('Lỗi khi lưu trạng thái onboarding:', e);
+    }
+};

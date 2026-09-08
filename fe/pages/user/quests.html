@@ -15,6 +15,8 @@
   <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
   <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
   <link rel="stylesheet" href="../../css/shared/footer.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
 </head>
 <body>
 
@@ -47,12 +49,12 @@
         </ol>
       </nav>
       <div class="quests-container">
-        <div class="quests-header">
+        <div class="quests-header" data-intro="Đây là khu vực hiển thị các nhiệm vụ bạn có thể làm mỗi ngày để nhận thưởng EduCoin." data-title="Nhiệm Vụ Hàng Ngày" data-step="1">
           <h1><i class="fa-solid fa-gift"></i> Nhiệm vụ của bạn</h1>
           <p>Hoàn thành các nhiệm vụ dưới đây để nhận EduCoin mỗi ngày!</p>
         </div>
         
-        <div id="questsList">
+        <div id="questsList" data-intro="Danh sách các nhiệm vụ. Nhấn 'Nhận thưởng' khi thanh tiến độ đạt 100%!" data-title="Danh Sách Nhiệm Vụ" data-step="2">
           <div style="text-align: center; padding: 40px; grid-column: 1 / -1;">
             <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: #4f46e5;"></i>
             <p style="margin-top: 15px; color: #6b7280;">Đang tải dữ liệu nhiệm vụ...</p>
@@ -104,8 +106,20 @@
 
   <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
   <script type="module" src="../../main/user/quests.js"></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_quests_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_quests_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
 </body>
 </html>
 

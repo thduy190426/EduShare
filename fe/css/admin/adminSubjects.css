@@ -145,3 +145,17 @@
         .btn-add-subject:active {
             transform: translateY(0);
         }
+
+        @media (max-width: 768px) {
+            .modal-container {
+                max-width: 90%;
+                padding: 20px;
+            }
+            .modal-actions {
+                flex-direction: column;
+            }
+            .btn-modal {
+                width: 100%;
+                text-align: center;
+            }
+        }

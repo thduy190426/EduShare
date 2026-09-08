@@ -15,7 +15,13 @@
   <link rel="stylesheet" href="../../css/document/documentDetails.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.3/purify.min.js" defer></script>
-<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+<script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
+
+  
+  <link rel="stylesheet" href="../../css/shared/donate-button.css">
 </head>
 <body>
   
@@ -40,13 +46,13 @@
     </div>
   </nav>
 
-  <div class="container">
+  <div class="doc-container">
     
     
     <div class="main-col">
       
       
-      <div class="doc-header-card">
+      <div class="doc-header-card" data-intro="Đây là khu vực thông tin chính của tài liệu, bao gồm huy hiệu xác thực, tác giả và lượt xem." data-title="Thông Tin Tài Liệu" data-step="1">
         <div class="badges-row" id="doc-badges">
           
         </div>
@@ -68,12 +74,17 @@
         </div>
         
         <div class="author-meta">
-          <div class="author-info">
-            <div class="author-avatar" id="doc-author-avatar">?</div>
-            <div>
-              <div class="author-name" id="doc-author-name">...</div>
-              <div class="author-date" id="doc-author-date">...</div>
+          <div class="author-info" style="display: flex; align-items: center; gap: 15px;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div class="author-avatar" id="doc-author-avatar">?</div>
+              <div>
+                <div class="author-name" id="doc-author-name">...</div>
+                <div class="author-date" id="doc-author-date">...</div>
+              </div>
             </div>
+            <button id="btn-donate-author" class="btn-primary btn-donate-xu" style="padding: 6px 12px; font-size: 13px; font-weight: 600; border-radius: 6px; display: none;">
+              <i class="fa-solid fa-gift"></i> Tặng Xu
+            </button>
           </div>
           <div class="meta-stats">
             <div class="meta-stat-item"><span><i class="fa-solid fa-eye"></i></span> <strong id="doc-views">0</strong> lượt xem</div>
@@ -128,39 +139,51 @@
           <div class="rating-count" style="font-size:12px; margin-top:5px; color:#6b7280;">Bấm vào sao để đánh giá</div>
         </div>
         
-        <div style="display: flex; gap: 8px; width: 100%;">
+        <div style="display: flex; gap: 8px; width: 100%;" data-intro="Bạn có thể tải xuống tài liệu miễn phí hoặc dùng EduCoin để mua nếu là tài liệu Độc quyền." data-title="Tải Xuống & Giỏ Hàng" data-step="2">
           <button class="btn btn-download" id="btn-download" style="flex: 1; border-radius: 8px;">
             <span><i class="fa-solid fa-download"></i></span> Tải xuống
           </button>
           <button class="btn btn-outline-primary" id="btn-add-cart" style="display: none; flex: 1; border-radius: 8px; color: #F59E0B; border-color: #F59E0B;" title="Thêm vào giỏ hàng">
-            <span><i class="fa-solid fa-cart-plus"></i></span> Thêm vào giỏ
+            <span><i class="fa-solid fa-cart-plus"></i></span> Thêm vào giỏ hàng
           </button>
         </div>
-        <div class="action-buttons-row" style="display: flex; gap: 8px; margin-top: 12px;">
-          <button class="btn" id="btn-bookmark" title="Lưu vào Bookmark" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); gap: 6px; transition: all 0.2s;">
+        <div class="action-buttons-row" style="display: flex; gap: 8px; margin-top: 12px; align-items: center;" data-intro="Lưu trữ tài liệu vào Bộ sưu tập cá nhân hoặc Báo cáo nếu tài liệu vi phạm bản quyền." data-title="Các Tiện Ích Khác" data-step="3">
+          <button class="btn" id="btn-bookmark" title="Lưu vào Bookmark" style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); gap: 8px; font-weight: 500; transition: all 0.2s;">
             <i class="fa-regular fa-bookmark" id="bookmark-icon" style="font-size: 18px;"></i>
-            <span id="bookmark-text" style="font-size: 12px; font-weight: 500; text-align: center;">Lưu</span>
+            <span id="bookmark-text">Lưu</span>
           </button>
           
-          <button class="btn" id="btn-save-collection" title="Lưu vào Bộ sưu tập" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); gap: 6px; transition: all 0.2s;">
-            <i class="fa-solid fa-folder-plus" style="font-size: 18px;"></i>
-            <span style="font-size: 12px; font-weight: 500; text-align: center;">Bộ sưu tập</span>
-          </button>
-          
-          <button class="btn" id="btn-report" title="Báo cáo vi phạm" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid #FCA5A5; border-radius: 8px; background: #FEF2F2; cursor: pointer; color: var(--danger); gap: 6px; transition: all 0.2s;">
-            <i class="fa-solid fa-flag" style="font-size: 18px;"></i>
-            <span style="font-size: 12px; font-weight: 500; text-align: center;">Báo cáo</span>
-          </button>
-          
-          <button class="btn" id="btn-share" title="Chia sẻ tài liệu" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); gap: 6px; transition: all 0.2s;">
+          <button class="btn" id="btn-share" title="Chia sẻ tài liệu" style="flex: 1; display: flex; justify-content: center; align-items: center; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); gap: 8px; font-weight: 500; transition: all 0.2s;">
             <i class="fa-solid fa-share-nodes" style="font-size: 18px;"></i>
-            <span style="font-size: 12px; font-weight: 500; text-align: center;">Chia sẻ</span>
+            <span>Chia sẻ</span>
           </button>
 
-          <button class="btn" id="btn-verify" title="Xác thực chất lượng" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; border: 1px solid #D1D5DB; border-radius: 8px; background: #F3F4F6; cursor: pointer; color: #374151; gap: 6px; transition: all 0.2s;">
+          <button class="btn" id="btn-verify" title="Xác thực chất lượng" style="display: none; flex: 1; justify-content: center; align-items: center; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; background: #F3F4F6; cursor: pointer; color: #374151; gap: 8px; transition: all 0.2s;">
             <i class="fa-solid fa-certificate" id="verify-icon" style="font-size: 18px;"></i>
-            <span id="verify-text" style="font-size: 12px; font-weight: 500; text-align: center;">Xác thực</span>
+            <span id="verify-text" style="font-weight: 500;">Xác thực</span>
           </button>
+
+          <div class="dropdown-container" style="position: relative; display: flex;">
+            <button class="btn" id="btn-more-options" style="display: flex; justify-content: center; align-items: center; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); cursor: pointer; color: var(--text-secondary); transition: all 0.2s;">
+              <i class="fa-solid fa-ellipsis" style="font-size: 18px;"></i>
+            </button>
+            
+            <div id="more-options-menu" style="display: none; position: absolute; top: calc(100% + 5px); right: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); width: 220px; z-index: 50; flex-direction: column; overflow: hidden;">
+              <button type="button" id="btn-save-collection" style="background: none; border: none; padding: 12px 16px; display: flex; align-items: center; gap: 10px; color: #374151; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; transition: background 0.2s; width: 100%;" onmouseover="this.style.backgroundColor='#f1f5f9'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="fa-solid fa-folder-plus" style="width: 18px; text-align: center;"></i> Lưu vào bộ sưu tập
+              </button>
+              <button type="button" id="btn-citation" style="background: none; border: none; padding: 12px 16px; display: flex; align-items: center; gap: 10px; color: #374151; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; transition: background 0.2s; width: 100%;" onmouseover="this.style.backgroundColor='#f1f5f9'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="fa-solid fa-quote-right" style="width: 18px; text-align: center;"></i> Trích dẫn
+              </button>
+              <button type="button" id="btn-embed" style="background: none; border: none; padding: 12px 16px; display: flex; align-items: center; gap: 10px; color: #374151; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; transition: background 0.2s; width: 100%;" onmouseover="this.style.backgroundColor='#f1f5f9'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="fa-solid fa-code" style="width: 18px; text-align: center;"></i> Nhúng
+              </button>
+              <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
+              <button type="button" id="btn-report" style="background: none; border: none; padding: 12px 16px; display: flex; align-items: center; gap: 10px; color: #ef4444; text-align: left; cursor: pointer; font-family: inherit; font-size: 14px; transition: background 0.2s; width: 100%;" onmouseover="this.style.backgroundColor='#fef2f2'" onmouseout="this.style.backgroundColor='transparent'">
+                <i class="fa-solid fa-flag" style="width: 18px; text-align: center;"></i> Báo cáo vi phạm
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -219,60 +242,80 @@
     </div>
   </footer>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script type="module" src="../../main/document/documentDetails.js"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_doc_detail_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_doc_detail_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
 
-  <div id="save-collection-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; transition: opacity 0.3s;">
-    <div style="background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: modalFadeIn 0.3s ease-out;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="margin: 0; color: var(--text-primary);"><i class="fa-solid fa-folder-plus" style="margin-right: 8px; color: var(--primary);"></i>Lưu vào Bộ sưu tập</h3>
-        <button id="btn-close-save-collection" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;"><i class="fa-solid fa-xmark"></i></button>
+  <div id="save-collection-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-folder-plus"></i>Lưu vào Bộ sưu tập</h3>
+        <button id="btn-close-save-collection" class="btn-close"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div id="save-collection-list" style="max-height: 250px; overflow-y: auto; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
-        <p style="text-align: center; color: #64748b; font-size: 14px;">Đang tải...</p>
+      <div id="save-collection-list" class="collection-list">
+        <p class="loading-text">Đang tải...</p>
       </div>
-      <div style="text-align: center;">
-        <button type="button" id="btn-open-create-collection" style="background: none; border: none; color: var(--primary); font-size: 14px; font-weight: 500; cursor: pointer;"><i class="fa-solid fa-plus"></i> Tạo bộ sưu tập mới</button>
+      <div class="modal-footer">
+        <button type="button" id="btn-open-create-collection" class="btn-text"><i class="fa-solid fa-plus"></i> Tạo bộ sưu tập mới</button>
       </div>
     </div>
   </div>
 
-  <style>
-    @keyframes modalFadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    #create-collection-modal .form-control,
-    #save-collection-modal .form-control {
-      width: 100%; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: #1E293B; transition: all 0.2s; outline: none; background: #FFFFFF;
-    }
-    #create-collection-modal .form-control:focus,
-    #save-collection-modal .form-control:focus {
-      border-color: #4F46E5; box-shadow: 0 0 0 3px #EEF2FF;
-    }
-    #create-collection-modal .form-label,
-    #save-collection-modal .form-label {
-      display: block; margin-bottom: 8px; font-weight: 600; color: #1E293B; font-size: 14px;
-    }
-    #create-collection-modal textarea.form-control {
-      padding: 12px 16px; resize: vertical; min-height: 120px;
-    }
-  </style>
-  <div id="create-collection-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; transition: opacity 0.3s;">
-    <div style="background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: modalFadeIn 0.3s ease-out;">
-      <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-primary);">Tạo bộ sưu tập mới</h3>
-      <div class="form-group" style="margin-bottom: 16px;">
-        <label class="form-label">Tên bộ sưu tập <span style="color: red;">*</span></label>
-        <input type="text" id="input-collection-name" class="form-control" placeholder="Nhập tên bộ sưu tập" maxlength="50" style="width: 100%; box-sizing: border-box; padding: 8px;">
+
+  <div id="create-collection-modal" class="modal">
+    <div class="modal-content">
+      <h3 class="modal-title">Tạo bộ sưu tập mới</h3>
+      <div class="form-group">
+        <label class="form-label">Tên bộ sưu tập <span class="required">*</span></label>
+        <input type="text" id="input-collection-name" class="form-control" placeholder="Nhập tên bộ sưu tập" maxlength="50">
       </div>
-      <div class="form-group" style="margin-bottom: 24px;">
+      <div class="form-group">
         <label class="form-label">Mô tả (tùy chọn)</label>
-        <textarea id="input-collection-desc" class="form-control" placeholder="Mô tả bộ sưu tập của bạn" rows="5" style="width: 100%; box-sizing: border-box; padding: 12px 12px; min-height: 120px; resize: vertical;"></textarea>
+        <textarea id="input-collection-desc" class="form-control" placeholder="Mô tả bộ sưu tập của bạn" rows="5"></textarea>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 12px;">
-        <button type="button" class="btn btn-outline" id="btn-cancel-collection" style="padding: 8px 16px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-xmark"></i> Hủy</button>
-        <button type="button" class="btn btn-primary" id="btn-submit-collection" disabled style="padding: 8px 16px; border-radius: 6px; border: none; background: var(--primary); color: white; cursor: not-allowed; opacity: 0.5; display: flex; align-items: center; gap: 6px; transition: all 0.2s;"><i class="fa-solid fa-check"></i> Tạo mới</button>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-cancel-collection"><i class="fa-solid fa-xmark"></i> Hủy</button>
+        <button type="button" class="btn btn-primary" id="btn-submit-collection" disabled><i class="fa-solid fa-check"></i> Tạo mới</button>
+      </div>
+    </div>
+  </div>
+  <div id="citationModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); z-index: 1050; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;">
+    <div class="modal-content" style="background: var(--white); width: 100%; max-width: 600px; border-radius: 16px; padding: 32px; display: flex; flex-direction: column; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="margin: 0; font-size: 22px; color: #111827; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+          <i class="fa-solid fa-quote-right" style="color: var(--primary);"></i> Tạo trích dẫn
+        </h2>
+        <span class="close-modal" id="btn-close-citation-modal" style="cursor: pointer; font-size: 24px; color: #6B7280;">&times;</span>
+      </div>
+      
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label class="form-label" style="font-weight: 600; color: #374151; margin-bottom: 8px; display: block;">Chọn định dạng (Chuẩn trích dẫn)</label>
+        <select id="citation-format" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #CBD5E1;">
+          <option value="APA">APA (American Psychological Association)</option>
+          <option value="MLA">MLA (Modern Language Association)</option>
+          <option value="Harvard">Harvard</option>
+          <option value="Chicago">Chicago</option>
+        </select>
+      </div>
+      
+      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; position: relative;">
+        <div id="citation-content" style="color: #111827; font-size: 15px; line-height: 1.6; word-break: break-word; padding-right: 80px;">Đang tạo trích dẫn...</div>
+        <button id="btn-copy-citation" style="position: absolute; top: 12px; right: 12px; background: white; border: 1px solid #E2E8F0; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: #4B5563; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: all 0.2s; width: auto; height: auto;">
+          <i class="fa-regular fa-copy"></i> Copy
+        </button>
       </div>
     </div>
   </div>

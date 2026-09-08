@@ -12,15 +12,13 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
 </head>
 <body>
   
   <nav class="navbar">
     <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
-    <!-- <div class="nav-search">
-      <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
-      <input type="text" placeholder="Tìm kiếm tài liệu, môn học, giáo trình...">
-    </div> -->
     <div class="nav-actions">
       <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
         <i class="fa-solid fa-bell"></i>
@@ -56,7 +54,7 @@
         </a>
       </div>
 
-      <div class="tabs-container">
+      <div class="tabs-container" data-intro="Chuyển đổi giữa các tab để xem tài liệu bạn đã đăng, đã lưu, đã tải xuống hoặc xem gần đây." data-title="Quản Lý Danh Mục" data-step="1">
         <div class="tab-item active" data-tab="uploaded">
           <i class="fa-solid fa-cloud-arrow-up" style="margin-right: 6px;"></i> Đã đăng tải <span class="tab-count" id="count-uploaded">0</span>
         </div>
@@ -71,7 +69,7 @@
         </div>
       </div>
           
-      <div class="filter-bar" style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+      <div class="filter-bar" style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;" data-intro="Sử dụng bộ lọc và thanh tìm kiếm để dễ dàng tìm lại tài liệu của bạn." data-title="Bộ Lọc Tìm Kiếm" data-step="2">
         <select id="filter-status" style="padding: 8px 12px; border: 1px solid #E5E7EB; border-radius: 6px; outline: none; flex: 1; min-width: 150px;">
             <option value="all">Tất cả trạng thái</option>
             <option value="DaDuyet">Đã duyệt</option>
@@ -96,7 +94,7 @@
         </div>
       </div>
 
-      <div class="table-card">
+      <div class="table-card" data-intro="Bảng thống kê chi tiết các tài liệu. Bạn có thể xem số lượt tải hoặc thao tác chỉnh sửa/xóa tại đây." data-title="Danh Sách Tài Liệu" data-step="3">
         <table class="data-table">
           <thead>
             <tr>
@@ -147,9 +145,21 @@
     </div>
   </div>
 
-<script type="module" src="../../main/document/myDocuments.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+  <script type="module" src="../../main/document/myDocuments.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_my_documents_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_my_documents_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
 </body>
 </html>
 

@@ -165,8 +165,15 @@ function renderNotifications(notifications, page = 1, hasMore = false) {
                     if (noti.LinkDich.startsWith('http')) {
                         window.location.href = noti.LinkDich;
                     } else {
-                        const path = noti.LinkDich.startsWith('/') ? noti.LinkDich : '/' + noti.LinkDich;
-                        window.location.href = window.location.origin + path;
+                        let finalUrl = noti.LinkDich;
+                        if (finalUrl.startsWith('/fe/')) {
+                            finalUrl = finalUrl.substring(3);
+                        }
+                        if (!finalUrl.startsWith('/') && !finalUrl.startsWith('.') && !finalUrl.startsWith('http')) {
+                            finalUrl = '../' + finalUrl;
+                        }
+                        const baseUrl = window.location.origin + '/pages/user/notifications.html';
+                        window.location.href = new URL(finalUrl, baseUrl).href;
                     }
                     return;
                 }

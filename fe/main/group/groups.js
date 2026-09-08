@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderGroupSkeleton, validateMessage } from '../shared/utils.js';
+import { decodeJWT, escapeHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderGroupSkeleton, renderDocumentSkeleton, validateMessage } from '../shared/utils.js';
 import { getSocket } from '../shared/socketClient.js';
 import { loadQuillAndTribute } from '../shared/lazyLoad.js';
 const token = getToken();
@@ -159,11 +159,14 @@ async function initGroupList() {
         };
         document.getElementById('new-group-name').addEventListener('input', checkCreateForm);
         document.getElementById('new-group-desc').addEventListener('input', checkCreateForm);
+        const newGroupRules = document.getElementById('new-group-rules');
+        if (newGroupRules) newGroupRules.addEventListener('input', checkCreateForm);
         document.getElementById('new-group-subject').addEventListener('change', checkCreateForm);
         btnCreate.addEventListener('click', () => {
             createModal.style.display = 'flex';
             document.getElementById('new-group-name').value = '';
             document.getElementById('new-group-desc').value = '';
+            if (document.getElementById('new-group-rules')) document.getElementById('new-group-rules').value = '';
             document.getElementById('new-group-subject').value = '';
             checkCreateForm();
         });
@@ -172,6 +175,8 @@ async function initGroupList() {
             const tenNhom = document.getElementById('new-group-name').value.trim();
             const moTa = document.getElementById('new-group-desc').value.trim();
             const maMonHoc = document.getElementById('new-group-subject').value;
+            const noiQuyEl = document.getElementById('new-group-rules');
+            const noiQuy = noiQuyEl ? noiQuyEl.value.trim() : '';
             if (!tenNhom) {
                 Swal.fire({ icon: 'warning', title: 'Cảnh báo', text: 'Vui lòng nhập tên nhóm' });
                 return;
@@ -185,7 +190,7 @@ async function initGroupList() {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null })
+                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, noiQuy: noiQuy || null })
                 });
                 if (res.ok) {
                     Swal.fire({ icon: 'success', title: 'Thành công', text: 'Tạo nhóm thành công!' });
@@ -231,7 +236,9 @@ async function initGroupList() {
             const tenNhom = document.getElementById('edit-group-name').value.trim();
             const moTa = document.getElementById('edit-group-desc').value.trim();
             const maMonHoc = document.getElementById('edit-group-subject').value;
-            const isPrivate = document.getElementById('edit-group-is-private').checked;
+            const isPrivate = document.getElementById('edit-group-is-private') ? document.getElementById('edit-group-is-private').checked : false;
+            const noiQuyEl = document.getElementById('edit-group-rules');
+            const noiQuy = noiQuyEl ? noiQuyEl.value.trim() : '';
             if (!tenNhom) {
                 Swal.fire({ icon: 'warning', title: 'Cảnh báo', text: 'Vui lòng nhập tên nhóm' });
                 return;
@@ -245,7 +252,7 @@ async function initGroupList() {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, isPrivate })
+                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, isPrivate, noiQuy: noiQuy || null })
                 });
                 if (res.ok) {
                     Swal.fire({ icon: 'success', title: 'Thành công', text: 'Cập nhật nhóm thành công!' });
@@ -376,6 +383,7 @@ window.fetchRecommendedGroups = async function() {
     const grid = document.getElementById('recommended-group-grid');
     const section = document.getElementById('recommended-section');
     if (!grid || !section) return;
+    grid.innerHTML = renderGroupSkeleton(3);
     try {
         const res = await fetch(`${API_URL}/groups/recommended?limit=3`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -511,13 +519,16 @@ window.openEditModal = (id) => {
     const descInput = document.getElementById('edit-group-desc');
     const subjectInput = document.getElementById('edit-group-subject');
     const privateInput = document.getElementById('edit-group-is-private');
+    const rulesInput = document.getElementById('edit-group-rules');
     if (nameInput) nameInput.value = g.TenNhom || '';
     if (descInput) descInput.value = g.MoTa || '';
+    if (rulesInput) rulesInput.value = g.NoiQuy || '';
     if (subjectInput) subjectInput.value = g.MaMonHoc || '';
     if (privateInput) privateInput.checked = !!(g.IsPrivate);
     editInitialState = {
         tenNhom: (g.TenNhom || '').trim(),
         moTa: (g.MoTa || '').trim(),
+        noiQuy: (g.NoiQuy || '').trim(),
         maMonHoc: String(g.MaMonHoc || ''),
         isPrivate: !!(g.IsPrivate)
     };
@@ -529,6 +540,10 @@ window.openEditModal = (id) => {
     if (descInput) {
         descInput.removeEventListener('input', window.validateEditGroupForm);
         descInput.addEventListener('input', window.validateEditGroupForm);
+    }
+    if (rulesInput) {
+        rulesInput.removeEventListener('input', window.validateEditGroupForm);
+        rulesInput.addEventListener('input', window.validateEditGroupForm);
     }
     if (subjectInput) {
         subjectInput.removeEventListener('change', window.validateEditGroupForm);
@@ -623,6 +638,22 @@ function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
     });
 }
 window.joinGroup = async (maNhom, btnElement) => {
+    const g = currentGroupInfo && String(currentGroupInfo.MaNhom) === String(maNhom)
+        ? currentGroupInfo
+        : currentGroupsData.find(x => String(x.MaNhom) === String(maNhom));
+    
+    if (g && g.NoiQuy && g.NoiQuy.trim() !== '') {
+        const result = await Swal.fire({
+            title: 'Nội quy nhóm',
+            html: `<div style="text-align: left; max-height: 300px; overflow-y: auto; padding: 10px; background: #f8fafc; border-radius: 8px; font-size: 14px; white-space: pre-wrap;">${escapeHTML(g.NoiQuy)}</div>`,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonText: 'Đồng ý & Xin gia nhập',
+            cancelButtonText: 'Hủy'
+        });
+        if (!result.isConfirmed) return;
+    }
+
     if (btnElement) {
         btnElement.disabled = true;
         btnElement.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 4px;"></i> Đang xử lý...';
@@ -1061,6 +1092,7 @@ function initGroupDetailControls() {
             const moTa = document.getElementById('edit-group-desc').value.trim();
             const maMonHoc = document.getElementById('edit-group-subject').value;
             const isPrivate = document.getElementById('edit-group-is-private').checked;
+            const noiQuy = document.getElementById('edit-group-rules').value.trim();
             if (!tenNhom) {
                 Swal.fire({ icon: 'warning', title: 'Cảnh báo', text: 'Vui lòng nhập tên nhóm' });
                 return;
@@ -1074,7 +1106,7 @@ function initGroupDetailControls() {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, isPrivate })
+                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, isPrivate, noiQuy })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
@@ -1298,6 +1330,16 @@ async function fetchGroupInfo() {
             btnChangeCover.style.display = 'inline-flex';
         }
         document.getElementById('group-desc').textContent = group.MoTa || 'Chưa có mô tả.';
+        const rulesContainer = document.getElementById('group-rules-container');
+        const rulesEl = document.getElementById('group-rules');
+        if (rulesContainer && rulesEl) {
+            if (group.NoiQuy && group.NoiQuy.trim() !== '') {
+                rulesContainer.style.display = 'block';
+                rulesEl.textContent = group.NoiQuy;
+            } else {
+                rulesContainer.style.display = 'none';
+            }
+        }
         const adminLink = document.querySelector('#group-header-info .js-user-link');
         if (adminLink && adminLink.dataset.userId) {
             adminLink.addEventListener('click', () => {
@@ -1533,6 +1575,8 @@ function hideMemberContextMenu() {
     hideInlineKickActions();
 }
 async function fetchGroupDocuments() {
+    const grid = document.getElementById('doc-grid');
+    if (grid) grid.innerHTML = renderDocumentSkeleton(6);
     try {
         const res = await fetch(`${API_URL}/groups/${currentGroupId}/documents`, {
             headers: { 'Authorization': `Bearer ${token}` }

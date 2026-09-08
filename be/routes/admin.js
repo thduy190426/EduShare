@@ -1,11 +1,39 @@
 const express = require('express');
-const { sendNotificationToUser } = require('./services/socket');
+const { sendNotificationToUser } = require('../services/socket');
 
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
-const { adminMiddleware, superAdminMiddleware, teacherMiddleware } = require('./middlewares/auth');
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
+    }
+});
+
+const { adminMiddleware, superAdminMiddleware, teacherMiddleware } = require('../middlewares/auth');
+
+async function grantUploadToUnlockPremium(conn, maND, days = 3) {
+    const [users] = await conn.execute('SELECT Premium_Until, Premium_Quota FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+    if (users.length > 0) {
+        const user = users[0];
+        let newPremiumUntil;
+        if (user.Premium_Until && new Date(user.Premium_Until) > new Date()) {
+            newPremiumUntil = new Date(user.Premium_Until);
+        } else {
+            newPremiumUntil = new Date();
+        }
+        newPremiumUntil.setDate(newPremiumUntil.getDate() + days);
+        const formatForMySQL = (date) => date.toISOString().slice(0, 19).replace('T', ' ');
+        
+        await conn.execute('UPDATE NGUOIDUNG SET Premium_Until = ?, Premium_Quota = Premium_Quota + 10 WHERE MaND = ?', [formatForMySQL(newPremiumUntil), maND]);
+    }
+}
+
 router.get('/documents/list', teacherMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
@@ -121,6 +149,8 @@ router.put('/documents/bulk-review', teacherMiddleware, async (req, res) => {
             let noiDungThongBao = '';
             if (quyetDinh === 'Duyet') {
                 noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" đã được duyệt.`;
+                await grantUploadToUnlockPremium(conn, taiLieu.MaND_NguoiDang, 3);
+                noiDungThongBao += ' Bạn được tặng 3 ngày Premium!';
                 const [followers] = await conn.execute(
                     'SELECT MaND_TheoDoi FROM THEODOI WHERE MaND_DuocTheoDoi = ?',
                     [taiLieu.MaND_NguoiDang]
@@ -204,7 +234,8 @@ router.put('/documents/:maTL/review', teacherMiddleware, async (req, res) => {
                 await conn.execute("INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', ?, ?)", [taiLieu.MaND_NguoiDang, rewardXu, `Thưởng ${rewardXu} Xu vì tài liệu được duyệt: ${taiLieu.TenTL}`]);
             }
 
-            noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" đã được duyệt.` + (rewardXu > 0 ? ` Bạn được thưởng +${rewardXu} Xu.` : '');
+            await grantUploadToUnlockPremium(conn, taiLieu.MaND_NguoiDang, 3);
+            noiDungThongBao = `Tài liệu "${taiLieu.TenTL}" đã được duyệt.` + (rewardXu > 0 ? ` Bạn được thưởng +${rewardXu} Xu.` : '') + ' Bạn được tặng 3 ngày Premium!';
             const [followers] = await conn.execute(
                 'SELECT MaND_TheoDoi FROM THEODOI WHERE MaND_DuocTheoDoi = ?',
                 [taiLieu.MaND_NguoiDang]
@@ -1705,6 +1736,99 @@ router.delete('/badges/:id', superAdminMiddleware, async (req, res) => {
     } catch (error) {
         console.error('Lỗi xóa danh hiệu:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.get('/user-by-email', adminMiddleware, async (req, res) => {
+    try {
+        const email = req.query.email;
+        if (!email) return res.status(400).json({ message: 'Vui lòng cung cấp email.' });
+        
+        const [rows] = await req.app.locals.pool.execute(
+            'SELECT HoTen, AvatarURL, VaiTro FROM NGUOIDUNG WHERE Email = ?',
+            [email]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng với email này.' });
+        }
+        res.status(200).json(rows[0]);
+    } catch (error) {
+        console.error('Lỗi khi lấy thông tin người dùng bằng email:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/mass-mail', adminMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        const { target, subject, htmlContent } = req.body;
+
+        if (!subject || !htmlContent) {
+            return res.status(400).json({ success: false, message: 'Thiếu tiêu đề hoặc nội dung email.' });
+        }
+
+        let query = 'SELECT Email FROM NGUOIDUNG WHERE TrangThai = "HoatDong"';
+        let params = [];
+
+        if (target === 'students') {
+            query += ' AND VaiTro = "SinhVien"';
+        } else if (target === 'teachers') {
+            query += ' AND VaiTro = "GiaoVien"';
+        } else if (target === 'locked') {
+            query = 'SELECT Email FROM NGUOIDUNG WHERE TrangThai = "BiKhoa"';
+        } else if (target === 'admins') {
+            query += ' AND VaiTro = "Admin"';
+        } else if (target === 'specific') {
+            if (!req.body.targetEmail) {
+                return res.status(400).json({ success: false, message: 'Thiếu email người dùng cụ thể.' });
+            }
+            query = 'SELECT Email FROM NGUOIDUNG WHERE Email = ?';
+            params.push(req.body.targetEmail);
+        }
+
+        const [rows] = await pool.execute(query, params);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng nào phù hợp với bộ lọc.' });
+        }
+
+        const emails = rows.map(r => r.Email).filter(e => e);
+        if (emails.length === 0) {
+            return res.status(404).json({ success: false, message: 'Người dùng trong bộ lọc không có địa chỉ email hợp lệ.' });
+        }
+
+        const chunkSize = 50;
+        let sentCount = 0;
+
+        for (let i = 0; i < emails.length; i += chunkSize) {
+            const chunk = emails.slice(i, i + chunkSize);
+            
+            await transporter.sendMail({
+                from: `"EduShare Admin" <${process.env.GMAIL_USER}>`,
+                to: process.env.GMAIL_USER, 
+                bcc: chunk.join(','), 
+                subject: subject,
+                html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h1 style="color: #4F46E5; margin: 0; font-size: 24px;">EduShare</h1>
+                    </div>
+                    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 30px;">
+                        ${htmlContent}
+                    </div>
+                    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6B7280; font-size: 12px;">
+                        <p>Đây là email thông báo tự động từ hệ thống EduShare. Vui lòng không trả lời email này.</p>
+                        <p>&copy; ${new Date().getFullYear()} EduShare. All rights reserved.</p>
+                    </div>
+                </div>
+                `
+            });
+            sentCount += chunk.length;
+        }
+
+        res.json({ success: true, message: `Đã gửi email thành công tới ${sentCount} người dùng.`, totalSent: sentCount });
+    } catch (error) {
+        console.error('Lỗi khi gửi mass mail:', error);
+        res.status(500).json({ success: false, message: 'Lỗi server khi gửi email.' });
     }
 });
 

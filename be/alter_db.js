@@ -58,6 +58,10 @@ async function run() {
         await addColumnIfMissing('NGUOIDUNG', 'IsTwoFactorEnabled', 'BOOLEAN DEFAULT FALSE');
         await addColumnIfMissing('NGUOIDUNG', 'FailedLoginAttempts', 'INT DEFAULT 0');
         await addColumnIfMissing('NGUOIDUNG', 'LockoutUntil', 'DATETIME DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'NotificationPrefs', 'JSON DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'HasCompletedOnboarding', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('NGUOIDUNG', 'Premium_Until', 'DATETIME DEFAULT NULL');
+        await addColumnIfMissing('NGUOIDUNG', 'Premium_Quota', 'INT DEFAULT 0');
         await pool.execute('ALTER TABLE NGUOIDUNG MODIFY COLUMN GioiTinh VARCHAR(20) DEFAULT NULL');
         await pool.execute(`
             UPDATE NGUOIDUNG
@@ -154,10 +158,17 @@ async function run() {
         `);
 
         try {
-            await pool.execute("ALTER TABLE LICH_SU_XU MODIFY COLUMN LoaiGiaoDich ENUM('NapXu', 'MuaTaiLieu', 'BanTaiLieu', 'TruXuAdmin', 'ThuongXu', 'HoanXu', 'PhatXu') NOT NULL");
+            await pool.execute("ALTER TABLE LICH_SU_XU MODIFY COLUMN LoaiGiaoDich ENUM('NapXu', 'MuaTaiLieu', 'BanTaiLieu', 'TruXuAdmin', 'ThuongXu', 'HoanXu', 'PhatXu', 'TangXu', 'NhanXu') NOT NULL");
             console.log("Updated ENUM for LICH_SU_XU.LoaiGiaoDich");
         } catch (e) {
             console.error("Error updating ENUM for LICH_SU_XU.LoaiGiaoDich", e.message);
+        }
+
+        try {
+            await pool.execute("ALTER TABLE NGUOIDUNG MODIFY COLUMN TrangThai ENUM('HoatDong', 'BiKhoa', 'VoHieuHoa') DEFAULT 'HoatDong'");
+            console.log("Updated ENUM for NGUOIDUNG.TrangThai (added VoHieuHoa)");
+        } catch (e) {
+            console.error("Error updating ENUM for NGUOIDUNG.TrangThai", e.message);
         }
 
         await createTableIfMissing('YEU_CAU_GIAO_VIEN', `
@@ -174,13 +185,17 @@ async function run() {
         `);
 
         await addColumnIfMissing('YEU_CAU_GIAO_VIEN', 'LyDoTuChoi', 'TEXT DEFAULT NULL');
+        try {
+            await pool.execute('ALTER TABLE YEU_CAU_GIAO_VIEN MODIFY MinhChungURL TEXT NOT NULL');
+            console.log('Modified YEU_CAU_GIAO_VIEN MinhChungURL to TEXT');
+        } catch(e) {}
 
         await addColumnIfMissing('BINHLUAN', 'DaGhim', 'BOOLEAN DEFAULT FALSE');
         await addColumnIfMissing('BINHLUAN', 'DaChinhSua', 'BOOLEAN DEFAULT FALSE');
 
         await addColumnIfMissing('NHOM', 'AnhBia', 'VARCHAR(255) DEFAULT NULL');
-
         await addColumnIfMissing('NHOM', 'IsPrivate', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('NHOM', 'NoiQuy', 'TEXT DEFAULT NULL');
 
         await addColumnIfMissing('TINNHAN', 'LoaiTinNhan', "ENUM('text', 'image', 'file') DEFAULT 'text'");
         await addColumnIfMissing('TINNHAN', 'DaThuHoi', 'BOOLEAN DEFAULT FALSE');
@@ -297,6 +312,22 @@ async function run() {
                 ApiEndpoint VARCHAR(255),
                 NgayTao DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (MaND) REFERENCES NGUOIDUNG(MaND)
+            )
+        `);
+
+        await createTableIfMissing('DEACTIVATE_ACCOUNT_OTP', `
+            CREATE TABLE DEACTIVATE_ACCOUNT_OTP (
+                Email VARCHAR(255) PRIMARY KEY,
+                OTP VARCHAR(10) NOT NULL,
+                ExpiresAt DATETIME NOT NULL
+            )
+        `);
+
+        await createTableIfMissing('DONATE_OTP', `
+            CREATE TABLE DONATE_OTP (
+                Email VARCHAR(255) PRIMARY KEY,
+                OTP VARCHAR(10) NOT NULL,
+                ExpiresAt DATETIME NOT NULL
             )
         `);
     } finally {

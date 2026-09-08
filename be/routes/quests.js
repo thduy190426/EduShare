@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('./middlewares/auth');
+const { authMiddleware } = require('../middlewares/auth');
 
 router.get('/', authMiddleware, async (req, res) => {
     const pool = req.app.locals.pool;
@@ -64,7 +64,14 @@ router.post('/:maNV/claim', authMiddleware, async (req, res) => {
             await conn.beginTransaction();
             
             await conn.execute('UPDATE TIENDO_NHIEMVU SET TrangThai = "DaNhan" WHERE MaND = ? AND MaNV = ?', [req.user.MaND, maNV]);
-            await conn.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [quest.ThuongXu, req.user.MaND]);
+            
+              let rewardXu = quest.ThuongXu;
+              try {
+                  const [configRows] = await conn.execute("SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = 'QUEST_REWARD_XU'");
+                  if (configRows.length > 0) rewardXu = parseInt(configRows[0].GiaTri) || quest.ThuongXu;
+              } catch (e) {}
+
+              await conn.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [rewardXu, req.user.MaND]);
             
             await conn.execute(
                 "INSERT INTO LICH_SU_XU (MaND, LoaiGiaoDich, SoXuThayDoi, MoTa) VALUES (?, 'ThuongXu', ?, ?)",

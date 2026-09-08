@@ -61,7 +61,17 @@ export function makeAdminTablesResizableAndSticky() {
         const cols = table.querySelectorAll('thead th');
         if (!cols || cols.length === 0) return;
 
-        cols.forEach(col => {
+        cols.forEach((col, index) => {
+            const pageName = window.location.pathname.split('/').pop() || 'unknown';
+            const tableId = table.id || 'default-table';
+            const storageKey = `admin_col_width_${pageName}_${tableId}_${index}`;
+
+            const savedWidth = localStorage.getItem(storageKey);
+            if (savedWidth) {
+                col.style.width = savedWidth;
+                col.style.minWidth = savedWidth;
+            }
+
             if (col.querySelector('.resizer')) return;
 
             const resizer = document.createElement('div');
@@ -95,6 +105,8 @@ export function makeAdminTablesResizableAndSticky() {
                 
                 resizer.classList.remove('resizing');
                 document.body.classList.remove('resizing-columns');
+
+                localStorage.setItem(storageKey, col.style.width);
             };
             
             resizer.addEventListener('mousedown', mouseDownHandler);

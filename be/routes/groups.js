@@ -2,11 +2,11 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
-const { authMiddleware } = require('./middlewares/auth');
-const { moderationMiddleware } = require('./middlewares/moderation');
-const { groupPostLimiter, commentLimiter } = require('./middlewares/rateLimit');
-const { sendNotificationToUser } = require('./services/socket');
-const { updateQuestProgress } = require('./services/questService');
+const { authMiddleware } = require('../middlewares/auth');
+const { moderationMiddleware } = require('../middlewares/moderation');
+const { groupPostLimiter, commentLimiter } = require('../middlewares/rateLimit');
+const { sendNotificationToUser } = require('../services/socket');
+const { updateQuestProgress } = require('../services/questService');
 
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -49,8 +49,8 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), async (req, res) => {
-    const { tenNhom, moTa, maMonHoc } = req.body;
+router.post('/', authMiddleware, moderationMiddleware(['tenNhom', 'moTa', 'noiQuy']), async (req, res) => {
+    const { tenNhom, moTa, maMonHoc, noiQuy } = req.body;
     const maND = req.user.MaND;
 
     if (!tenNhom) {
@@ -64,8 +64,8 @@ router.post('/', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), asyn
         await conn.beginTransaction();
 
         const [groupResult] = await conn.execute(
-            'INSERT INTO NHOM (TenNhom, MoTa, MaND_QuanTri, MaMonHoc) VALUES (?, ?, ?, ?)',
-            [tenNhom, moTa || '', maND, maMonHoc || null]
+            'INSERT INTO NHOM (TenNhom, MoTa, MaND_QuanTri, MaMonHoc, NoiQuy) VALUES (?, ?, ?, ?, ?)',
+            [tenNhom, moTa || '', maND, maMonHoc || null, noiQuy || null]
         );
         const maNhom = groupResult.insertId;
 
@@ -662,10 +662,10 @@ router.get('/:maNhom', authMiddleware, async (req, res) => {
     }
 });
 
-router.put('/:maNhom', authMiddleware, moderationMiddleware(['tenNhom', 'moTa']), async (req, res) => {
+router.put('/:maNhom', authMiddleware, moderationMiddleware(['tenNhom', 'moTa', 'noiQuy']), async (req, res) => {
     const maNhom = req.params.maNhom;
     const maND = req.user.MaND;
-    const { tenNhom, moTa, maMonHoc, anhBia, isPrivate } = req.body;
+    const { tenNhom, moTa, maMonHoc, anhBia, isPrivate, noiQuy } = req.body;
 
     if (!tenNhom) {
         return res.status(400).json({ message: 'Tên nhóm không được để trống.' });
@@ -680,9 +680,9 @@ router.put('/:maNhom', authMiddleware, moderationMiddleware(['tenNhom', 'moTa'])
 
         const isPrivateVal = isPrivate ? 1 : 0;
         if (anhBia !== undefined) {
-            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, AnhBia = ?, IsPrivate = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, anhBia || null, isPrivateVal, maNhom]);
+            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, AnhBia = ?, IsPrivate = ?, NoiQuy = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, anhBia || null, isPrivateVal, noiQuy || null, maNhom]);
         } else {
-            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, IsPrivate = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, isPrivateVal, maNhom]);
+            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, IsPrivate = ?, NoiQuy = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, isPrivateVal, noiQuy || null, maNhom]);
         }
         res.status(200).json({ message: 'Cập nhật thành công.' });
     } catch (error) {

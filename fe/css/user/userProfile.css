@@ -160,4 +160,54 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; background: var(--text-secondary); }
 
-*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
+
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+#create-collection-modal .form-control {
+  width: 100%; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: #1E293B; transition: all 0.2s; outline: none; background: #FFFFFF; box-sizing: border-box;
+}
+#create-collection-modal .form-control:focus {
+  border-color: #4F46E5; box-shadow: 0 0 0 3px #EEF2FF;
+}
+#create-collection-modal .form-label {
+  display: block; margin-bottom: 8px; font-weight: 600; color: #1E293B; font-size: 14px;
+}
+#create-collection-modal textarea.form-control {
+  padding: 12px 16px; resize: vertical; min-height: 120px;
+}
+.modal {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; transition: opacity 0.3s;
+}
+.modal-content {
+  background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: modalFadeIn 0.3s ease-out;
+}
+.modal-title {
+  margin-top: 0; margin-bottom: 16px; color: var(--text-primary);
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group:last-of-type {
+  margin-bottom: 24px;
+}
+.required {
+  color: red;
+}
+.modal-actions {
+  display: flex; justify-content: flex-end; gap: 12px;
+}
+.modal-actions .btn {
+  padding: 8px 16px; border-radius: 6px; display: flex; align-items: center; gap: 6px;
+}
+.modal-actions .btn-outline {
+  border: 1px solid #cbd5e1; background: transparent; cursor: pointer;
+}
+.modal-actions .btn-primary {
+  border: none; background: var(--primary); color: white; transition: all 0.2s;
+}
+.modal-actions .btn-primary:disabled {
+  cursor: not-allowed; opacity: 0.5;
+}

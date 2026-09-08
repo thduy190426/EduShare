@@ -33,6 +33,13 @@ function injectChatWidget() {
     container.innerHTML = `
         <style>
             #chat-widget-panel { opacity: 0; pointer-events: none; transform: translateY(20px); }
+            @keyframes chat-attention-pulse {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 132, 255, 0.6); }
+                50% { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(0, 132, 255, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 132, 255, 0); }
+            }
+            #chat-widget-button { animation: chat-attention-pulse 1.2s infinite ease-in-out; }
+            #chat-widget-button:hover { animation: none; transform: scale(1.1); }
         </style>
         <div id="chat-widget-panel">
             <div class="chat-header">

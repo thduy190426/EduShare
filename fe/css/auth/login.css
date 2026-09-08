@@ -95,7 +95,6 @@
 body { -webkit-user-select: none; user-select: none; }
 input, textarea { -webkit-user-select: auto; user-select: auto; }
 
-*:not(.fa):not(.fas):not(.far):not(.fa-solid):not(.fa-regular):not(.fa-brands):not(i) { font-family: 'Inter', sans-serif !important; }
 
 .form-floating-group { position: relative; margin-bottom: 20px; }
 .form-floating-group .input-wrapper { position: relative; display: flex; align-items: center; width: 100%; }

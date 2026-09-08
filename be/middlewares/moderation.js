@@ -24,14 +24,33 @@ const containsSpam = (text) => {
 };
 
 const moderationMiddleware = (fieldsToCheck = []) => {
-    return (req, res, next) => {
+    return async (req, res, next) => {
         try {
+            const pool = req.app.locals.pool;
+            let blacklist = [];
+
+            if (pool) {
+                const [settingRows] = await pool.execute('SELECT GiaTri FROM CAUHINH_HETHONG WHERE TenCauHinh = "BAD_WORDS"');
+                if (settingRows.length > 0 && settingRows[0].GiaTri) {
+                    blacklist = settingRows[0].GiaTri.split(',').map(w => w.trim().toLowerCase()).filter(w => w.length > 0);
+                }
+            }
+
+            if (blacklist.length === 0) {
+                blacklist = getBlacklist();
+            }
+
             for (const field of fieldsToCheck) {
                 const value = req.body[field];
-                if (value && containsSpam(value)) {
-                    return res.status(400).json({ 
-                        message: `Nội dung chứa từ khóa vi phạm tiêu chuẩn cộng đồng (Spam/Từ khóa cấm).` 
-                    });
+                if (value && typeof value === 'string') {
+                    const lowerText = value.toLowerCase();
+                    for (const keyword of blacklist) {
+                        if (lowerText.includes(keyword)) {
+                            return res.status(400).json({ 
+                                message: `Nội dung chứa từ khóa vi phạm tiêu chuẩn cộng đồng (Spam/Từ khóa cấm).` 
+                            });
+                        }
+                    }
                 }
             }
             next();

@@ -70,10 +70,11 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 ### Người dùng (Sinh viên / Giảng viên)
 
 - **Xác thực đa kênh & Bảo mật**: 
-  - Đăng nhập/Đăng ký qua Email (kèm OTP) hoặc Google OAuth2. Đăng xuất an toàn hỗ trợ Refresh Tokens.
+  - Đăng nhập/Đăng ký qua Email (kèm OTP), **Google OAuth2**, và **GitHub OAuth2**. Đăng xuất an toàn hỗ trợ Refresh Tokens.
   - Cơ chế **Ghi nhớ đăng nhập (Remember Me)**.
-  - Tùy chọn cài đặt **Xác thực 2 yếu tố (2FA)** bảo vệ tài sản (Xu).
-- **Quản lý tài liệu**: Đăng tải tài liệu Free hoặc Premium. Hệ thống tự động tạo mã băm chống re-upload, quét virus và trích xuất text phục vụ SEO.
+  - Tùy chọn cài đặt **Xác thực 2 yếu tố (2FA)** bảo vệ tài khoản (Xu).
+- **Quản lý tài liệu**: Đăng tải tài liệu Free hoặc Premium. Hệ thống tự động tạo mã băm chống re-upload, quét virus và trích xuất text phục vụ SEO. Cung cấp mã nhúng (Embed) để dễ dàng chia sẻ tài liệu lên các website khác.
+- **Trợ lý AI (AI Assistant)**: Tích hợp Trợ lý Trí tuệ Nhân tạo thông minh, cho phép sinh viên đặt câu hỏi và nhận câu trả lời có tính ngữ cảnh dựa trên nội dung các tài liệu đã được duyệt trên nền tảng.
 - **Nâng cấp Giảng viên**: Gửi yêu cầu kèm minh chứng URL để Admin xét duyệt quyền Giảng viên (Đăng tài liệu không cần chờ duyệt).
 - **Hệ thống giao dịch (Xu) & Danh hiệu (Badges)**:
   - Nạp Xu qua Admin, nhập mã khuyến mãi (Promo Code).
@@ -107,9 +108,11 @@ Hệ thống được phát triển theo mô hình **Client - Server (RESTful AP
 - **Hệ thống Cron Jobs Tự động**: Tự động chạy ngầm vào đầu tháng để tổng kết và phát thưởng Xu cho Top Bảng Vàng (Người dùng có lượt đóng góp và lượt tải nhiều nhất). Đặt lại tiến độ nhiệm vụ hàng ngày.
 - **Cấu hình hệ thống động**: Tùy chỉnh các tham số cốt lõi từ giao diện web: tỷ giá nạp Xu - VNĐ, giới hạn đăng tải, bật/tắt tính năng đăng ký, duyệt nhóm.
 - **Mã khuyến mãi (Promo Code)** & **Quản lý Gói Nạp (Packages)**: Tạo, chỉnh sửa các gói nạp và mã quà tặng người dùng.
+- **Gửi Email Hàng Loạt (Mass Mail)**: Công cụ gửi bản tin (Newsletter) hoặc thông báo hệ thống đồng loạt tới email của tất cả thành viên.
 - **Kiểm soát Hệ thống Nâng cao**:
   - **Audit Logs**: Lưu vết (Log) tự động toàn bộ thao tác quan trọng của Quản trị viên để dễ dàng truy vết và quản lý trách nhiệm.
   - **Xuất Báo cáo Kế toán**: Dễ dàng xuất file định dạng Excel/CSV (chuẩn UTF-8 BOM) cho báo cáo Doanh thu hệ thống và Lịch sử nạp xu.
+  - **Sao lưu Dữ liệu (Database Backups)**: Tự động hoặc thủ công sao lưu toàn bộ cơ sở dữ liệu hệ thống (sử dụng `mysqldump`), cho phép quản lý vòng đời file sao lưu dễ dàng ngay trên giao diện Web.
 
 ---
 
@@ -126,10 +129,11 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ, đượ
 - **`contact.html`, `privacy.html`, `terms.html`, `copyright.html`**: Các trang thông tin, pháp lý.
 
 ### 2. Phân hệ Xác thực (Authentication)
-- **`login.html`**: Đăng nhập bảo mật (hỗ trợ Google OAuth2).
+- **`login.html`**: Đăng nhập bảo mật (hỗ trợ Google & GitHub OAuth2).
 - **`register.html`**: Đăng ký tài khoản thành viên mới.
 - **`register-verify.html`**: Form nhập mã xác thực OTP qua Email.
 - **`forgot-password.html`**: Luồng quy trình quên và khôi phục mật khẩu.
+- **`github-callback.html`**: Giao diện xử lý chuyển hướng sau khi xác thực GitHub.
 
 ### 3. Phân hệ Người dùng & Cá nhân hóa (User Module)
 - **`userHome.html`**: Trang chủ cá nhân hóa sau khi đăng nhập (Bảng feed tài liệu, gợi ý nhóm, top contributor).
@@ -147,6 +151,7 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ, đượ
 - **`myDocuments.html`**: Kho lưu trữ cá nhân (tài liệu đã đăng, đã mua, đã lưu/bookmark).
 - **`searchResults.html`**: Trang tìm kiếm tài liệu nâng cao (lọc theo môn học, định dạng).
 - **`uploadDocument.html`**: Giao diện đăng tải tài liệu trực quan.
+- **`embed.html`**: Giao diện nhúng tài liệu (Iframe) dành cho bên thứ 3.
 
 ### 5. Phân hệ Nhóm học tập (Group Module)
 - **`groupList.html`**: Khám phá, tìm kiếm và tham gia nhóm.
@@ -163,6 +168,8 @@ Dự án sở hữu một hệ thống giao diện vô cùng đồ sộ, đượ
 - **`adminTeacherRequests.html`**: Xét duyệt hồ sơ xin cấp quyền Giảng viên.
 - **`adminSubjects.html`**: Quản lý danh mục môn học.
 - **`adminAuditLogs.html`**: Giao diện Nhật ký hoạt động (Audit Logs), truy vết toàn bộ thao tác của Admin.
+- **`adminBackups.html`**: Quản lý file sao lưu CSDL (Backup).
+- **`adminMassMail.html`**: Giao diện soạn thảo và gửi Email hàng loạt.
 - **`adminSettings.html`**: Cấu hình hệ thống động.
 
 ---
@@ -237,6 +244,13 @@ CLOUDINARY_API_SECRET=your_api_secret
 # Google OAuth2
 GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
+# GitHub OAuth2
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+
+# AI (Trợ lý ảo)
+GEMINI_API_KEY=your_gemini_api_key
+
 # VirusTotal
 VIRUSTOTAL_API_KEY=your_api_key_here
 
@@ -266,20 +280,3 @@ Server chạy tại: `http://localhost:3000`.
 - Bổ sung quy trình **Rút tiền (Cashout)** hoặc tích hợp cổng thanh toán tự động (VNPAY/MoMo).
 - Chuyển đổi khung giao diện sang **React / Next.js** (SSR) nhằm tối ưu trải nghiệm SPA và tăng trưởng SEO tự nhiên.
 - Phát triển Mobile App bằng React Native hoặc Flutter sử dụng lại bộ API hiện có.
-- Tích hợp **AI (Gemini/ChatGPT)** để tự động tóm tắt nội dung tài liệu PDF/DOCX, hỗ trợ sinh viên học nhanh.
-
-## 9. Kiểm thử tự động (Unit Tests)
-
-Hệ thống được tích hợp bộ Unit Tests bao phủ toàn bộ các Module Backend (Sử dụng **Jest** và **Supertest**).
-- **Auth API**: Đăng ký, Đăng nhập, 2FA, Khôi phục mật khẩu, Token Refresh.
-- **Users Profile**: Cập nhật thông tin cá nhân, Đổi Avatar, Xóa tài khoản, Cấp/Thu hồi Danh hiệu.
-- **Documents & Uploads**: Tải lên tài liệu, Quét virus (Mocks), Giới hạn tệp.
-- **Subjects & Groups**: Theo dõi môn học, Quản lý nhóm, Thành viên.
-- **Real-time (Sockets)**: Kiểm thử logic các sự kiện phát thông báo và tin nhắn qua Socket.io.
-- **Cron Jobs**: Kiểm thử luồng phát thưởng Top Bảng Vàng (Mocking).
-- **Admin Controls**: Quản lý Dashboard, Xóa/Khóa Users, Duyệt tài liệu, Gói nạp.
-
-Toàn bộ tests chạy hoàn toàn độc lập nhờ cơ chế **Mocking Database Connections**. Cú pháp chạy test:
-```bash
-npm test
-```

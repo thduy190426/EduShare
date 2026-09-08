@@ -4,7 +4,7 @@ const isTest = process.env.NODE_ENV === 'test';
 
 const uploadLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, 
-    max: isTest ? 1000 : 10, 
+    max: isTest ? 1000 : 5, 
     message: { message: 'Bạn đã đạt giới hạn tải lên tài liệu. Vui lòng thử lại sau 1 giờ.' },
     standardHeaders: true, 
     legacyHeaders: false, 

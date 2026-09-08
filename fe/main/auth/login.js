@@ -499,6 +499,24 @@ if (facebookLoginBtn) {
   });
 }
 
+const githubLoginBtn = document.getElementById("githubLoginBtn");
+if (githubLoginBtn) {
+  githubLoginBtn.addEventListener("click", async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/github/url`);
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        showCustomToast(data.message || 'Lỗi cấu hình Github', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showCustomToast('Không thể kết nối đến server', 'error');
+    }
+  });
+}
+
 window.handleFacebookLogin = async function (accessToken) {
   try {
     if (typeof Swal !== "undefined") {

@@ -14,6 +14,9 @@
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
   <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
   <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
+  <link rel="stylesheet" href="../../css/shared/intro-custom.css">
+  <link rel="stylesheet" href="../../css/shared/searchWidget.css">
 </head>
 <body>
   <nav class="navbar">
@@ -55,7 +58,7 @@
         </ol>
       </nav>
       <div class="search-layout">
-        <aside class="filter-sidebar">
+        <aside class="filter-sidebar" data-intro="Sử dụng bộ lọc này để tìm kiếm tài liệu theo cấp bậc, môn học, loại file và nhiều tiêu chí khác." data-title="Bộ Lọc Tìm Kiếm" data-step="1">
           <div class="filter-header">
             <h3><i class="fa-solid fa-filter" style="margin-right: 8px;"></i> Bộ lọc</h3>
             <button class="filter-clear" id="btnClearFilter" type="button">Xóa lọc</button>
@@ -145,7 +148,7 @@
           </div>
         </aside>
 
-        <main class="results-area">
+        <main class="results-area" data-intro="Các tài liệu phù hợp với tiêu chí tìm kiếm của bạn sẽ hiển thị tại đây." data-title="Kết Quả Tìm Kiếm" data-step="2">
           <div class="results-header" id="resultsHeader" style="display: none;">
             <h1 class="results-count">Tìm thấy <strong>...</strong> kết quả</h1>
           </div>
@@ -166,9 +169,20 @@
     </main>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
   <script type="module" src="../../main/document/search.js"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
+  <script type="module">
+    import { startIntroTour } from '../../main/shared/intro-helper.js';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('seen_search_results_tour')) {
+        setTimeout(() => {
+          startIntroTour();
+          localStorage.setItem('seen_search_results_tour', 'true');
+        }, 1500);
+      }
+    });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 </body>
 </html>
-

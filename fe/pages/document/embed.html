@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduShare Embed Viewer</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/document/embed.css">
+</head>
+<body>
+    <div class="embed-header">
+        <div class="doc-info">
+            <h1 class="doc-title" id="embed-title">Đang tải...</h1>
+            <div class="doc-author" id="embed-author">EduShare</div>
+        </div>
+        <a href="documentDetails.html" target="_blank" class="edushare-logo" id="edushare-link">
+            <i class="fa-solid fa-book"></i> Xem trên EduShare
+        </a>
+    </div>
+
+    <div class="embed-content" id="embed-container">
+        <div class="loading-state" id="loading-indicator">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>Đang tải tài liệu...</span>
+        </div>
+        
+        <div class="error-state" id="error-indicator">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <p id="error-message">Không thể tải tài liệu</p>
+        </div>
+        
+        <div class="premium-lock" id="premium-indicator">
+            <i class="fa-solid fa-lock"></i>
+            <h3>Tài liệu Premium</h3>
+            <p>Vui lòng xem trên EduShare để mở khóa tài liệu này.</p>
+            <a href="documentDetails.html" target="_blank" class="btn-view-edushare" id="premium-link">Mở trên EduShare</a>
+        </div>
+        
+        <div id="iframe-container" class="iframe-container"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../../main/shared/config.js"></script>
+    <script src="../../main/shared/utils.js"></script>
+    <script src="../../main/document/embed.js"></script>
+</body>
+</html>

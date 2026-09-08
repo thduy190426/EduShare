@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
-const { authMiddleware } = require('./middlewares/auth');
+const { authMiddleware } = require('../middlewares/auth');
 
 router.get('/', authMiddleware, async (req, res) => {
     try {

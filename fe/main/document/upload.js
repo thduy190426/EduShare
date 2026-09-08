@@ -501,6 +501,26 @@ async function generatePdfThumbnail(file) {
             if (response.ok) {
                 localStorage.removeItem('draft_upload_title');
                 localStorage.removeItem('draft_upload_desc');
+                
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const playBeep = (freq, time) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime + time);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.1);
+                        osc.start(ctx.currentTime + time);
+                        osc.stop(ctx.currentTime + time + 0.1);
+                    };
+                    playBeep(880, 0);
+                    playBeep(1320, 0.15);
+                } catch(e) {
+                    console.error('Audio notification failed', e);
+                }
+
                 await Swal.fire({
                     icon: 'success',
                     title: 'Thành công',

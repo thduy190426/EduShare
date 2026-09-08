@@ -8,12 +8,12 @@ const os = require('os');
 const multer = require('multer');
 const streamifier = require('streamifier');
 const router = express.Router();
-const { authMiddleware } = require('./middlewares/auth');
-const { validate } = require('./middlewares/validate');
-const { updateProfileSchema } = require('./schemas/userSchemas');
-const cloudinary = require('./config/cloudinary');
-const { sendNotificationToUser } = require('./services/socket');
-const { updateQuestProgress } = require('./services/questService');
+const { authMiddleware } = require('../middlewares/auth');
+const { validate } = require('../middlewares/validate');
+const { updateProfileSchema } = require('../schemas/userSchemas');
+const cloudinary = require('../config/cloudinary');
+const { sendNotificationToUser } = require('../services/socket');
+const { updateQuestProgress } = require('../services/questService');
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -60,6 +60,31 @@ const generateOTPDeleteAccountEmail = (hoTen, otp) => {
             <p style="font-size: 14px; color: #6b7280; margin: 0;">Nếu bạn không yêu cầu xóa tài khoản, <strong>vui lòng đổi mật khẩu ngay lập tức</strong> để bảo vệ tài khoản.</p>
         </div>
     </div>`;
+};
+
+const generateOTPDeactivateAccountEmail = (hoTen, otp) => {
+    return `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #F59E0B; margin: 0; font-size: 28px;">EduShare</h1>
+            <p style="color: #6B7280; margin-top: 5px; font-size: 16px;">Yêu cầu vô hiệu hóa tài khoản</p>
+        </div>
+        <div style="background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); border: 1px solid #F59E0B;">
+            <h2 style="color: #1f2937; margin-top: 0;">Xin chào ${hoTen},</h2>
+            <p style="font-size: 16px;">Chúng tôi nhận được yêu cầu <strong>vô hiệu hóa tài khoản tạm thời</strong> trên EduShare của bạn.</p>
+            <p style="font-size: 16px;">Dưới đây là mã xác thực OTP để hoàn tất quá trình vô hiệu hóa tài khoản:</p>
+            <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; border: 1px dashed #F59E0B;">
+                <div style="font-size: 32px; font-weight: 700; color: #F59E0B; letter-spacing: 4px;">${otp}</div>
+            </div>
+            <p style="font-size: 14px; color: #6b7280; font-style: italic;">Mã này sẽ hết hạn sau 5 phút.</p>
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+            <p style="font-size: 14px; color: #6b7280; margin-bottom: 0;">Nếu bạn không thực hiện yêu cầu này, vui lòng đổi mật khẩu ngay lập tức hoặc liên hệ hỗ trợ.</p>
+        </div>
+        <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">
+            <p>&copy; 2026 EduShare. Tất cả các quyền được bảo lưu.</p>
+        </div>
+    </div>
+    `;
 };
 async function tableExists(conn, tableName) {
     const [rows] = await conn.execute(
@@ -188,7 +213,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
-            SELECT N.MaND, N.HoTen, N.Email, N.VaiTro, N.AvatarURL, N.Tuoi, N.GioiTinh, N.DiaChi, N.TruongHoc, N.KhoaNganh, N.GioiThieu, N.SoDuXu, N.HienThiLichSuTai, N.HienThiDanhGia, N.AuthType, N.IsTwoFactorEnabled,
+            SELECT N.MaND, N.HoTen, N.Email, N.VaiTro, N.AvatarURL, N.Tuoi, N.GioiTinh, N.DiaChi, N.TruongHoc, N.KhoaNganh, N.GioiThieu, N.SoDuXu, N.HienThiLichSuTai, N.HienThiDanhGia, N.AuthType, N.IsTwoFactorEnabled, N.HasCompletedOnboarding, N.Premium_Until, N.Premium_Quota,
                    D.TenDanhHieu AS DanhHieu, D.IconClass AS DanhHieuIcon, D.MauSac AS DanhHieuMauSac
             FROM NGUOIDUNG N
             LEFT JOIN NGUOIDUNG_DANHHIEU ND ON N.MaND = ND.MaND AND ND.LaDanhHieuChinh = TRUE
@@ -196,9 +221,22 @@ router.get('/profile', authMiddleware, async (req, res) => {
             WHERE N.MaND = ?
         `, [req.user.MaND]);
         if (rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
-        res.status(200).json({ profile: rows[0] });
+        const profile = rows[0];
+        profile.isPremium = profile.Premium_Until && new Date(profile.Premium_Until) > new Date();
+        res.status(200).json({ profile });
     } catch (error) {
         console.error('Lỗi lấy profile:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/complete-onboarding', authMiddleware, async (req, res) => {
+    try {
+        const pool = req.app.locals.pool;
+        await pool.execute('UPDATE NGUOIDUNG SET HasCompletedOnboarding = TRUE WHERE MaND = ?', [req.user.MaND]);
+        res.status(200).json({ message: 'Đã hoàn thành onboarding.' });
+    } catch (error) {
+        console.error('Lỗi khi cập nhật trạng thái onboarding:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
@@ -1171,6 +1209,72 @@ router.get('/creator-stats', authMiddleware, async (req, res) => {
         });
     } catch (error) {
         console.error('Lỗi lấy thống kê creator:', error);
+        res.status(500).json({ message: 'Lỗi máy chủ.' });
+    }
+});
+
+router.post('/deactivate-otp', authMiddleware, async (req, res) => {
+    try {
+        const maND = req.user.MaND;
+        const pool = req.app.locals.pool;
+
+        const [userRows] = await pool.execute('SELECT Email, HoTen FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (userRows.length === 0) return res.status(404).json({ message: 'Không tìm thấy người dùng.' });
+        
+        const email = userRows[0].Email;
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60000);
+
+        await pool.execute(
+            'INSERT INTO DEACTIVATE_ACCOUNT_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
+            [email, otp, expiresAt, otp, expiresAt]
+        );
+
+        await transporter.sendMail({
+            from: `"EduShare" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: 'Mã OTP Vô Hiệu Hóa Tài Khoản',
+            html: generateOTPDeactivateAccountEmail(userRows[0].HoTen, otp)
+        });
+
+        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
+    } catch (err) {
+        console.error('Lỗi gửi OTP vô hiệu hóa tài khoản:', err);
+        res.status(500).json({ message: 'Lỗi máy chủ khi gửi OTP.' });
+    }
+});
+
+router.post('/deactivate', authMiddleware, async (req, res) => {
+    try {
+        const maND = req.user.MaND;
+        const pool = req.app.locals.pool;
+        const { otp } = req.body;
+
+        if (!otp) return res.status(400).json({ message: 'Vui lòng cung cấp mã OTP.' });
+
+        const [userRows] = await pool.execute('SELECT Email FROM NGUOIDUNG WHERE MaND = ?', [maND]);
+        if (userRows.length === 0) return res.status(404).json({ message: 'Người dùng không tồn tại.' });
+        const email = userRows[0].Email;
+
+        const [otpRows] = await pool.execute('SELECT * FROM DEACTIVATE_ACCOUNT_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+        if (otpRows.length === 0) return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+
+        if (new Date(otpRows[0].ExpiresAt) < new Date()) {
+            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+        }
+
+        await pool.execute('DELETE FROM DEACTIVATE_ACCOUNT_OTP WHERE Email = ?', [email]);
+
+        await pool.execute('UPDATE NGUOIDUNG SET TrangThai = ? WHERE MaND = ?', ['VoHieuHoa', maND]);
+
+        const { sendNotificationToUser } = require('../services/socket');
+        sendNotificationToUser(maND, 'force_logout', {
+            message: 'Tài khoản của bạn đã bị vô hiệu hóa.'
+        });
+
+        res.status(200).json({ message: 'Vô hiệu hóa tài khoản thành công.' });
+    } catch (error) {
+        console.error('Lỗi vô hiệu hóa tài khoản:', error);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });

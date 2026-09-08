@@ -1,7 +1,7 @@
 async function scanFileVirus(fileHash) {
     const apiKey = process.env.VIRUSTOTAL_API_KEY;
 
-    if (!apiKey || apiKey.trim() === '' || apiKey === '3a73b4f146f91977c3d0666e95c0e6a099d08f2986d0036216fc368420f5d27b') {
+    if (!apiKey || apiKey.trim() === '') {
         console.warn('[VirusScanner] Chưa cấu hình VIRUSTOTAL_API_KEY trong .env — Bỏ qua bước quét virus.');
         return { safe: true, message: 'Bỏ qua bước quét virus do chưa cấu hình API Key.' };
     }
