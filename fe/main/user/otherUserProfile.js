@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { formatRatingSummary, getToken, getAssetUrl, decodeJWT, getAvatar } from '../shared/utils.js';
+import { formatRatingSummary, getToken, getAssetUrl, decodeJWT, getAvatar, renderDocumentSkeleton } from '../shared/utils.js';
 const token = getToken();
 let currentUserId = null; 
 let isFollowing = false;
@@ -152,7 +152,7 @@ function setupTabs() {
 }
 async function loadDocuments(tabName) {
     const container = document.getElementById('user-docs-container');
-    container.innerHTML = '<p style="text-align:center; padding: 20px;">Đang tải tài liệu...</p>';
+    if (container) container.innerHTML = renderDocumentSkeleton(4);
     let endpoint = 'documents';
     let emptyMessage = 'Người dùng này chưa chia sẻ tài liệu nào.';
     if (tabName === 'downloads') {

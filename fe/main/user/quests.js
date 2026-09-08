@@ -6,6 +6,7 @@ import '../shared/chatWidget.js';
 document.addEventListener('DOMContentLoaded', async () => {
     loadUserProfileNav();
     const questsList = document.getElementById('questsList');
+    let hasRemindedQuests = false;
 
     async function loadQuests() {
         try {
@@ -39,11 +40,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         questsList.innerHTML = '';
+        let claimableCount = 0;
         quests.forEach(q => {
             const progressPercent = Math.min((q.TienDo / q.MucTieu) * 100, 100);
             const isCompleted = q.TienDo >= q.MucTieu;
             const isClaimed = q.TrangThai === 'DaNhan';
             const isClaimable = q.TrangThai === 'ChoNhan';
+            if (isClaimable) claimableCount++;
 
             let actionHtml = '';
             if (isClaimed) {
@@ -85,6 +88,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.btn-claim').forEach(btn => {
             btn.addEventListener('click', handleClaim);
         });
+
+        if (claimableCount > 0 && !hasRemindedQuests) {
+            hasRemindedQuests = true;
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                icon: 'info',
+                title: `Bạn có ${claimableCount} nhiệm vụ chưa nhận thưởng!`,
+                text: 'Hãy click "Nhận thưởng" để lấy EduCoin nhé.'
+            });
+        }
     }
 
     async function handleClaim(e) {
@@ -99,6 +116,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = await res.json();
             
             if (res.ok) {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const playBeep = (freq, time) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime + time);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 0.1);
+                        osc.start(ctx.currentTime + time);
+                        osc.stop(ctx.currentTime + time + 0.1);
+                    };
+                    playBeep(880, 0);
+                    playBeep(1320, 0.15);
+                } catch(e) {
+                    console.error('Audio notification failed', e);
+                }
+
                 Swal.fire({
                     icon: 'success',
                     title: 'Nhận thưởng thành công',

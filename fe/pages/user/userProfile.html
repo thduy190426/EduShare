@@ -5,18 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hồ sơ cá nhân — EduShare</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
   <link rel="stylesheet" href="../../css/user/userProfile.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
   <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
-  <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
-  <link rel="stylesheet" href="../../css/shared/footer.css">
 </head>
 
 <body>
@@ -60,12 +55,6 @@
 
     <aside id="app-sidebar" class="sidebar"></aside>
     <main class="content-area">
-      <nav aria-label="breadcrumb" class="breadcrumb-container">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Hồ sơ của tôi</li>
-        </ol>
-      </nav>
 
 
       <div class="profile-header">
@@ -115,12 +104,9 @@
               <input type="text" id="input-hoten" class="form-control">
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-envelope"
+              <label class="form-label" title="Email không thể thay đổi"><i class="fa-solid fa-envelope"
                   style="margin-right: 6px;"></i> Email: </label>
-              <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="email" id="input-email" class="form-control" disabled style="flex: 1; opacity: 0.8;">
-                <button type="button" class="btn btn-outline" id="btn-open-change-email" style="padding: 10px 16px; white-space: nowrap; font-size: 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer;"><i class="fa-solid fa-pen" style="margin-right: 6px;"></i> Thay đổi</button>
-              </div>
+              <input type="email" id="input-email" class="form-control" disabled>
             </div>
           </div>
           <div class="form-row" style="margin-top: 15px;">
@@ -163,13 +149,6 @@
               </select>
             </div>
           </div>
-          <div class="form-row" style="margin-top: 15px; grid-template-columns: 1fr;">
-            <div class="form-group" style="width: 100%;">
-              <label class="form-label"><i class="fa-solid fa-address-card" style="margin-right: 6px;"></i> Giới thiệu bản thân:
-              </label>
-              <textarea id="input-gioithieu" class="form-control" placeholder="Viết một vài điều về bản thân (Sở thích, định hướng, ...)" rows="8" style="resize: vertical; min-height: 150px; padding: 14px 16px;"></textarea>
-            </div>
-          </div>
           <div class="form-row" style="margin-top: 25px; margin-bottom: 10px; grid-template-columns: 1fr;">
             <div class="form-group" style="padding: 15px; background: var(--bg-secondary); border-radius: var(--radius-btn); border: 1px solid var(--border);">
               <label class="form-label" style="font-weight: 600; color: var(--primary); margin-bottom: 12px; display: block;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Quyền riêng tư (Privacy Settings)</label>
@@ -194,10 +173,7 @@
 
       <div class="form-card" id="change-password-section" style="border-left: 4px solid var(--primary);">
         <div class="collapsible-header" id="btn-toggle-pwd" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-lock" style="color: var(--primary); margin-right: 5px;"></i> Đổi mật khẩu</h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Định kỳ thay đổi mật khẩu để bảo vệ tài khoản an toàn hơn.</p>
-          </div>
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-lock" style="color: var(--primary); margin-right: 5px;"></i> Đổi mật khẩu</h2>
           <span class="toggle-status"
             style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
             <span class="toggle-text">Mở rộng</span>
@@ -258,10 +234,7 @@
 
       <div class="form-card" id="twofa-section" style="border-left: 4px solid #10b981;">
         <div class="collapsible-header" id="btn-toggle-2fa" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Xác thực 2 bước (2FA)</h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Thêm một lớp bảo mật bổ sung mỗi khi đăng nhập vào hệ thống.</p>
-          </div>
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Xác thực 2 bước (2FA)</h2>
           <span class="toggle-status"
             style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
             <span class="toggle-text">Mở rộng</span>
@@ -281,10 +254,7 @@
 
       <div class="form-card" id="sessions-section" style="border-left: 4px solid #3b82f6;">
         <div class="collapsible-header" id="btn-toggle-sessions" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-desktop" style="color: #3b82f6;"></i> Quản lý thiết bị</h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Kiểm soát và đăng xuất các phiên đăng nhập từ thiết bị lạ.</p>
-          </div>
+          <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-desktop" style="color: #3b82f6;"></i> Quản lý thiết bị</h2>
           <span class="toggle-status"
             style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
             <span class="toggle-text">Mở rộng</span>
@@ -295,9 +265,6 @@
         <div class="collapsible-content" id="sessions-content">
           <div style="padding: 10px 0;">
             <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Quản lý các thiết bị và trình duyệt đang đăng nhập vào tài khoản của bạn. Đăng xuất các phiên lạ để bảo vệ tài khoản.</p>
-            <div style="margin-bottom: 15px;">
-              <button type="button" id="btn-logout-all-sessions" class="btn-primary" style="background-color: #ef4444; display: none;"><i class="fa-solid fa-power-off" style="margin-right: 6px;"></i> Đăng xuất tất cả các thiết bị khác</button>
-            </div>
             <div id="sessions-list" style="display: flex; flex-direction: column; gap: 12px;">
               <p>Đang tải danh sách thiết bị...</p>
             </div>
@@ -373,19 +340,12 @@
           <div class="tab-item" id="tab-bookmarks">
             <i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu
           </div>
-          <div class="tab-item" id="tab-collections">
-            <i class="fa-solid fa-folder" style="margin-right: 6px;"></i> Bộ sưu tập
-          </div>
           <div class="tab-item" id="tab-purchased">
             <i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM
           </div>
 
           <div class="tab-item" id="tab-my-reports">
             <i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm
-          </div>
-
-          <div class="tab-item" id="tab-creator-stats">
-            <i class="fa-solid fa-chart-pie" style="margin-right: 6px;"></i> Thống kê Doanh thu
           </div>
         </div>
 
@@ -397,16 +357,6 @@
           <p>Đang tải tài liệu đã lưu...</p>
         </div>
 
-        <div class="doc-list" id="collections-container" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 18px; color: var(--text-primary);">Danh sách Bộ sưu tập</h3>
-            <button id="btn-create-collection" class="btn-primary" style="padding: 8px 16px; font-size: 14px;"><i class="fa-solid fa-plus"></i> Tạo mới</button>
-          </div>
-          <div id="collections-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
-            <p>Đang tải bộ sưu tập...</p>
-          </div>
-        </div>
-
         <div class="doc-list" id="purchased-container" style="display: none;">
           <p>Đang tải tài liệu đã mua...</p>
         </div>
@@ -415,35 +365,6 @@
 
         <div class="doc-list" id="my-reports-container" style="display: none;">
           <p>Đang tải báo cáo của bạn...</p>
-        </div>
-
-        <div class="doc-list" id="creator-stats-container" style="display: none; flex-direction: column; gap: 20px;">
-          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px; background: #FEF3C7; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-              <div style="color: #B45309; font-weight: 600; font-size: 14px; margin-bottom: 8px;">TỔNG XU KIẾM ĐƯỢC</div>
-              <div id="stats-total-revenue" style="font-size: 28px; font-weight: 700; color: #D97706;">0</div>
-            </div>
-            <div style="flex: 1; min-width: 200px; background: #E0E7FF; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-              <div style="color: #4338CA; font-weight: 600; font-size: 14px; margin-bottom: 8px;">SỐ LƯỢT TẢI XUỐNG</div>
-              <div id="stats-total-downloads" style="font-size: 28px; font-weight: 700; color: #4F46E5;">0</div>
-            </div>
-            <div style="flex: 1; min-width: 200px; background: #DCFCE7; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-              <div style="color: #15803D; font-weight: 600; font-size: 14px; margin-bottom: 8px;">TÀI LIỆU ĐÃ ĐĂNG</div>
-              <div id="stats-total-docs" style="font-size: 28px; font-weight: 700; color: #16A34A;">0</div>
-            </div>
-          </div>
-          
-          <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #E5E7EB;">
-            <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: var(--text-primary);"><i class="fa-solid fa-chart-line" style="margin-right: 8px; color: var(--primary);"></i>Biểu đồ Doanh thu (12 Tháng gần nhất)</h3>
-            <canvas id="revenueChart" width="400" height="150"></canvas>
-          </div>
-
-          <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #E5E7EB;">
-            <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: var(--text-primary);"><i class="fa-solid fa-ranking-star" style="margin-right: 8px; color: #F59E0B;"></i>Top 5 Tài liệu bán chạy nhất</h3>
-            <div id="stats-top-docs">
-              <p style="color: var(--text-secondary); font-size: 14px;">Đang tải...</p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -457,46 +378,6 @@
           <i class="fa-solid fa-trash-can" style="margin-right: 6px;"></i> Xoá tài khoản
         </button>
       </div>
-
-    
-      <footer class="footer">
-        <div class="container">
-          <div class="footer-grid">
-            <div class="footer-branding">
-              <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
-              <p class="footer-desc">Nền tảng chia sẻ tài liệu học tập miễn phí giúp cộng đồng học sinh, sinh viên và giảng viên dễ dàng tiếp cận nguồn tri thức phong phú.</p>
-            </div>
-            <div class="footer-col">
-              <h4>Về chúng tôi</h4>
-              <div class="footer-links">
-                <a href="../guest/about.html">Giới thiệu</a>
-                <a href="../guest/terms.html">Điều khoản dịch vụ</a>
-                <a href="../guest/privacy.html">Chính sách bảo mật</a>
-                <a href="../guest/contact.html">Liên hệ</a>
-              </div>
-            </div>
-            <div class="footer-col">
-              <h4>Hỗ trợ</h4>
-              <div class="footer-links">
-                <a href="../guest/helpCenter.html">Trung tâm trợ giúp</a>
-                <a href="../guest/guide.html">Hướng dẫn đăng tài liệu</a>
-                <a href="../guest/copyright.html">Quy định bản quyền</a>
-              </div>
-            </div>
-            <div class="footer-col">
-              <h4>Cộng đồng</h4>
-              <div class="footer-links">
-                <a href="../guest/forum.html">Diễn đàn</a>
-                <a href="../group/groupList.html">Nhóm học tập</a>
-                <a href="../guest/blog.html">Blog</a>
-              </div>
-            </div>
-          </div>
-          <div class="footer-bottom">
-            &copy; 2026 EduShare. Tất cả các quyền được bảo lưu.
-          </div>
-        </div>
-      </footer>
 
     </main>
   </div>
@@ -560,12 +441,11 @@
           <label class="form-label"
             style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-bottom: 8px;"><i
               class="fa-solid fa-lock" style="color: var(--primary);"></i> Mật khẩu hiện tại</label>
-            <div style="position: relative;">
-              <input type="text" id="input-delete-pw-visual" class="form-control" placeholder="Nhập mật khẩu của bạn..."
-                autocomplete="off" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
-              <input type="password" id="input-delete-pw" style="display:none;" autocomplete="current-password">
-              <i class="fa-solid fa-eye" id="toggle-delete-pw" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary);"></i>
-            </div>
+          <div style="position: relative;">
+            <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
+              autocomplete="current-password" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
+            <i class="fa-solid fa-eye-slash" id="toggle-delete-pw" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary);"></i>
+          </div>
         </div>
         
         <label class="form-label"
@@ -646,86 +526,10 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script type="module" src="../../main/user/userProfile.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script type="module" src="../../main/shared/sidebar.js"></script>
-
-  <div id="changeEmailModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 400px; padding: 24px; border-radius: 12px; background: white; text-align: center;">
-      <h3 style="margin-bottom: 8px; font-size: 20px; color: #1e293b;">Thay đổi Email</h3>
-      <p style="color: #64748b; font-size: 14px; margin-bottom: 20px;" id="change-email-desc">Vui lòng nhập địa chỉ Email mới để nhận mã xác thực OTP.</p>
-      
-      <div id="change-email-step-1">
-        <div class="form-group" style="text-align: left; margin-bottom: 20px;">
-          <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500; color: #475569;"><i class="fa-solid fa-envelope" style="margin-right: 6px;"></i> Địa chỉ Email mới</label>
-          <input type="email" id="new-email-input" class="form-control" placeholder="Ví dụ: nguyenvan@gmail.com" style="width: 100%; box-sizing: border-box; text-align: left;">
-        </div>
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button type="button" class="btn btn-outline" id="btn-cancel-change-email" style="padding: 10px 20px; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: transparent; color: #475569;"><i class="fa-solid fa-xmark" style="margin-right: 6px;"></i> Hủy</button>
-          <button type="button" class="btn btn-primary" id="btn-send-email-otp" disabled style="padding: 10px 20px; border-radius: 8px; cursor: not-allowed; opacity: 0.6; transition: all 0.2s;"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP</button>
-        </div>
-      </div>
-
-      <div id="change-email-step-2" style="display: none;">
-        <div class="form-group" style="text-align: left; margin-bottom: 20px;">
-          <label class="form-label" style="display: block; margin-bottom: 8px; font-weight: 500; color: #475569;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Mã xác thực (OTP)</label>
-          <input type="text" id="new-email-otp" class="form-control" placeholder="Nhập mã OTP 6 số" maxlength="6" style="width: 100%; box-sizing: border-box; text-align: center; font-size: 18px; letter-spacing: 4px;">
-        </div>
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button type="button" class="btn btn-outline" id="btn-back-change-email" style="padding: 10px 20px; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: transparent; color: #475569;"><i class="fa-solid fa-arrow-left" style="margin-right: 6px;"></i> Quay lại</button>
-          <button type="button" class="btn btn-primary" id="btn-verify-email-otp" disabled style="padding: 10px 20px; border-radius: 8px; cursor: not-allowed; opacity: 0.6; transition: all 0.2s;"><i class="fa-solid fa-check" style="margin-right: 6px;"></i> Xác nhận</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="../../main/shared/socketClient.js" type="module"></script>
-
-  <style>
-    @keyframes modalFadeIn {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    #create-collection-modal .form-control {
-      width: 100%; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: #1E293B; transition: all 0.2s; outline: none; background: #FFFFFF; box-sizing: border-box;
-    }
-    #create-collection-modal .form-control:focus {
-      border-color: #4F46E5; box-shadow: 0 0 0 3px #EEF2FF;
-    }
-    #create-collection-modal .form-label {
-      display: block; margin-bottom: 8px; font-weight: 600; color: #1E293B; font-size: 14px;
-    }
-    #create-collection-modal textarea.form-control {
-      padding: 12px 16px; resize: vertical; min-height: 120px;
-    }
-  </style>
-  <div id="create-collection-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; transition: opacity 0.3s;">
-    <div style="background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: modalFadeIn 0.3s ease-out;">
-      <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--text-primary);">Tạo bộ sưu tập mới</h3>
-      <div class="form-group" style="margin-bottom: 16px;">
-        <label class="form-label">Tên bộ sưu tập <span style="color: red;">*</span></label>
-        <input type="text" id="input-collection-name" class="form-control" placeholder="Nhập tên bộ sưu tập" maxlength="50">
-      </div>
-      <div class="form-group" style="margin-bottom: 24px;">
-        <label class="form-label">Mô tả (tùy chọn)</label>
-        <textarea id="input-collection-desc" class="form-control" placeholder="Mô tả bộ sưu tập của bạn" rows="5" style="padding: 12px 12px; min-height: 120px; resize: vertical;"></textarea>
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 12px;">
-        <button type="button" class="btn btn-outline" id="btn-cancel-collection" style="padding: 8px 16px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; cursor: pointer; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-xmark"></i> Hủy</button>
-        <button type="button" class="btn btn-primary" id="btn-submit-collection" disabled style="padding: 8px 16px; border-radius: 6px; border: none; background: var(--primary); color: white; cursor: not-allowed; opacity: 0.5; display: flex; align-items: center; gap: 6px; transition: all 0.2s;"><i class="fa-solid fa-check"></i> Tạo mới</button>
-      </div>
-    </div>
-  </div>
-  
-  <div id="view-collection-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9998; justify-content: center; align-items: center; transition: opacity 0.3s;">
-    <div style="background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: modalFadeIn 0.3s ease-out;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-        <h3 id="view-collection-title" style="margin: 0; color: var(--text-primary);"><i class="fa-solid fa-folder-open" style="color: var(--primary); margin-right: 8px;"></i>Tên bộ sưu tập</h3>
-        <button id="btn-close-collection-view" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #666;"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div id="view-collection-docs" style="overflow-y: auto; flex: 1; padding-right: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
-      </div>
-    </div>
-  </div>
 </body>
+
 </html>

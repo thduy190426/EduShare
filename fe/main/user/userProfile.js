@@ -1,6 +1,5 @@
-import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML, saveLoginSession } from '../shared/utils.js';
+import { clearAuthSession, formatRatingSummary, getAssetUrl, getToken, setAvatarForCurrentSession, escapeHTML } from '../shared/utils.js';
 
 const token = getToken();
 
@@ -17,8 +16,6 @@ const Toast = Swal.mixin({
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-    renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Hồ sơ của tôi' }]);
-
     if (!token) {
         Toast.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để xem hồ sơ.' });
         window.location.href = '../guest/guestHome.html';
@@ -74,7 +71,6 @@ function checkProfileChanges() {
     const currentDiaChi = document.getElementById('input-diachi').value;
     const currentTruongHoc = document.getElementById('input-truonghoc').value;
     const currentKhoaNganh = document.getElementById('input-khoanganh').value;
-    const currentGioiThieu = document.getElementById('input-gioithieu').value;
     const currentPrivacyDownloads = document.getElementById('input-privacy-downloads').checked;
     const currentPrivacyRatings = document.getElementById('input-privacy-ratings').checked;
 
@@ -85,7 +81,6 @@ function checkProfileChanges() {
         currentDiaChi !== initialProfileState.diaChi ||
         currentTruongHoc !== initialProfileState.truongHoc ||
         currentKhoaNganh !== initialProfileState.khoaNganh ||
-        currentGioiThieu !== initialProfileState.gioiThieu ||
         currentPrivacyDownloads !== initialProfileState.privacyDownloads ||
         currentPrivacyRatings !== initialProfileState.privacyRatings;
 
@@ -248,14 +243,6 @@ async function initProfile() {
         document.getElementById('input-diachi').value = profile.DiaChi || '';
         document.getElementById('input-truonghoc').value = profile.TruongHoc || '';
         document.getElementById('input-khoanganh').value = profile.KhoaNganh || '';
-        document.getElementById('input-gioithieu').value = profile.GioiThieu || '';
-        
-        if (profile.VaiTro === 'Admin') {
-            const schoolInput = document.getElementById('input-truonghoc');
-            if (schoolInput && schoolInput.closest('.form-row')) {
-                schoolInput.closest('.form-row').style.display = 'none';
-            }
-        }
         document.getElementById('input-privacy-downloads').checked = profile.HienThiLichSuTai !== 0;
         document.getElementById('input-privacy-ratings').checked = profile.HienThiDanhGia !== 0;
 
@@ -271,7 +258,6 @@ async function initProfile() {
             diaChi: profile.DiaChi || '',
             truongHoc: profile.TruongHoc || '',
             khoaNganh: profile.KhoaNganh || '',
-            gioiThieu: profile.GioiThieu || '',
             privacyDownloads: profile.HienThiLichSuTai !== 0,
             privacyRatings: profile.HienThiDanhGia !== 0
         };
@@ -352,7 +338,6 @@ async function saveProfile() {
     const diaChi = document.getElementById('input-diachi').value;
     const truongHoc = document.getElementById('input-truonghoc').value;
     const khoaNganh = document.getElementById('input-khoanganh').value;
-    const gioiThieu = document.getElementById('input-gioithieu').value;
     const hienThiLichSuTai = document.getElementById('input-privacy-downloads').checked ? 1 : 0;
     const hienThiDanhGia = document.getElementById('input-privacy-ratings').checked ? 1 : 0;
 
@@ -365,7 +350,7 @@ async function saveProfile() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, gioiThieu, hienThiLichSuTai, hienThiDanhGia })
+            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, hienThiLichSuTai, hienThiDanhGia })
         });
         const data = await res.json();
         if (res.ok) {
@@ -402,12 +387,6 @@ async function changePassword() {
     const confirm = document.getElementById('input-confirm-pw').value;
     const otp = document.getElementById('input-change-pw-otp').value;
     const hoTen = document.getElementById('input-hoten').value;
-    const tuoi = document.getElementById('input-tuoi').value;
-    const gioiTinh = document.getElementById('input-gioitinh').value;
-    const diaChi = document.getElementById('input-diachi').value;
-    const truongHoc = document.getElementById('input-truonghoc').value;
-    const khoaNganh = document.getElementById('input-khoanganh').value;
-    const gioiThieu = document.getElementById('input-gioithieu').value;
 
     if (!matKhauCu || !matKhauMoi || !confirm || !otp) return Toast.fire({ icon: 'warning', title: 'Vui lòng điền đủ thông tin đổi mật khẩu và mã OTP.' });
     if (matKhauMoi !== confirm) return Toast.fire({ icon: 'warning', title: 'Mật khẩu xác nhận không khớp.' });
@@ -419,7 +398,7 @@ async function changePassword() {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hoTen, tuoi, gioiTinh, diaChi, truongHoc, khoaNganh, gioiThieu, matKhauCu, matKhauMoi, otp, hienThiLichSuTai: document.getElementById('input-privacy-downloads').checked ? 1 : 0, hienThiDanhGia: document.getElementById('input-privacy-ratings').checked ? 1 : 0 })
+            body: JSON.stringify({ hoTen, matKhauCu, matKhauMoi, otp, hienThiLichSuTai: document.getElementById('input-privacy-downloads').checked ? 1 : 0, hienThiDanhGia: document.getElementById('input-privacy-ratings').checked ? 1 : 0 })
         });
         const data = await res.json();
         if (res.ok) {
@@ -1013,32 +992,24 @@ async function fetchMyReports(page = 1) {
 function setupTabListeners() {
     const tabMyDocs = document.getElementById('tab-my-docs');
     const tabBookmarks = document.getElementById('tab-bookmarks');
-    const tabCollections = document.getElementById('tab-collections');
     const tabPurchased = document.getElementById('tab-purchased');
     const tabMyReports = document.getElementById('tab-my-reports');
-    const tabCreatorStats = document.getElementById('tab-creator-stats');
 
     const containerMyDocs = document.getElementById('my-docs-container');
     const containerBookmarks = document.getElementById('bookmarks-container');
-    const containerCollections = document.getElementById('collections-container');
     const containerPurchased = document.getElementById('purchased-container');
     const containerMyReports = document.getElementById('my-reports-container');
-    const containerCreatorStats = document.getElementById('creator-stats-container');
 
     function resetTabs() {
         tabMyDocs.classList.remove('active');
         tabBookmarks.classList.remove('active');
-        if (tabCollections) tabCollections.classList.remove('active');
         tabPurchased.classList.remove('active');
         tabMyReports.classList.remove('active');
-        if (tabCreatorStats) tabCreatorStats.classList.remove('active');
 
         containerMyDocs.style.display = 'none';
         containerBookmarks.style.display = 'none';
-        if (containerCollections) containerCollections.style.display = 'none';
         containerPurchased.style.display = 'none';
         containerMyReports.style.display = 'none';
-        if (containerCreatorStats) containerCreatorStats.style.display = 'none';
     }
 
     tabMyDocs.addEventListener('click', () => {
@@ -1058,15 +1029,6 @@ function setupTabListeners() {
         fetchBookmarks();
     });
 
-    if (tabCollections) {
-        tabCollections.addEventListener('click', () => {
-            resetTabs();
-            tabCollections.classList.add('active');
-            containerCollections.style.display = 'block';
-            fetchCollections();
-        });
-    }
-
     tabPurchased.addEventListener('click', () => {
         resetTabs();
         tabPurchased.classList.add('active');
@@ -1084,122 +1046,7 @@ function setupTabListeners() {
         containerMyReports.style.gap = '15px';
         fetchMyReports();
     });
-
-    if (tabCreatorStats) {
-        tabCreatorStats.addEventListener('click', () => {
-            resetTabs();
-            tabCreatorStats.classList.add('active');
-            containerCreatorStats.style.display = 'flex';
-            fetchCreatorStats();
-        });
-    }
 }
-
-let revenueChartInstance = null;
-
-async function fetchCreatorStats() {
-    try {
-        const res = await fetch(`${API_URL}/users/creator-stats`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-            console.error('Lỗi lấy thống kê:', data.message);
-            return;
-        }
-
-        document.getElementById('stats-total-revenue').innerText = data.summary.totalRevenue.toLocaleString() + ' Xu';
-        document.getElementById('stats-total-downloads').innerText = data.summary.totalDownloads.toLocaleString();
-        document.getElementById('stats-total-docs').innerText = data.summary.totalDocs.toLocaleString();
-
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        if (revenueChartInstance) {
-            revenueChartInstance.destroy();
-        }
-
-        const labels = data.monthlyRevenue.map(item => item.month);
-        const chartData = data.monthlyRevenue.map(item => parseInt(item.revenue) || 0);
-
-        revenueChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Doanh thu Xu',
-                    data: chartData,
-                    borderColor: '#4F46E5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3,
-                    pointBackgroundColor: '#4F46E5',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y.toLocaleString() + ' Xu';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString();
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        const topDocsContainer = document.getElementById('stats-top-docs');
-        if (!data.topDocs || data.topDocs.length === 0) {
-            topDocsContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 14px;">Chưa có tài liệu nào bán được.</p>';
-        } else {
-            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
-            data.topDocs.forEach((doc, index) => {
-                const rankColor = index === 0 ? '#F59E0B' : (index === 1 ? '#9CA3AF' : (index === 2 ? '#B45309' : '#D1D5DB'));
-                html += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #F9FAFB; border-radius: 8px; border: 1px solid #E5E7EB;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="width: 24px; height: 24px; background: ${rankColor}; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">
-                                ${index + 1}
-                            </div>
-                            <div style="font-weight: 500; color: var(--text-primary); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                ${escapeHTML(doc.TenTL)}
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 20px;">
-                            <div style="color: var(--text-secondary); font-size: 14px;">${doc.SoLuotBan} lượt mua</div>
-                            <div style="font-weight: 600; color: #D97706;">${parseInt(doc.TongDoanhThu).toLocaleString()} Xu</div>
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            topDocsContainer.innerHTML = html;
-        }
-
-    } catch (error) {
-        console.error('Lỗi lấy dữ liệu thống kê:', error);
-    }
-}
-
 
 async function initNotificationsLegacy() {
     try {
@@ -1339,95 +1186,13 @@ function setupEventListeners() {
     if (btnConfirmDelete) btnConfirmDelete.addEventListener('click', processDeleteAccount);
 
     const inputDeletePw = document.getElementById('input-delete-pw');
-    const inputDeletePwVisual = document.getElementById('input-delete-pw-visual');
     const toggleDeletePw = document.getElementById('toggle-delete-pw');
 
-    if (toggleDeletePw && inputDeletePw && inputDeletePwVisual) {
-        let realValue = "";
-        let isVisible = false;
-        let maskTimeout = null;
-
-        inputDeletePwVisual.addEventListener('input', (e) => {
-            const visualValue = inputDeletePwVisual.value;
-            const cursor = inputDeletePwVisual.selectionStart;
-            
-            if (isVisible) {
-                realValue = visualValue;
-            } else {
-                if (visualValue.length > realValue.length) {
-                    const diff = visualValue.length - realValue.length;
-                    const added = visualValue.substring(cursor - diff, cursor);
-                    realValue = realValue.substring(0, cursor - diff) + added + realValue.substring(cursor - diff);
-                } else if (visualValue.length < realValue.length) {
-                    const diff = realValue.length - visualValue.length;
-                    realValue = realValue.substring(0, cursor) + realValue.substring(cursor + diff);
-                } else {
-                    const lastChar = visualValue.substring(cursor - 1, cursor);
-                    if (lastChar !== '•') {
-                        realValue = realValue.substring(0, cursor - 1) + lastChar + realValue.substring(cursor);
-                    }
-                }
-            }
-            
-            inputDeletePw.value = realValue;
-            inputDeletePw.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            if (!isVisible) {
-                let masked = "";
-                for(let i = 0; i < realValue.length; i++) {
-                    if (i === cursor - 1) {
-                        masked += realValue[i];
-                    } else {
-                        masked += '•';
-                    }
-                }
-                inputDeletePwVisual.value = masked;
-                inputDeletePwVisual.setSelectionRange(cursor, cursor);
-                
-                clearTimeout(maskTimeout);
-                maskTimeout = setTimeout(() => {
-                    if (!isVisible) {
-                        const cur = inputDeletePwVisual.selectionStart;
-                        inputDeletePwVisual.value = '•'.repeat(realValue.length);
-                        if (document.activeElement === inputDeletePwVisual) {
-                            inputDeletePwVisual.setSelectionRange(cur, cur);
-                        }
-                    }
-                }, 300);
-            }
-        });
-
-        inputDeletePwVisual.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-            const cursor = inputDeletePwVisual.selectionStart;
-            const cursorEnd = inputDeletePwVisual.selectionEnd;
-            
-            realValue = realValue.substring(0, cursor) + text + realValue.substring(cursorEnd);
-            inputDeletePw.value = realValue;
-            inputDeletePw.dispatchEvent(new Event('input', { bubbles: true }));
-            
-            if (isVisible) {
-                inputDeletePwVisual.value = realValue;
-            } else {
-                inputDeletePwVisual.value = '•'.repeat(realValue.length);
-            }
-            
-            const newCursor = cursor + text.length;
-            inputDeletePwVisual.setSelectionRange(newCursor, newCursor);
-        });
-
+    if (toggleDeletePw && inputDeletePw) {
         toggleDeletePw.addEventListener('click', function () {
-            isVisible = !isVisible;
-            const type = isVisible ? 'text' : 'password';
+            const type = inputDeletePw.getAttribute('type') === 'password' ? 'text' : 'password';
             inputDeletePw.setAttribute('type', type);
-            this.className = isVisible ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
-            
-            if (isVisible) {
-                inputDeletePwVisual.value = realValue;
-            } else {
-                inputDeletePwVisual.value = '•'.repeat(realValue.length);
-            }
+            this.className = type === 'password' ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
         });
     }
 
@@ -1576,7 +1341,7 @@ function setupEventListeners() {
         if(el) el.addEventListener('input', checkPasswordChanges);
     });
 
-    ['input-hoten', 'input-tuoi', 'input-gioitinh', 'input-diachi', 'input-truonghoc', 'input-khoanganh', 'input-gioithieu'].forEach(id => {
+    ['input-hoten', 'input-tuoi', 'input-gioitinh', 'input-diachi', 'input-truonghoc', 'input-khoanganh'].forEach(id => {
         document.getElementById(id).addEventListener('input', checkProfileChanges);
         document.getElementById(id).addEventListener('change', checkProfileChanges);
     });
@@ -2044,11 +1809,6 @@ async function loadActiveSessions() {
         const listContainer = document.getElementById('sessions-list');
         if (!listContainer) return;
         
-        const btnLogoutAll = document.getElementById('btn-logout-all-sessions');
-        if (btnLogoutAll) {
-            btnLogoutAll.style.display = sessions.length > 1 ? 'inline-block' : 'none';
-        }
-        
         if (sessions.length === 0) {
             listContainer.innerHTML = '<p>Không có phiên đăng nhập nào.</p>';
             return;
@@ -2186,480 +1946,4 @@ function parseDeviceInfo(ua) {
     if (ua.includes("like Mac")) os = "iOS";
 
     return `${browser} trên ${os}`;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const btnLogoutAllSessions = document.getElementById('btn-logout-all-sessions');
-    if (btnLogoutAllSessions) {
-        btnLogoutAllSessions.addEventListener('click', async () => {
-            const result = await Swal.fire({
-                title: 'Đăng xuất tất cả',
-                text: 'Bạn có chắc chắn muốn đăng xuất khỏi tất cả các thiết bị khác (ngoại trừ thiết bị này)?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Đăng xuất',
-                cancelButtonText: 'Hủy'
-            });
-            
-            if (result.isConfirmed) {
-                try {
-                    const currentRefreshToken = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
-                    const res = await fetch(`${API_URL}/users/sessions`, {
-                        method: 'DELETE',
-                        headers: { 
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ refreshToken: currentRefreshToken }),
-                        credentials: 'include'
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        Swal.fire('Thành công', data.message || 'Đã đăng xuất khỏi tất cả thiết bị khác.', 'success');
-                        loadActiveSessions();
-                    } else {
-                        Swal.fire('Lỗi', data.message || 'Không thể đăng xuất', 'error');
-                    }
-                } catch (err) {
-                    Swal.fire('Lỗi', 'Lỗi kết nối máy chủ.', 'error');
-                }
-            }
-        });
-    }
-
-    const btnOpenChangeEmail = document.getElementById('btn-open-change-email');
-    const changeEmailModal = document.getElementById('changeEmailModal');
-    const step1 = document.getElementById('change-email-step-1');
-    const step2 = document.getElementById('change-email-step-2');
-    const inputNewEmail = document.getElementById('new-email-input');
-    const inputOtp = document.getElementById('new-email-otp');
-    const changeEmailDesc = document.getElementById('change-email-desc');
-
-    if (btnOpenChangeEmail) {
-        btnOpenChangeEmail.addEventListener('click', () => {
-            const lastChange = localStorage.getItem('lastEmailChangeSuccess');
-            if (lastChange) {
-                const daysPassed = (Date.now() - parseInt(lastChange)) / (1000 * 60 * 60 * 24);
-                if (daysPassed < 30) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Thao tác quá nhanh',
-                        text: `Bạn chỉ có thể thay đổi email 1 lần mỗi 30 ngày. Vui lòng thử lại sau ${Math.ceil(30 - daysPassed)} ngày.`,
-                        confirmButtonText: 'Đã hiểu'
-                    });
-                    return;
-                }
-            }
-
-            changeEmailModal.style.display = 'flex';
-            step1.style.display = 'block';
-            step2.style.display = 'none';
-            inputNewEmail.value = '';
-            inputOtp.value = '';
-            changeEmailDesc.textContent = 'Vui lòng nhập địa chỉ Email mới để nhận mã xác thực OTP.';
-            
-            const btnSendOtp = document.getElementById('btn-send-email-otp');
-            const btnVerifyOtp = document.getElementById('btn-verify-email-otp');
-            if(btnSendOtp) {
-                btnSendOtp.disabled = true;
-                btnSendOtp.style.cursor = 'not-allowed';
-                btnSendOtp.style.opacity = '0.6';
-            }
-            if(btnVerifyOtp) {
-                btnVerifyOtp.disabled = true;
-                btnVerifyOtp.style.cursor = 'not-allowed';
-                btnVerifyOtp.style.opacity = '0.6';
-            }
-        });
-    }
-
-    const validateEmail = (email) => {
-        return String(email).toLowerCase().match(
-            /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
-        );
-    };
-
-    inputNewEmail?.addEventListener('input', (e) => {
-        const val = e.target.value.trim();
-        const btnSendOtp = document.getElementById('btn-send-email-otp');
-        if (!btnSendOtp) return;
-        if (validateEmail(val)) {
-            btnSendOtp.disabled = false;
-            btnSendOtp.style.cursor = 'pointer';
-            btnSendOtp.style.opacity = '1';
-        } else {
-            btnSendOtp.disabled = true;
-            btnSendOtp.style.cursor = 'not-allowed';
-            btnSendOtp.style.opacity = '0.6';
-        }
-    });
-
-    inputOtp?.addEventListener('input', (e) => {
-        const val = e.target.value.trim();
-        e.target.value = val.replace(/[^0-9]/g, '');
-        const btnVerifyOtp = document.getElementById('btn-verify-email-otp');
-        if (!btnVerifyOtp) return;
-        if (e.target.value.length === 6) {
-            btnVerifyOtp.disabled = false;
-            btnVerifyOtp.style.cursor = 'pointer';
-            btnVerifyOtp.style.opacity = '1';
-        } else {
-            btnVerifyOtp.disabled = true;
-            btnVerifyOtp.style.cursor = 'not-allowed';
-            btnVerifyOtp.style.opacity = '0.6';
-        }
-    });
-
-    const closeEmailModal = () => {
-        changeEmailModal.classList.add('closing');
-        setTimeout(() => {
-            changeEmailModal.style.display = 'none';
-            changeEmailModal.classList.remove('closing');
-        }, 250);
-    };
-
-    document.getElementById('btn-cancel-change-email')?.addEventListener('click', () => {
-        closeEmailModal();
-    });
-
-    document.getElementById('btn-send-email-otp')?.addEventListener('click', async () => {
-        const lastOtpTime = localStorage.getItem('lastEmailOtpTime');
-        if (lastOtpTime) {
-            const secondsPassed = Math.floor((Date.now() - parseInt(lastOtpTime)) / 1000);
-            if (secondsPassed < 60) {
-                Toast.fire({ icon: 'warning', title: `Vui lòng chờ ${60 - secondsPassed} giây trước khi gửi lại OTP.` });
-                return;
-            }
-        }
-
-        const newEmail = inputNewEmail.value.trim();
-        if (!newEmail) {
-            Toast.fire({ icon: 'warning', title: 'Vui lòng nhập email mới.' });
-            return;
-        }
-
-        const btn = document.getElementById('btn-send-email-otp');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang gửi...';
-
-        try {
-            const res = await fetch(`${API_URL}/users/change-email/request`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ newEmail })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                Toast.fire({ icon: 'success', title: data.message });
-                step1.style.display = 'none';
-                step2.style.display = 'block';
-                changeEmailDesc.textContent = `Mã OTP đã được gửi đến ${newEmail}. Mã có hiệu lực 5 phút.`;
-            } else {
-                Toast.fire({ icon: 'error', title: data.message });
-            }
-        } catch (error) {
-            Toast.fire({ icon: 'error', title: 'Lỗi mạng, vui lòng thử lại.' });
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP';
-        }
-    });
-
-    document.getElementById('btn-back-change-email')?.addEventListener('click', () => {
-        step2.style.display = 'none';
-        step1.style.display = 'block';
-        changeEmailDesc.textContent = 'Vui lòng nhập địa chỉ Email mới để nhận mã xác thực OTP.';
-    });
-
-    document.getElementById('btn-verify-email-otp')?.addEventListener('click', async () => {
-        const otp = inputOtp.value.trim();
-        if (!otp) {
-            Toast.fire({ icon: 'warning', title: 'Vui lòng nhập mã OTP.' });
-            return;
-        }
-
-        const btn = document.getElementById('btn-verify-email-otp');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px;"></i> Đang xác nhận...';
-
-        try {
-            const res = await fetch(`${API_URL}/users/change-email/verify`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ otp })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Thành công',
-                    text: data.message,
-                    confirmButtonText: 'Đóng'
-                });
-                closeEmailModal();
-                
-                saveLoginSession({
-                    token: data.accessToken,
-                    refreshToken: data.refreshToken,
-                    avatarURL: data.user.AvatarURL,
-                    rememberLogin: true
-                });
-
-                localStorage.setItem('lastEmailChangeSuccess', Date.now().toString());
-
-                document.getElementById('input-email').value = inputNewEmail.value.trim();
-            } else {
-                Toast.fire({ icon: 'error', title: data.message });
-            }
-        } catch (error) {
-            Toast.fire({ icon: 'error', title: 'Lỗi mạng, vui lòng thử lại.' });
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-check" style="margin-right: 6px;"></i> Xác nhận';
-        }
-    });
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    const btnCreateCollection = document.getElementById('btn-create-collection');
-    const modalCreate = document.getElementById('create-collection-modal');
-    const btnCancelCreate = document.getElementById('btn-cancel-collection');
-    const btnSubmitCreate = document.getElementById('btn-submit-collection');
-    
-    const modalView = document.getElementById('view-collection-modal');
-    const btnCloseView = document.getElementById('btn-close-collection-view');
-
-    if (btnCreateCollection) {
-        const inputName = document.getElementById('input-collection-name');
-        
-        const validateForm = () => {
-            const val = inputName.value.trim();
-            if (val) {
-                btnSubmitCreate.disabled = false;
-                btnSubmitCreate.style.opacity = '1';
-                btnSubmitCreate.style.cursor = 'pointer';
-            } else {
-                btnSubmitCreate.disabled = true;
-                btnSubmitCreate.style.opacity = '0.5';
-                btnSubmitCreate.style.cursor = 'not-allowed';
-            }
-        };
-
-        if (inputName) {
-            inputName.addEventListener('input', validateForm);
-        }
-
-        const closeCreateModal = () => {
-            modalCreate.style.opacity = '0';
-            setTimeout(() => {
-                modalCreate.style.display = 'none';
-                document.body.style.overflow = '';
-            }, 300);
-        };
-
-        btnCreateCollection.addEventListener('click', () => {
-            if (inputName) inputName.value = '';
-            document.getElementById('input-collection-desc').value = '';
-            validateForm();
-            modalCreate.style.display = 'flex';
-            modalCreate.style.opacity = '1';
-            document.body.style.overflow = 'hidden';
-        });
-
-        if (btnCancelCreate) {
-            btnCancelCreate.addEventListener('click', closeCreateModal);
-        }
-
-        if (btnSubmitCreate) {
-            btnSubmitCreate.addEventListener('click', async () => {
-                const tenBST = document.getElementById('input-collection-name').value;
-                const moTa = document.getElementById('input-collection-desc').value;
-                if (!tenBST.trim()) return alert('Vui lòng nhập tên bộ sưu tập');
-
-                try {
-                    btnSubmitCreate.disabled = true;
-                    const res = await fetch(`${API_URL}/collections`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ tenBST, moTa })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        closeCreateModal();
-                        fetchCollections();
-                    } else {
-                        alert(data.message || 'Lỗi tạo bộ sưu tập');
-                    }
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    btnSubmitCreate.disabled = false;
-                }
-            });
-        }
-    }
-
-    if (btnCloseView) {
-        btnCloseView.addEventListener('click', () => {
-            modalView.style.opacity = '0';
-            setTimeout(() => {
-                modalView.style.display = 'none';
-                document.body.style.overflow = '';
-            }, 300);
-        });
-    }
-
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'collections' && urlParams.get('action') === 'create') {
-        setTimeout(() => {
-            const collectionsTab = document.getElementById('tab-collections');
-            if (collectionsTab) {
-                collectionsTab.click();
-                if (btnCreateCollection) {
-                    setTimeout(() => btnCreateCollection.click(), 50);
-                }
-            }
-        }, 100);
-    }
-});
-
-async function fetchCollections() {
-    const container = document.getElementById('collections-list');
-    if (!container) return;
-    try {
-        const res = await fetch(`${API_URL}/collections`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const collections = await res.json();
-        
-        container.innerHTML = '';
-        if (!res.ok) return container.innerHTML = '<p>Lỗi tải danh sách bộ sưu tập</p>';
-        if (collections.length === 0) return container.innerHTML = '<p>Bạn chưa có bộ sưu tập nào.</p>';
-
-        collections.forEach(col => {
-            const div = document.createElement('div');
-            div.style.border = '1px solid #e2e8f0';
-            div.style.borderRadius = '8px';
-            div.style.padding = '16px';
-            div.style.background = '#f8fafc';
-            div.style.cursor = 'pointer';
-            div.style.position = 'relative';
-            
-            div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <h4 style="margin:0; color:var(--primary);"><i class="fa-solid fa-folder" style="margin-right:8px;"></i>${col.TenBST}</h4>
-                    <button class="btn-delete-col" data-id="${col.MaBST}" style="background:none; border:none; color:#ef4444; cursor:pointer;" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                </div>
-                <p style="font-size:13px; color:#64748b; margin-top:8px; margin-bottom:12px;">${col.MoTa || 'Không có mô tả'}</p>
-                <div style="font-size:12px; font-weight:600; color:#475569;">${col.DocCount} tài liệu</div>
-            `;
-            
-            div.addEventListener('click', (e) => {
-                if(e.target.closest('.btn-delete-col')) return;
-                openCollection(col.MaBST, col.TenBST);
-            });
-            
-            const btnDelete = div.querySelector('.btn-delete-col');
-            btnDelete.addEventListener('click', async () => {
-                if(confirm('Bạn có chắc chắn muốn xóa bộ sưu tập này?')) {
-                    await deleteCollection(col.MaBST);
-                }
-            });
-            
-            container.appendChild(div);
-        });
-    } catch (err) {
-        console.error(err);
-        container.innerHTML = '<p>Lỗi tải danh sách bộ sưu tập</p>';
-    }
-}
-
-async function deleteCollection(id) {
-    try {
-        const res = await fetch(`${API_URL}/collections/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            fetchCollections();
-        } else {
-            const data = await res.json();
-            alert(data.message || 'Lỗi xóa bộ sưu tập');
-        }
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-async function openCollection(id, name) {
-    const modalView = document.getElementById('view-collection-modal');
-    document.getElementById('view-collection-title').innerHTML = `<i class="fa-solid fa-folder-open" style="color: var(--primary); margin-right: 8px;"></i> ${name}`;
-    const container = document.getElementById('view-collection-docs');
-    container.innerHTML = '<p>Đang tải tài liệu...</p>';
-    modalView.style.display = 'flex';
-    modalView.style.opacity = '1';
-    document.body.style.overflow = 'hidden';
-    
-    try {
-        const res = await fetch(`${API_URL}/collections/${id}/documents`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const docs = await res.json();
-        
-        container.innerHTML = '';
-        if (!res.ok || docs.length === 0) {
-            container.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Chưa có tài liệu nào trong bộ sưu tập này.</p>';
-            return;
-        }
-        
-        docs.forEach(doc => {
-            const el = document.createElement('div');
-            el.className = 'doc-card';
-            el.innerHTML = `
-                <div class="doc-icon"><i class="fa-regular fa-file-pdf"></i></div>
-                <div class="doc-info">
-                  <div class="doc-title">
-                    <a href="../document/documentDetails.html?id=${doc.MaTL}" style="color:inherit;text-decoration:none;">${doc.TenTL}</a>
-                  </div>
-                  <div class="doc-meta">
-                    <span><i class="fa-solid fa-user"></i> ${doc.TenNguoiDang}</span>
-                    <span><i class="fa-solid fa-book"></i> ${doc.TenMonHoc || 'Không rõ'}</span>
-                  </div>
-                </div>
-                <button class="btn-remove-doc" data-id="${doc.MaTL}" style="background:#ef4444; border:none; color:white; border-radius:4px; padding:6px; cursor:pointer; font-size:12px;" title="Xóa khỏi bộ sưu tập"><i class="fa-solid fa-xmark"></i> Xóa</button>
-            `;
-            
-            const btnRemove = el.querySelector('.btn-remove-doc');
-            btnRemove.addEventListener('click', async () => {
-                try {
-                    const resRm = await fetch(`${API_URL}/collections/${id}/documents/${doc.MaTL}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (resRm.ok) {
-                        el.remove();
-                        fetchCollections();     
-                    }
-                } catch(err) { console.error(err); }
-            });
-            
-            container.appendChild(el);
-        });
-    } catch(err) {
-        console.error(err);
-        container.innerHTML = '<p>Lỗi tải tài liệu.</p>';
-    }
 }

@@ -507,6 +507,73 @@ export const renderCommentSkeleton = (count = 3) => {
   return html;
 };
 
+export const renderDocumentListSkeleton = (count = 5) => {
+  let html = "";
+  for (let i = 0; i < count; i++) {
+    html += `
+            <div class="doc-item skeleton-card skeleton-box" style="display:flex; padding:16px; border-bottom:1px solid #f1f5f9; gap:16px; width: 100%; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 16px; width: 70%; align-items: center;">
+                    <div class="skeleton-noti-icon skeleton-box"></div>
+                    <div class="skeleton-noti-content" style="width: 100%;">
+                        <div class="skeleton-noti-title skeleton-box" style="height: 20px; width: 60%; margin-bottom: 8px;"></div>
+                        <div class="skeleton-noti-time skeleton-box" style="height: 14px; width: 80%;"></div>
+                    </div>
+                </div>
+                <div class="skeleton-box" style="width: 120px; height: 36px; border-radius: 8px;"></div>
+            </div>
+        `;
+  }
+  return html;
+};
+
+export const renderSubjectSkeleton = (count = 8) => {
+  let html = "";
+  for (let i = 0; i < count; i++) {
+    html += `
+            <div class="subject-card skeleton-card skeleton-box">
+                <div class="skeleton-subject-icon skeleton-box"></div>
+                <div class="skeleton-subject-name skeleton-box"></div>
+            </div>
+        `;
+  }
+  return html;
+};
+
+export const renderNotificationSkeleton = (count = 5) => {
+  let html = "";
+  for (let i = 0; i < count; i++) {
+    html += `
+            <div class="notification-item skeleton-card skeleton-box" style="display:flex; padding:16px; border-bottom:1px solid #f1f5f9; gap:16px; width: 100%;">
+                <div class="skeleton-noti-icon skeleton-box"></div>
+                <div class="skeleton-noti-content">
+                    <div class="skeleton-noti-title skeleton-box"></div>
+                    <div class="skeleton-noti-time skeleton-box"></div>
+                </div>
+            </div>
+        `;
+  }
+  return html;
+};
+
+export const renderTransactionSkeleton = (count = 5) => {
+  let html = "";
+  for (let i = 0; i < count; i++) {
+    html += `
+            <div class="transaction-item skeleton-card skeleton-box" style="display:flex; padding:16px; justify-content:space-between; border-bottom:1px solid #f1f5f9; width: 100%;">
+                <div class="skeleton-trans-left" style="width:60%;">
+                    <div class="skeleton-trans-id skeleton-box" style="margin-bottom:8px;"></div>
+                    <div class="skeleton-trans-desc skeleton-box"></div>
+                </div>
+                <div class="skeleton-trans-right" style="text-align:right;">
+                    <div class="skeleton-trans-amount skeleton-box" style="margin-bottom:8px;"></div>
+                    <div class="skeleton-trans-status skeleton-box"></div>
+                </div>
+            </div>
+        `;
+  }
+  return html;
+};
+
 if (typeof window !== "undefined") {
   window.alert = function (msg) {
     if (typeof Swal !== "undefined") {

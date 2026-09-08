@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { escapeHTML, formatRatingSummary, getAssetUrl, renderDocumentSkeleton } from '../shared/utils.js';
+import { escapeHTML, formatRatingSummary, getAssetUrl, renderDocumentSkeleton, renderSubjectSkeleton } from '../shared/utils.js';
 document.addEventListener('DOMContentLoaded', () => {
     renderBreadcrumb([{ name: 'Trang chủ' }]);
 
@@ -290,6 +290,7 @@ function animateValue(obj, start, end, duration) {
 async function fetchSubjects() {
     const grid = document.getElementById('homeSubjectGrid');
     if (!grid) return;
+    grid.innerHTML = renderSubjectSkeleton(8);
     try {
         const response = await fetch(`${API_URL}/documents/subjects/popular`);
         if (!response.ok) throw new Error('Không thể tải danh sách môn học.');

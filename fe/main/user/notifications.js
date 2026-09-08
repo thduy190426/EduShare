@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { decodeJWT, getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
+import { decodeJWT, getAssetUrl, getToken, getAvatar, renderNotificationSkeleton } from '../shared/utils.js';
 import { getSocket } from '../shared/socketClient.js';
 
 let currentPage = 1;
@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadUserProfileNav();
     fetchNotifications(currentPage);
+    checkUnclaimedQuests();
     setupSocketListener();
 
     const btnMarkAll = document.getElementById('btn-mark-all-read');
@@ -67,6 +68,9 @@ async function fetchNotifications(page = 1) {
     if (!token) return;
 
     try {
+        const list = document.getElementById('notificationList');
+        if (list && page === 1) list.innerHTML = renderNotificationSkeleton(5);
+
         const response = await fetch(`${API_URL}/notifications?page=${page}&limit=${LIMIT}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -409,4 +413,38 @@ function setupSocketListener() {
         currentPage = 1;
         fetchNotifications(1);
     });
+}
+
+async function checkUnclaimedQuests() {
+    const token = getToken();
+    if (!token) return;
+    try {
+        const res = await fetch(`${API_URL}/quests`, { 
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.quests) {
+            let claimableCount = 0;
+            data.quests.forEach(q => {
+                if (q.TrangThai === 'ChoNhan') claimableCount++;
+            });
+            
+            if (claimableCount > 0) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true,
+                    icon: 'info',
+                    title: `Bạn có ${claimableCount} nhiệm vụ chưa nhận thưởng!`,
+                    text: 'Hãy vào trang Nhiệm vụ để nhận EduCoin nhé.'
+                });
+            }
+        }
+    } catch (e) {
+        console.error('Lỗi kiểm tra nhiệm vụ:', e);
+    }
 }

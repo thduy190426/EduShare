@@ -1,12 +1,15 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { getToken, escapeHTML } from '../shared/utils.js';
+import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 
 let allTransactions = [];
+let filteredTransactions = [];
 let currentPage = 1;
 const ITEMS_PER_PAGE = 10;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    makeAdminTablesResizableAndSticky();
     renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Lịch sử giao dịch' }]);
     const token = getToken();
     if (!token) {
@@ -16,12 +19,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const btnExportExcel = document.getElementById('btn-export-excel');
     const btnExportPdf = document.getElementById('btn-export-pdf');
+    const btnFilter = document.getElementById('btn-filter');
+    const btnResetFilter = document.getElementById('btn-reset-filter');
 
     if (btnExportExcel) {
         btnExportExcel.addEventListener('click', exportToExcel);
     }
     if (btnExportPdf) {
         btnExportPdf.addEventListener('click', exportToPDF);
+    }
+    if (btnFilter) {
+        btnFilter.addEventListener('click', applyDateFilter);
+    }
+    if (btnResetFilter) {
+        btnResetFilter.addEventListener('click', resetDateFilter);
     }
 
     await fetchTransactions(token);
@@ -48,6 +59,7 @@ async function fetchTransactions(token) {
         if (res.ok) {
             const data = await res.json();
             allTransactions = data.transactions || [];
+            filteredTransactions = [...allTransactions];
             currentPage = 1;
             renderTransactions();
         } else {
@@ -79,12 +91,12 @@ function renderTransactions() {
     const listEl = document.getElementById('transaction-list');
     const paginationContainer = document.getElementById('pagination-container');
 
-    if (!allTransactions || allTransactions.length === 0) {
+    if (!filteredTransactions || filteredTransactions.length === 0) {
         listEl.innerHTML = `
             <tr>
                 <td colspan="4" class="empty-state">
                     <i class="fa-solid fa-clock-rotate-left"></i>
-                    <p>Bạn chưa có giao dịch nào.</p>
+                    <p>Không có giao dịch nào phù hợp.</p>
                 </td>
             </tr>
         `;
@@ -99,12 +111,14 @@ function renderTransactions() {
         'TruXuAdmin': 'Admin Trừ Xu',
         'ThuongXu': 'Thưởng Xu',
         'HoanXu': 'Hoàn Xu',
-        'PhatXu': 'Phạt Xu'
+        'PhatXu': 'Phạt Xu',
+        'TangXu': 'Tặng Xu',
+        'NhanXu': 'Nhận Xu'
     };
 
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    const currentItems = allTransactions.slice(startIndex, endIndex);
+    const currentItems = filteredTransactions.slice(startIndex, endIndex);
 
     let html = '';
     currentItems.forEach(tx => {
@@ -134,7 +148,7 @@ function renderPagination() {
     const paginationContainer = document.getElementById('pagination-container');
     if (!paginationContainer) return;
 
-    const totalPages = Math.max(1, Math.ceil(allTransactions.length / ITEMS_PER_PAGE));
+    const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE));
 
     let html = '';
     html += `<button class="btn-page ${currentPage === 1 ? 'disabled' : ''}" data-page="${currentPage - 1}">Trước</button>`;
@@ -146,6 +160,11 @@ function renderPagination() {
     html += `<button class="btn-page ${currentPage === totalPages ? 'disabled' : ''}" data-page="${currentPage + 1}">Sau</button>`;
 
     paginationContainer.innerHTML = html;
+    paginationContainer.style.display = 'flex';
+    paginationContainer.style.justifyContent = 'center';
+    paginationContainer.style.alignItems = 'center';
+    paginationContainer.style.gap = '8px';
+    paginationContainer.style.marginTop = '20px';
 
     const pageButtons = paginationContainer.querySelectorAll('.btn-page:not(.disabled)');
     pageButtons.forEach(btn => {
@@ -160,7 +179,7 @@ function renderPagination() {
 }
 
 function exportToExcel() {
-    if (allTransactions.length === 0) {
+    if (filteredTransactions.length === 0) {
         Swal.fire('Thông báo', 'Không có dữ liệu để xuất', 'info');
         return;
     }
@@ -171,10 +190,12 @@ function exportToExcel() {
         'TruXuAdmin': 'Admin Trừ Xu',
         'ThuongXu': 'Thưởng Xu',
         'HoanXu': 'Hoàn Xu',
-        'PhatXu': 'Phạt Xu'
+        'PhatXu': 'Phạt Xu',
+        'TangXu': 'Tặng Xu',
+        'NhanXu': 'Nhận Xu'
     };
 
-    const data = allTransactions.map(tx => {
+    const data = filteredTransactions.map(tx => {
         const d = new Date(tx.NgayTao);
         const typeLabel = typeMapping[tx.LoaiGiaoDich] || tx.LoaiGiaoDich;
 
@@ -193,7 +214,7 @@ function exportToExcel() {
 }
 
 function exportToPDF() {
-    if (allTransactions.length === 0) {
+    if (filteredTransactions.length === 0) {
         Swal.fire('Thông báo', 'Không có dữ liệu để xuất', 'info');
         return;
     }
@@ -212,7 +233,7 @@ function exportToPDF() {
                 </tr>
             </thead>
             <tbody>
-                ${allTransactions.map(tx => {
+                ${filteredTransactions.map(tx => {
                     const d = new Date(tx.NgayTao);
                     const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
@@ -223,7 +244,9 @@ function exportToPDF() {
                         'TruXuAdmin': 'Admin Trừ Xu',
                         'ThuongXu': 'Thưởng Xu',
                         'HoanXu': 'Hoàn Xu',
-                        'PhatXu': 'Phạt Xu'
+                        'PhatXu': 'Phạt Xu',
+                        'TangXu': 'Tặng Xu',
+                        'NhanXu': 'Nhận Xu'
                     };
                     const typeLabel = typeMapping[tx.LoaiGiaoDich] || tx.LoaiGiaoDich;
 
@@ -271,6 +294,48 @@ function exportToPDF() {
             timer: 3000
         });
     });
+}
+
+function applyDateFilter() {
+    const startDateVal = document.getElementById('filter-start-date').value;
+    const endDateVal = document.getElementById('filter-end-date').value;
+
+    if (!startDateVal && !endDateVal) {
+        filteredTransactions = [...allTransactions];
+    } else {
+        filteredTransactions = allTransactions.filter(tx => {
+            const txDate = new Date(tx.NgayTao);
+            txDate.setHours(0, 0, 0, 0);
+
+            let isAfterStart = true;
+            let isBeforeEnd = true;
+
+            if (startDateVal) {
+                const startDate = new Date(startDateVal);
+                startDate.setHours(0, 0, 0, 0);
+                isAfterStart = txDate >= startDate;
+            }
+
+            if (endDateVal) {
+                const endDate = new Date(endDateVal);
+                endDate.setHours(23, 59, 59, 999);
+                isBeforeEnd = txDate <= endDate;
+            }
+
+            return isAfterStart && isBeforeEnd;
+        });
+    }
+
+    currentPage = 1;
+    renderTransactions();
+}
+
+function resetDateFilter() {
+    document.getElementById('filter-start-date').value = '';
+    document.getElementById('filter-end-date').value = '';
+    filteredTransactions = [...allTransactions];
+    currentPage = 1;
+    renderTransactions();
 }
 
 renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Lịch sử giao dịch' }]);

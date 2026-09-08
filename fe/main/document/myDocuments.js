@@ -1,6 +1,7 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, getAssetUrl, getToken, getAvatar } from '../shared/utils.js';
+import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 
 let currentTab = 'uploaded';
 let uploadedDocs = [];
@@ -10,6 +11,7 @@ let recentlyViewedDocs = [];
 let subjects = [];
 
 document.addEventListener('DOMContentLoaded', () => {
+    makeAdminTablesResizableAndSticky();
     renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Tài liệu của tôi' }]);
 
     loadUserProfileNav();
@@ -464,6 +466,26 @@ function openUpdateFileModal(doc) {
         customClass: {
             confirmButton: 'modern-btn-confirm',
             cancelButton: 'modern-btn-cancel'
+        },
+        didOpen: () => {
+            const confirmBtn = Swal.getConfirmButton();
+            const fileInput = document.getElementById('update-fileUpload');
+            
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.style.cursor = 'not-allowed';
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.style.opacity = '1';
+                    confirmBtn.style.cursor = 'pointer';
+                } else {
+                    confirmBtn.disabled = true;
+                    confirmBtn.style.opacity = '0.5';
+                    confirmBtn.style.cursor = 'not-allowed';
+                }
+            });
         },
         preConfirm: () => {
             const fileInput = document.getElementById('update-fileUpload');

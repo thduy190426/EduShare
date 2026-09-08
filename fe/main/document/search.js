@@ -1,9 +1,11 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
 import { decodeJWT, escapeHTML, stripHTML, formatRatingSummary, getAssetUrl, getToken, getAvatar, getUserProfileUrl, renderDocumentSkeleton } from '../shared/utils.js';
+import { setupSearchWidget } from '../shared/searchWidget.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     renderBreadcrumb([{ name: 'Trang chủ', url: '../user/userHome.html' }, { name: 'Tìm kiếm' }]);
+    setupSearchWidget();
 
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
@@ -152,20 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
         checkFilterState();
         fetchDocuments(1);
     });
-
-    if (searchInput) {
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                clearTimeout(debounceTimer);
-                currentPage = 1;
-                fetchDocuments(1);
-            }
-        });
-        searchInput.addEventListener('input', () => {
-            checkFilterState();
-            handleDebouncedFilterChange();
-        });
-    }
 
     function checkFilterState() {
         if (!btnClearFilter) return;
@@ -457,7 +445,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (documents.length === 0) {
                 if (!isAppend) {
-                    resultsGrid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #6b7280; font-size: 16px;">Không tìm thấy tài liệu phù hợp.</div>';
+                    resultsGrid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 80px 20px; background: white; border-radius: 12px; border: 1px dashed #CBD5E1; margin: 20px 0;">
+                            <div style="font-size: 48px; color: #94A3B8; margin-bottom: 16px;"><i class="fa-solid fa-magnifying-glass-minus"></i></div>
+                            <h3 style="font-size: 18px; color: #1E293B; margin-bottom: 8px;">Không tìm thấy tài liệu nào phù hợp</h3>
+                            <p style="color: #64748B; font-size: 14px; max-width: 400px; margin: 0 auto;">Rất tiếc, chúng tôi không tìm thấy kết quả nào khớp với tìm kiếm của bạn. Vui lòng thử lại với từ khóa khác hoặc xóa bớt bộ lọc.</p>
+                            <button class="btn-outline-primary" style="margin-top: 20px;" onclick="document.getElementById('btnClearFilter').click()">Xóa bộ lọc</button>
+                        </div>`;
                 }
                 hasMore = false;
             } else {

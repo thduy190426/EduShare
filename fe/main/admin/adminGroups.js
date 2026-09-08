@@ -1,5 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { checkAuth, getToken, showToast, renderPagination } from '../shared/utils.js';
+import { makeAdminTablesResizableAndSticky } from './adminTableUtils.js';
 document.addEventListener('DOMContentLoaded', () => {
     renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Quản lý Nhóm' }]);
 
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '../auth/login.html';
         return;
     }
+    makeAdminTablesResizableAndSticky();
     loadGroups();
 });
 let currentPage = 1;
