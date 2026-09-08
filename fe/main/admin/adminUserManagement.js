@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { escapeHTML, getAssetUrl, getToken, showToast, renderPagination } from '../shared/utils.js';
+import { escapeHTML, getAssetUrl, getToken, showToast, renderPagination, renderTableSkeleton } from '../shared/utils.js';
 
 const token = getToken();
 let currentPage = 1;
@@ -140,6 +140,7 @@ function getUserFilters() {
 
 async function fetchUsers() {
     try {
+        document.getElementById('user-table-body').innerHTML = renderTableSkeleton(7, 10);
         const filters = getUserFilters();
         const queryParams = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {

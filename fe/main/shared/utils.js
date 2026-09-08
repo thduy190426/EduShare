@@ -574,6 +574,18 @@ export const renderTransactionSkeleton = (count = 5) => {
   return html;
 };
 
+export const renderTableSkeleton = (columnsCount = 5, rowsCount = 5) => {
+  let html = "";
+  for (let i = 0; i < rowsCount; i++) {
+    html += `<tr>`;
+    for (let j = 0; j < columnsCount; j++) {
+      html += `<td><div class="skeleton-box" style="height: 20px; width: ${Math.floor(Math.random() * 40 + 40)}%; border-radius: 4px; display: inline-block;"></div></td>`;
+    }
+    html += `</tr>`;
+  }
+  return html;
+};
+
 if (typeof window !== "undefined") {
   window.alert = function (msg) {
     if (typeof Swal !== "undefined") {

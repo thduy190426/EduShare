@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { getToken, escapeHTML } from '../shared/utils.js';
+import { getToken, escapeHTML, renderTableSkeleton } from '../shared/utils.js';
 import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 
 let allTransactions = [];
@@ -40,14 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function fetchTransactions(token) {
     const listEl = document.getElementById('transaction-list');
-    listEl.innerHTML = `
-        <tr>
-            <td colspan="4" class="empty-state">
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                <p>Đang tải dữ liệu...</p>
-            </td>
-        </tr>
-    `;
+    listEl.innerHTML = renderTableSkeleton(4, 5);
 
     try {
         const res = await fetch(`${API_URL}/users/transactions`, {

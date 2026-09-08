@@ -1,5 +1,5 @@
 import { renderBreadcrumb } from '../shared/utils.js';
-import { checkAuth, getToken, showToast, renderPagination } from '../shared/utils.js';
+import { checkAuth, getToken, showToast, renderPagination, renderTableSkeleton } from '../shared/utils.js';
 import { makeAdminTablesResizableAndSticky } from './adminTableUtils.js';
 document.addEventListener('DOMContentLoaded', () => {
     renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Quản lý Nhóm' }]);
@@ -17,7 +17,7 @@ let currentPage = 1;
 const limit = 10;
 async function loadGroups() {
     const tableBody = document.getElementById('groups-table-body');
-    tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">Đang tải dữ liệu...</td></tr>';
+    tableBody.innerHTML = renderTableSkeleton(7, 5);
     try {
         const token = getToken();
         const response = await fetch(`http://localhost:3000/api/admin/groups?page=${currentPage}&limit=${limit}`, {

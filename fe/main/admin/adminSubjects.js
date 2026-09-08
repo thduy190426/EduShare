@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { getToken, showToast, renderPagination, getAssetUrl } from '../shared/utils.js';
+import { getToken, showToast, renderPagination, getAssetUrl, renderTableSkeleton } from '../shared/utils.js';
 
 const token = getToken();
 let currentPage = 1;
@@ -74,6 +74,7 @@ function escapeHTML(value) {
 
 async function fetchSubjects() {
     try {
+        document.getElementById('subject-table-body').innerHTML = renderTableSkeleton(4, 10);
         const res = await fetch(`${API_URL}/admin/subjects?page=${currentPage}&limit=${limit}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });

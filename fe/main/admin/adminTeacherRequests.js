@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from "../shared/config.js";
-import { getToken, showToast, renderPagination, getAssetUrl, escapeHTML } from "../shared/utils.js";
+import { getToken, showToast, renderPagination, getAssetUrl, escapeHTML, renderTableSkeleton } from "../shared/utils.js";
 
 let currentStatus = "ChoDuyet";
 let currentRequests = [];
@@ -38,7 +38,9 @@ function setupTabs() {
 
 async function fetchRequests() {
     const token = getToken();
+    const tbody = document.getElementById("table-body");
     try {
+        tbody.innerHTML = renderTableSkeleton(6, 10);
         const response = await fetch(`${API_URL}/admin/teacher-requests?page=${currentPage}&limit=${limit}&status=${currentStatus}`, {
             headers: { "Authorization": `Bearer ${token}` }
         });
@@ -122,13 +124,24 @@ function renderRequests(requests) {
         const btnView = tr.querySelector(".btn-view-proof");
         if (btnView) {
             btnView.addEventListener("click", () => {
+                const urls = btnView.dataset.url.split(',');
+                let htmlContent = `<div style="display: flex; flex-direction: column; gap: 16px;">`;
+                urls.forEach(url => {
+                    if (url.trim()) {
+                        htmlContent += `<img src="${url.trim()}" style="max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0;">`;
+                    }
+                });
+                htmlContent += `</div>`;
+
                 Swal.fire({
                     title: 'Minh chứng Giáo viên',
-                    imageUrl: btnView.dataset.url,
-                    imageAlt: 'Minh chứng',
-                    width: '600px',
+                    html: htmlContent,
+                    width: '700px',
                     showConfirmButton: false,
-                    showCloseButton: true
+                    showCloseButton: true,
+                    customClass: {
+                        popup: 'swal2-overflow-hidden' 
+                    }
                 });
             });
         }

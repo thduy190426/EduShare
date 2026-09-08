@@ -1,5 +1,5 @@
 import { API_URL } from '../shared/config.js';
-import { getToken, decodeJWT, renderPagination } from '../shared/utils.js';
+import { getToken, decodeJWT, renderPagination, renderTableSkeleton } from '../shared/utils.js';
 import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 import '../shared/sidebar.js';
 
@@ -100,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchQuests() {
         try {
+            document.getElementById('quests-tbody').innerHTML = renderTableSkeleton(7, 5);
             const res = await fetch(`${API_URL}/admin/quests`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -307,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchBadges() {
         try {
+            document.getElementById('badges-tbody').innerHTML = renderTableSkeleton(5, 5);
             const res = await fetch(`${API_URL}/admin/badges`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });

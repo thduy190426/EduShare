@@ -1,6 +1,6 @@
 import { renderBreadcrumb } from '../shared/utils.js';
 import { API_URL } from '../shared/config.js';
-import { getToken, escapeHTML, getAssetUrl } from '../shared/utils.js';
+import { getToken, escapeHTML, getAssetUrl, renderTableSkeleton } from '../shared/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     renderBreadcrumb([{ name: 'Trang chủ Admin', url: 'adminDashboard.html' }, { name: 'Nhật ký hệ thống' }]);
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
+      tableBody.innerHTML = renderTableSkeleton(5, 10);
       const search = searchInput.value.trim();
       const action = filterAction.value;
       const date = filterDate.value;
