@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
+const { getRedisClient } = require('../config/redis');
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
@@ -992,6 +993,14 @@ router.delete('/subjects/:id', superAdminMiddleware, async (req, res) => {
 });
 router.get('/stats/overview', adminMiddleware, async (req, res) => {
     try {
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const cached = await redisClient.get('admin:dashboard_summary');
+            if (cached) {
+                const summary = JSON.parse(cached);
+                return res.status(200).json(summary);
+            }
+        }
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT * FROM ADMIN_DASHBOARD_SUMMARY WHERE Id = 1');
         
@@ -1028,6 +1037,18 @@ router.get('/stats/overview', adminMiddleware, async (req, res) => {
 });
 router.get('/stats/advanced', superAdminMiddleware, async (req, res) => {
     try {
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const cached = await redisClient.get('admin:dashboard_summary');
+            if (cached) {
+                const summary = JSON.parse(cached);
+                return res.status(200).json({
+                    revenueByMonth: summary.revenueByMonth || [],
+                    userGrowth: summary.userGrowth || [],
+                    trendingSubjects: summary.trendingSubjects || []
+                });
+            }
+        }
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT DataJSON FROM ADMIN_DASHBOARD_SUMMARY WHERE Id = 1');
         

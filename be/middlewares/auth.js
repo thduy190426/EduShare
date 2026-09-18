@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { getRedisClient } = require('../config/redis');
 
 const authMiddleware = async (req, res, next) => {
     let token = null;
@@ -8,6 +9,8 @@ const authMiddleware = async (req, res, next) => {
         const authHeader = req.header('Authorization');
         if (authHeader && authHeader.startsWith('Bearer ')) {
             token = authHeader.split(' ')[1];
+        } else if (req.query && req.query.token) {
+            token = req.query.token;
         }
     }
 
@@ -16,6 +19,14 @@ const authMiddleware = async (req, res, next) => {
     }
 
     try {
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const isBlacklisted = await redisClient.get(`bl_${token}`);
+            if (isBlacklisted) {
+                return res.status(401).json({ message: 'Token đã bị vô hiệu hóa (Đăng xuất).' });
+            }
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const pool = req.app.locals.pool;

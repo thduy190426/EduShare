@@ -6,6 +6,8 @@ const { Readable } = require('stream');
 const fs = require('fs');
 const os = require('os');
 const multer = require('multer');
+
+const { cacheMiddleware } = require('../middlewares/cache');
 const streamifier = require('streamifier');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/auth');
@@ -182,7 +184,7 @@ router.get('/search', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/top-contributors', async (req, res) => {
+router.get('/top-contributors', cacheMiddleware(60 * 60), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const sql = `

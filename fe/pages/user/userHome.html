@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="../../css/shared/intro-custom.css">
   <link rel="stylesheet" href="../../css/shared/searchWidget.css">
 <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script></head>
-<body>
+<body style="font-family: 'Inter', sans-serif !important;">
   
   
   <nav class="navbar">
@@ -63,7 +63,7 @@
             <h1 class="hero-title">Chào buổi sáng, <span id="heroUserName">Người dùng</span>!</h1>
             <p class="hero-subtitle">Bạn đang có <strong id="heroUserCoin" style="color: #F59E0B;">0</strong> EduCoin <i class="fa-solid fa-circle-info" title="EduCoin là điểm thưởng dùng để mở khóa tài liệu. Bạn có thể kiếm thêm xu bằng cách đăng tải tài liệu hữu ích cho cộng đồng." style="cursor: help; color: rgba(255,255,255,0.7); margin-left: 4px; font-size: 14px;"></i>. Hãy tiếp tục chia sẻ tài liệu để nhận thêm xu nhé.</p>
             <div class="hero-action" style="margin-top: 24px;">
-              <a href="../document/uploadDocument.html" class="btn-hero-primary" data-intro="Đóng góp tài liệu lên hệ thống để nhận EduCoin và chia sẻ kiến thức với mọi người." data-title="Tải Tài Liệu Lên" data-step="3"><i class="fa-solid fa-cloud-arrow-up"></i> Tải tài liệu lên</a>
+              <a href="../document/uploadDocument.html" onclick="event.preventDefault(); document.body.style.transition='all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'; document.body.style.opacity='0'; document.body.style.transform='scale(1.03)'; document.body.style.filter='blur(4px)'; setTimeout(() => { window.location.href=this.href; setTimeout(() => { document.body.style.transition='none'; document.body.style.opacity='1'; document.body.style.transform='none'; document.body.style.filter='none'; }, 100); }, 400);" class="btn-hero-primary" data-intro="Đóng góp tài liệu lên hệ thống để nhận EduCoin và chia sẻ kiến thức với mọi người." data-title="Tải Tài Liệu Lên" data-step="3"><i class="fa-solid fa-cloud-arrow-up"></i> Tải tài liệu lên</a>
             </div>
           </div>
         </div>

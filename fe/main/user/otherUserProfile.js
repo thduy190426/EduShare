@@ -87,16 +87,16 @@ async function fetchUserProfile() {
         if (profile.VaiTro === 'GiaoVien') roleName = 'Giáo viên';
         if (profile.VaiTro === 'Admin') roleName = 'Admin';
         document.getElementById('header-role').textContent = roleName;
-        document.getElementById('view-hoten').value = profile.HoTen || 'Không có tên';
-        document.getElementById('view-tuoi').value = profile.Tuoi ? profile.Tuoi : 'Chưa cập nhật';
+        document.getElementById('view-hoten').textContent = profile.HoTen || 'Không có tên';
+        document.getElementById('view-tuoi').textContent = profile.Tuoi ? profile.Tuoi : 'Chưa cập nhật';
         let gioiTinhStr = 'Chưa cập nhật';
         if (profile.GioiTinh === 'Nam') gioiTinhStr = 'Nam';
         else if (profile.GioiTinh === 'Nu') gioiTinhStr = 'Nữ';
         else if (profile.GioiTinh === 'Khac') gioiTinhStr = 'Khác';
-        document.getElementById('view-gioitinh').value = gioiTinhStr;
-        document.getElementById('view-diachi').value = profile.DiaChi || 'Chưa cập nhật';
-        document.getElementById('view-truonghoc').value = profile.TruongHoc || 'Chưa cập nhật';
-        document.getElementById('view-khoanganh').value = profile.KhoaNganh || 'Chưa cập nhật';
+        document.getElementById('view-gioitinh').textContent = gioiTinhStr;
+        document.getElementById('view-diachi').textContent = profile.DiaChi || 'Chưa cập nhật';
+        document.getElementById('view-truonghoc').textContent = profile.TruongHoc || 'Chưa cập nhật';
+        document.getElementById('view-khoanganh').textContent = profile.KhoaNganh || 'Chưa cập nhật';
         
         const bioEl = document.getElementById('view-gioithieu');
         if (bioEl) {
@@ -133,21 +133,53 @@ async function fetchUserProfile() {
 }
 function setupTabs() {
     const tabs = document.querySelectorAll('.profile-tab');
+    const indicator = document.getElementById('tab-indicator');
+    
+    function updateIndicator(activeTab) {
+        if (!indicator || !activeTab) return;
+        indicator.style.width = `${activeTab.offsetWidth}px`;
+        indicator.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+    }
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => {
                 t.classList.remove('active-tab');
                 t.style.color = 'var(--text-secondary)';
-                t.style.borderBottom = '2px solid transparent';
             });
             tab.classList.add('active-tab');
             tab.style.color = 'var(--primary)';
-            tab.style.borderBottom = '2px solid var(--primary)';
+            
+            updateIndicator(tab);
+            
+            const container = document.getElementById('user-docs-container');
+            if (container) {
+                container.style.opacity = '0';
+                container.style.transform = 'translateY(10px)';
+                container.style.transition = 'none';
+                
+                setTimeout(() => {
+                    container.style.transition = 'all 0.3s ease';
+                    container.style.opacity = '1';
+                    container.style.transform = 'translateY(0)';
+                }, 50);
+            }
+
             const tabId = tab.id;
             if (tabId === 'tab-shared') loadDocuments('shared');
             if (tabId === 'tab-downloads') loadDocuments('downloads');
             if (tabId === 'tab-ratings') loadDocuments('ratings');
         });
+    });
+    
+    setTimeout(() => {
+        const activeTab = document.querySelector('.profile-tab.active-tab');
+        if (activeTab) updateIndicator(activeTab);
+    }, 100);
+    
+    window.addEventListener('resize', () => {
+        const activeTab = document.querySelector('.profile-tab.active-tab');
+        if (activeTab) updateIndicator(activeTab);
     });
 }
 async function loadDocuments(tabName) {

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduShare - Chi tiết kết quả</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/shared/variables.css">
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <link rel="stylesheet" href="../../css/user/userHome.css">
+    <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+    <link rel="stylesheet" href="../../css/quiz/quizResultDetails.css">
+</head>
+<body style="font-family: 'Inter', sans-serif !important;">
+    
+    <nav class="navbar">
+        <a href="../user/userHome.html" class="logo">
+            <i class="fa-solid fa-book"></i> EduShare
+        </a>
+        
+        <div class="nav-search">
+            <span class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="text" id="globalSearchInput" placeholder="Tìm kiếm tài liệu, môn học, giáo trình...">
+        </div>
+
+        <div class="nav-actions">
+            <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+                <i class="fa-solid fa-bell"></i>
+                <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+            </button>
+            <div class="user-profile" id="userProfileNav">
+                <div class="avatar" id="navAvatar">?</div>
+                <div class="user-info">
+                    <span class="user-name" id="navUserName">Đang tải...</span>
+                    <span class="user-role" id="navUserRole"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-layout">
+        <aside id="app-sidebar" class="sidebar"></aside>
+        
+        <main class="content-area">
+            <nav aria-label="breadcrumb" class="breadcrumb-container">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="quizHistory.html">Lịch sử làm bài thi</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Chi tiết kết quả</li>
+                </ol>
+            </nav>
+            <div class="back-link">
+                <a href="quizHistory.html"><i class="fa-solid fa-arrow-left"></i> Quay lại Lịch sử</a>
+            </div>
+
+            <div id="loadingIndicator" class="loading-state">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải chi tiết bài thi...
+            </div>
+
+            <div id="resultContent" style="display: none;">
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <h1 id="quizTitle">Tên đề thi</h1>
+                        <div id="quizScore" class="score-display">0 / 100</div>
+                    </div>
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Tổng số câu:</span>
+                            <span class="stat-value" id="totalQuestions">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Câu đúng:</span>
+                            <span class="stat-value text-success" id="correctAnswers">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Thời gian nộp:</span>
+                            <span class="stat-value" id="submitTime">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="questions-list" id="questionsList">
+                    <!-- Questions will be injected here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module" src="../../main/quiz/quizResultDetails.js"></script>
+</body>
+</html>

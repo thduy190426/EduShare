@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="../../css/shared/intro-custom.css">
   <link rel="stylesheet" href="../../css/shared/searchWidget.css">
 </head>
-<body>
+<body style="font-family: 'Inter', sans-serif !important;">
   <nav class="navbar">
     <a href="../user/userHome.html" class="logo">
       <i class="fa-solid fa-book"></i> EduShare
@@ -66,86 +66,126 @@
 
           <div class="active-filters" id="activeFilters" aria-live="polite"></div>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-arrow-down-short-wide" style="margin-right: 6px; color: var(--primary);"></i> Sắp xếp theo: </div>
-            <select class="filter-select" id="sortSelect">
-              <option value="MoiNhat">Mới nhất</option>
-              <option value="PhoBien">Lượt tải nhiều nhất</option>
-              <option value="Relevance">Liên quan nhất</option>
-            </select>
-          </div>
+          <details class="filter-group" open>
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-arrow-down-short-wide" style="margin-right: 8px; color: var(--primary);"></i> Sắp xếp theo</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <select class="filter-select" id="sortSelect">
+                <option value="MoiNhat">Mới nhất</option>
+                <option value="PhoBien">Lượt tải nhiều nhất</option>
+                <option value="Relevance">Liên quan nhất</option>
+              </select>
+            </div>
+          </details>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-graduation-cap" style="margin-right: 6px; color: var(--primary);"></i> Cấp bậc: </div>
-            <select class="filter-select" id="levelSelect">
-              <option value="">Tất cả cấp bậc</option>
-            </select>
-          </div>
+          <details class="filter-group" open>
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-graduation-cap" style="margin-right: 8px; color: var(--primary);"></i> Cấp bậc</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <select class="filter-select" id="levelSelect">
+                <option value="">Tất cả cấp bậc</option>
+              </select>
+            </div>
+          </details>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-book-open" style="margin-right: 6px; color: var(--primary);"></i> Môn học: </div>
-            <select class="filter-select" id="subjectSelect">
-              <option value="">Tất cả môn học</option>
-            </select>
-          </div>
+          <details class="filter-group" open>
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-book-open" style="margin-right: 8px; color: var(--primary);"></i> Môn học</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <select class="filter-select" id="subjectSelect">
+                <option value="">Tất cả môn học</option>
+              </select>
+            </div>
+          </details>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-star" style="margin-right: 6px; color: var(--primary);"></i> Đánh giá: </div>
-            <select class="filter-select" id="ratingSelect">
-              <option value="">Tất cả đánh giá</option>
-              <option value="5">Từ 5 sao</option>
-              <option value="4">Từ 4 sao trở lên</option>
-              <option value="3">Từ 3 sao trở lên</option>
-              <option value="2">Từ 2 sao trở lên</option>
-              <option value="1">Từ 1 sao trở lên</option>
-            </select>
-          </div>
+          <details class="filter-group" open>
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-file-lines" style="margin-right: 8px; color: var(--primary);"></i> Loại file</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <div class="file-filter-grid" id="fileTypeFilters">
+                <label class="filter-pill">
+                  <input type="checkbox" name="loaiFile" value="pdf">
+                  <span><i class="fa-solid fa-file-pdf"></i> PDF</span>
+                </label>
+                <label class="filter-pill">
+                  <input type="checkbox" name="loaiFile" value="docx">
+                  <span><i class="fa-solid fa-file-word"></i> Word</span>
+                </label>
+                <label class="filter-pill">
+                  <input type="checkbox" name="loaiFile" value="pptx">
+                  <span><i class="fa-solid fa-file-powerpoint"></i> PPT</span>
+                </label>
+              </div>
+            </div>
+          </details>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-file-lines" style="margin-right: 6px; color: var(--primary);"></i> Loại file: </div>
-            <div class="file-filter-grid" id="fileTypeFilters">
-              <label class="filter-pill">
-                <input type="checkbox" name="loaiFile" value="pdf">
-                <span><i class="fa-solid fa-file-pdf"></i> PDF</span>
-              </label>
-              <label class="filter-pill">
-                <input type="checkbox" name="loaiFile" value="docx">
-                <span><i class="fa-solid fa-file-word"></i> Word</span>
-              </label>
-              <label class="filter-pill">
-                <input type="checkbox" name="loaiFile" value="pptx">
-                <span><i class="fa-solid fa-file-powerpoint"></i> PPT</span>
+          <details class="filter-group">
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-star" style="margin-right: 8px; color: var(--primary);"></i> Đánh giá</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <select class="filter-select" id="ratingSelect">
+                <option value="">Tất cả đánh giá</option>
+                <option value="5">Từ 5 sao</option>
+                <option value="4">Từ 4 sao trở lên</option>
+                <option value="3">Từ 3 sao trở lên</option>
+                <option value="2">Từ 2 sao trở lên</option>
+                <option value="1">Từ 1 sao trở lên</option>
+              </select>
+            </div>
+          </details>
+
+          <details class="filter-group">
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-circle-check" style="margin-right: 8px; color: var(--primary);"></i> Trạng thái</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <label class="filter-toggle">
+                <input type="checkbox" id="officialOnly">
+                <span class="toggle-track"></span>
+                <span>Chỉ tài liệu chính thống</span>
               </label>
             </div>
-          </div>
+          </details>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-circle-check" style="margin-right: 6px; color: var(--primary);"></i> Trạng thái: </div>
-            <label class="filter-toggle">
-              <input type="checkbox" id="officialOnly">
-              <span class="toggle-track"></span>
-              <span>Chỉ tài liệu chính thống</span>
-            </label>
-          </div>
-
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-calendar-days" style="margin-right: 6px; color: var(--primary);"></i> Ngày đăng: </div>
-            <div class="date-filter-grid">
-              <label>
-                <span>Từ ngày</span>
-                <input type="date" id="fromDate">
-              </label>
-              <label>
-                <span>Đến ngày</span>
-                <input type="date" id="toDate">
-              </label>
+          <details class="filter-group">
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-calendar-days" style="margin-right: 8px; color: var(--primary);"></i> Ngày đăng</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <div class="date-filter-grid">
+                <label>
+                  <span>Từ ngày</span>
+                  <input type="date" id="fromDate">
+                </label>
+                <label>
+                  <span>Đến ngày</span>
+                  <input type="date" id="toDate">
+                </label>
+              </div>
             </div>
-          </div>
+          </details>
 
-          <div class="filter-group">
-            <div class="filter-title"><i class="fa-solid fa-user-pen" style="margin-right: 6px; color: var(--primary);"></i> Người đăng: </div>
-            <input class="filter-input" type="search" id="authorInput" placeholder="Nhập tên người đăng">
-          </div>
+          <details class="filter-group">
+            <summary class="filter-title">
+              <span><i class="fa-solid fa-user-pen" style="margin-right: 8px; color: var(--primary);"></i> Người đăng</span>
+              <i class="fa-solid fa-chevron-down accordion-icon"></i>
+            </summary>
+            <div class="filter-content">
+              <input class="filter-input" type="search" id="authorInput" placeholder="Nhập tên người đăng">
+            </div>
+          </details>
         </aside>
 
         <main class="results-area" data-intro="Các tài liệu phù hợp với tiêu chí tìm kiếm của bạn sẽ hiển thị tại đây." data-title="Kết Quả Tìm Kiếm" data-step="2">

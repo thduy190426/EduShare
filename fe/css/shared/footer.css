@@ -8,6 +8,7 @@ body, input, button, textarea, select {
   margin-top: 80px; 
 }
 .footer .container {
+  display: block;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 48px;

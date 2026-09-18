@@ -3,13 +3,14 @@ const router = express.Router();
 
 const { authMiddleware } = require('../middlewares/auth');
 const { sendNotificationToUser } = require('../services/socket');
+const { cacheMiddleware } = require('../middlewares/cache');
 
 const parseId = (value) => {
     const id = Number.parseInt(value, 10);
     return Number.isInteger(id) && id > 0 ? id : null;
 };
 
-router.get('/my', authMiddleware, async (req, res) => {
+router.get('/my', authMiddleware, cacheMiddleware(60), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
@@ -36,7 +37,7 @@ router.get('/my', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/available', authMiddleware, async (req, res) => {
+router.get('/available', authMiddleware, cacheMiddleware(60), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const search = (req.query.search || '').trim();

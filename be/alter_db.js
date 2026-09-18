@@ -44,6 +44,7 @@ async function run() {
     }
 
     try {
+        await addColumnIfMissing('NHOM', 'ChoPhepKhachXemChat', 'BOOLEAN DEFAULT FALSE');
         await addColumnIfMissing('TAILIEU', 'LyDoTuChoi', 'TEXT DEFAULT NULL');
         await addColumnIfMissing('TAILIEU', 'PhanHoiTuChoi', 'TEXT DEFAULT NULL');
         await addColumnIfMissing('TAILIEU', 'GiaXu', 'INT DEFAULT 0');
@@ -78,6 +79,9 @@ async function run() {
         await addColumnIfMissing('MONHOC', 'NgayTao', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
         await addColumnIfMissing('MONHOC', 'NgayCapNhat', 'DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
         await pool.execute("ALTER TABLE MONHOC MODIFY COLUMN TrangThai ENUM('HoatDong', 'TamAn', 'DaXoa') DEFAULT 'HoatDong'");
+        await addColumnIfMissing('NHOM', 'ChoPhepKhachXemTaiLieu', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('NHOM', 'ChoPhepKhachXemThaoLuan', 'BOOLEAN DEFAULT FALSE');
+        await addColumnIfMissing('NHOM', 'ChoPhepKhachXemThanhVien', 'BOOLEAN DEFAULT FALSE');
         await createTableIfMissing('NGUOIDUNG_MONHOC', `
             CREATE TABLE NGUOIDUNG_MONHOC (
                 MaND INT NOT NULL,
@@ -330,6 +334,9 @@ async function run() {
                 ExpiresAt DATETIME NOT NULL
             )
         `);
+
+        await pool.execute('ALTER TABLE RESET_PASSWORD_OTP MODIFY COLUMN OTP VARCHAR(255) NOT NULL').catch(() => console.log('Column already updated or missing table'));
+
     } finally {
         await pool.end();
     }

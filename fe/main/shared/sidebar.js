@@ -6,6 +6,8 @@ import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 
 const SIDEBAR_ITEMS = [
     { label: 'Trang chủ', icon: 'fa-house', href: '../user/userHome.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Khám phá bài thi', icon: 'fa-gamepad', href: '../quiz/quizList.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Lịch sử làm bài thi', icon: 'fa-clock-rotate-left', href: '../quiz/quizHistory.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Tìm kiếm tài liệu', icon: 'fa-magnifying-glass', href: '../document/searchResults.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tải tài liệu', icon: 'fa-upload', href: '../document/uploadDocument.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
     { label: 'Tài liệu của tôi', icon: 'fa-folder-open', href: '../document/myDocuments.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
@@ -15,6 +17,8 @@ const SIDEBAR_ITEMS = [
     { label: 'Nạp EduCoin', icon: 'fa-coins', href: '../user/buyCoins.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Lịch sử giao dịch', icon: 'fa-clock-rotate-left', href: '../user/transactionHistory.html', roles: ['SinhVien'], group: 'user' },
     { label: 'Hồ sơ của tôi', icon: 'fa-user', href: '../user/userProfile.html', roles: ['SinhVien', 'GiaoVien'], group: 'user' },
+    { label: 'Ngân hàng câu hỏi', icon: 'fa-database', href: '../teacher/questionBank.html', roles: ['GiaoVien', 'Admin'], group: 'user' },
+    { label: 'Quản lý Đề thi', icon: 'fa-graduation-cap', href: '../teacher/quizManagement.html', roles: ['GiaoVien', 'Admin'], group: 'user' },
     { label: 'Tổng quan', icon: 'fa-chart-column', href: '../admin/adminDashboard.html', roles: ['Admin'], adminRoles: ['SuperAdmin', 'Moderator'], group: 'admin' },
     { label: 'Kiểm duyệt', icon: 'fa-shield-halved', href: '../admin/adminModeration.html', roles: ['Admin', 'GiaoVien'], adminRoles: ['SuperAdmin', 'Moderator'], badge: 'pendingDocs', group: 'admin' },
     { label: 'Quản lý nạp xu', icon: 'fa-money-bill-transfer', href: '../admin/adminPayments.html', roles: ['Admin'], adminRoles: ['SuperAdmin'], badge: 'pendingPayments', group: 'admin' },
@@ -363,30 +367,83 @@ function setupUserProfileNavigation() {
     const profileEls = document.querySelectorAll('#userProfileNav, .navbar .user-profile');
     if (!profileEls.length) return;
 
-    const isAlreadyOnProfile = window.location.pathname.includes('userProfile.html');
-
-    const goToProfile = () => {
-        if (!isAlreadyOnProfile) {
-            window.location.href = new URL('../user/userProfile.html', window.location.href).href;
-        }
-    };
-
     profileEls.forEach((profileEl) => {
-        if (isAlreadyOnProfile) {
-            profileEl.style.cursor = 'default';
-        } else {
-            profileEl.style.cursor = 'pointer';
-            profileEl.setAttribute('role', 'button');
-            profileEl.setAttribute('tabindex', '0');
+        profileEl.style.cursor = 'pointer';
+        profileEl.setAttribute('role', 'button');
+        profileEl.setAttribute('tabindex', '0');
+        profileEl.style.position = 'relative';
 
-            profileEl.addEventListener('click', goToProfile);
-            profileEl.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    goToProfile();
+        if (!profileEl.querySelector('.profile-dropdown-menu')) {
+            const token = getToken();
+            const payload = token ? decodeJWT(token) : null;
+            const isGiaoVien = payload && payload.VaiTro === 'GiaoVien';
+
+            const dropdownHTML = `
+                <div class="profile-dropdown-menu">
+                    <a href="../user/userProfile.html" class="dropdown-item">
+                        <i class="fa-solid fa-user"></i> Hồ sơ cá nhân
+                    </a>
+                    ${!isGiaoVien ? `
+                    <a href="../user/transactionHistory.html" class="dropdown-item">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử giao dịch
+                    </a>` : ''}
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item text-danger" id="nav-logout-btn">
+                        <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                    </a>
+                </div>
+            `;
+            profileEl.insertAdjacentHTML('beforeend', dropdownHTML);
+        }
+
+        const dropdownMenu = profileEl.querySelector('.profile-dropdown-menu');
+        const logoutBtn = profileEl.querySelector('#nav-logout-btn');
+
+        profileEl.addEventListener('click', (e) => {
+            if (e.target.closest('.profile-dropdown-menu') && !e.target.closest('.dropdown-item')) return;
+            const isOpen = dropdownMenu.classList.toggle('show');
+            if (isOpen) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        });
+
+        profileEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const isOpen = dropdownMenu.classList.toggle('show');
+                if (isOpen) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }
+        });
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                document.body.style.overflow = ''; 
+                const sidebarLogout = document.getElementById('btn-logout-sidebar');
+                if (sidebarLogout) {
+                    sidebarLogout.click();
                 }
             });
         }
+    });
+
+    document.addEventListener('click', (e) => {
+        profileEls.forEach((profileEl) => {
+            if (!profileEl.contains(e.target)) {
+                const dropdownMenu = profileEl.querySelector('.profile-dropdown-menu');
+                if (dropdownMenu && dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.classList.remove('show');
+                    document.body.style.overflow = '';
+                }
+            }
+        });
     });
 }
 

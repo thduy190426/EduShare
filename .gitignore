@@ -44,7 +44,9 @@ tmp/
 temp/
 
 # IDE and editor files
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.code-workspace
 *.swp
@@ -58,3 +60,7 @@ desktop.ini
 # Python and text scripts
 *.py
 *.txt
+
+# AI and Agents generated data
+.gemini/
+.agents/

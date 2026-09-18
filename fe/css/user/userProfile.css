@@ -211,3 +211,111 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 .modal-actions .btn-primary:disabled {
   cursor: not-allowed; opacity: 0.5;
 }
+
+@keyframes premiumPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+}
+
+#btn-buy-premium {
+  animation: premiumPulse 1.5s infinite ease-in-out;
+}
+#btn-buy-premium:hover {
+  animation: none;
+  transform: scale(1.05);
+  filter: brightness(1.1);
+}
+
+.follow-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.follow-item:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 16px -4px rgba(79, 70, 229, 0.15);
+}
+
+.follow-item .avatar-wrapper {
+  position: relative;
+}
+
+.follow-item .avatar-image {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #E2E8F0;
+  transition: all 0.3s ease;
+}
+
+.follow-item:hover .avatar-image {
+  border-color: var(--primary-light);
+}
+
+.follow-item .avatar-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #818cf8);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 700;
+  font-size: 20px;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+}
+
+.follow-item .user-details {
+  flex: 1;
+}
+
+.follow-item .user-name {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.follow-item .user-role {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.follow-item .role-student { background: #E0F2FE; color: #0284C7; }
+.follow-item .role-teacher { background: #DCFCE7; color: #16A34A; }
+.follow-item .role-admin { background: #FEF3C7; color: #D97706; }
+
+.follow-item .btn-view-profile {
+  padding: 8px 16px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.follow-item .btn-view-profile:hover {
+  background: var(--primary);
+  color: white;
+}

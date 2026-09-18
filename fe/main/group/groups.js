@@ -18,6 +18,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return;
     }
+    const modalObserver = new MutationObserver((mutations) => {
+        mutations.forEach((m) => {
+            if (m.type === 'attributes' && m.attributeName === 'style') {
+                const target = m.target;
+                if (target.classList.contains('modal-overlay')) {
+                    if (target.style.display === 'flex' || target.style.display === 'block') {
+                        document.body.style.overflow = 'hidden';
+                    } else if (target.style.display === 'none' || target.style.display === '') {
+                        const openModals = document.querySelectorAll('.modal-overlay[style*="display: flex"], .modal-overlay[style*="display: block"]');
+                        if (openModals.length === 0) document.body.style.overflow = '';
+                    }
+                }
+            }
+        });
+    });
+    document.querySelectorAll('.modal-overlay').forEach(m => modalObserver.observe(m, { attributes: true }));
+
     loadUserProfileNav();
     const path = window.location.pathname;
     if (path.includes('groupList.html')) {
@@ -493,10 +510,20 @@ window.validateEditGroupForm = () => {
     const moTa = document.getElementById('edit-group-desc').value.trim();
     const maMonHoc = String(document.getElementById('edit-group-subject').value || '');
     const isPrivate = document.getElementById('edit-group-is-private').checked;
+    const guestDocs = document.getElementById('edit-group-guest-docs').checked;
+    const guestDiscuss = document.getElementById('edit-group-guest-discuss').checked;
+    const guestMembers = document.getElementById('edit-group-guest-members').checked;
+    const guestChat = document.getElementById('edit-group-guest-chat').checked;
+    const noiQuy = document.getElementById('edit-group-rules').value.trim();
     const hasChanged = tenNhom !== editInitialState.tenNhom ||
                        moTa !== editInitialState.moTa ||
+                       noiQuy !== editInitialState.noiQuy ||
                        maMonHoc !== editInitialState.maMonHoc ||
-                       isPrivate !== editInitialState.isPrivate;
+                       isPrivate !== editInitialState.isPrivate ||
+                       guestDocs !== editInitialState.guestDocs ||
+                       guestDiscuss !== editInitialState.guestDiscuss ||
+                       guestMembers !== editInitialState.guestMembers ||
+                       guestChat !== editInitialState.guestChat;
     const isValid = tenNhom.length > 0;
     if (hasChanged && isValid) {
         btnConfirmEdit.disabled = false;
@@ -520,17 +547,29 @@ window.openEditModal = (id) => {
     const subjectInput = document.getElementById('edit-group-subject');
     const privateInput = document.getElementById('edit-group-is-private');
     const rulesInput = document.getElementById('edit-group-rules');
+    const guestDocsInput = document.getElementById('edit-group-guest-docs');
+    const guestDiscussInput = document.getElementById('edit-group-guest-discuss');
+    const guestMembersInput = document.getElementById('edit-group-guest-members');
+    const guestChatInput = document.getElementById('edit-group-guest-chat');
     if (nameInput) nameInput.value = g.TenNhom || '';
     if (descInput) descInput.value = g.MoTa || '';
     if (rulesInput) rulesInput.value = g.NoiQuy || '';
     if (subjectInput) subjectInput.value = g.MaMonHoc || '';
     if (privateInput) privateInput.checked = !!(g.IsPrivate);
+    if (guestDocsInput) guestDocsInput.checked = !!(g.ChoPhepKhachXemTaiLieu);
+    if (guestDiscussInput) guestDiscussInput.checked = !!(g.ChoPhepKhachXemThaoLuan);
+    if (guestMembersInput) guestMembersInput.checked = !!(g.ChoPhepKhachXemThanhVien);
+    if (guestChatInput) guestChatInput.checked = !!(g.ChoPhepKhachXemChat);
     editInitialState = {
         tenNhom: (g.TenNhom || '').trim(),
         moTa: (g.MoTa || '').trim(),
         noiQuy: (g.NoiQuy || '').trim(),
         maMonHoc: String(g.MaMonHoc || ''),
-        isPrivate: !!(g.IsPrivate)
+        isPrivate: !!(g.IsPrivate),
+        guestDocs: !!(g.ChoPhepKhachXemTaiLieu),
+        guestDiscuss: !!(g.ChoPhepKhachXemThaoLuan),
+        guestMembers: !!(g.ChoPhepKhachXemThanhVien),
+        guestChat: !!(g.ChoPhepKhachXemChat)
     };
     window.validateEditGroupForm();
     if (nameInput) {
@@ -552,6 +591,22 @@ window.openEditModal = (id) => {
     if (privateInput) {
         privateInput.removeEventListener('change', window.validateEditGroupForm);
         privateInput.addEventListener('change', window.validateEditGroupForm);
+    }
+    if (guestDocsInput) {
+        guestDocsInput.removeEventListener('change', window.validateEditGroupForm);
+        guestDocsInput.addEventListener('change', window.validateEditGroupForm);
+    }
+    if (guestDiscussInput) {
+        guestDiscussInput.removeEventListener('change', window.validateEditGroupForm);
+        guestDiscussInput.addEventListener('change', window.validateEditGroupForm);
+    }
+    if (guestMembersInput) {
+        guestMembersInput.removeEventListener('change', window.validateEditGroupForm);
+        guestMembersInput.addEventListener('change', window.validateEditGroupForm);
+    }
+    if (guestChatInput) {
+        guestChatInput.removeEventListener('change', window.validateEditGroupForm);
+        guestChatInput.addEventListener('change', window.validateEditGroupForm);
     }
     document.getElementById('editGroupModal').style.display = 'flex';
 };
@@ -617,21 +672,23 @@ function renderGroups(groups, gridId = 'group-grid', isAppend = false) {
             actionButton = `<button class="btn-primary" style="flex:1;" onclick="window.joinGroup(${g.MaNhom}, this)"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
         }
         const groupIconHtml = g.AnhBia 
-            ? `<img src="${getAssetUrl(g.AnhBia)}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="${escapeHTML(g.TenNhom)}">` 
-            : `<i class="fa-solid fa-users"></i>`;
+            ? `<img src="${getAssetUrl(g.AnhBia)}" alt="${escapeHTML(g.TenNhom)}">` 
+            : `<div class="group-cover-fallback"><i class="fa-solid fa-users"></i></div>`;
         div.innerHTML = `
-          <div class="group-header">
-            <div class="group-icon" style="padding:0; overflow:hidden;">${groupIconHtml}</div>
-            <div class="group-members"><i class="fa-solid fa-user-group"></i> ${g.SoLuongThanhVien || 1}</div>
+          <div class="group-cover">
+            ${groupIconHtml}
+            <div class="group-members-badge"><i class="fa-solid fa-user-group"></i> ${g.SoLuongThanhVien || 1}</div>
           </div>
-          <div class="group-info">
-            <h3 class="group-title">${g.IsPrivate ? '<i class="fa-solid fa-lock" style="font-size: 0.8em; color: #64748b; margin-right: 8px;"></i>' : ''}${escapeHTML(g.TenNhom)}</h3>
-            <span class="group-subject">${escapeHTML(g.TenMonHoc) || 'Chung'}</span>
-            <p class="group-desc">${escapeHTML(g.MoTa) || 'Không có mô tả'}</p>
-          </div>
-          <div class="group-footer" style="display:flex; gap:10px;">
-            <button class="btn-outline-primary" style="flex:1;" onclick="window.location.href='groupDetails.html?id=${g.MaNhom}'"><i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chi tiết</button>
-            ${actionButton}
+          <div class="group-content-wrapper">
+            <div class="group-info">
+              <h3 class="group-title">${g.IsPrivate ? '<i class="fa-solid fa-lock" style="font-size: 0.8em; color: #64748b; margin-right: 8px;"></i>' : ''}${escapeHTML(g.TenNhom)}</h3>
+              <span class="group-subject">${escapeHTML(g.TenMonHoc) || 'Chung'}</span>
+              <p class="group-desc">${escapeHTML(g.MoTa) || 'Không có mô tả'}</p>
+            </div>
+            <div class="group-footer">
+              <button class="btn-outline-primary" style="flex:1;" onclick="window.location.href='groupDetails.html?id=${g.MaNhom}'"><i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chi tiết</button>
+              ${actionButton}
+            </div>
           </div>
         `;
         grid.appendChild(div);
@@ -1092,6 +1149,10 @@ function initGroupDetailControls() {
             const moTa = document.getElementById('edit-group-desc').value.trim();
             const maMonHoc = document.getElementById('edit-group-subject').value;
             const isPrivate = document.getElementById('edit-group-is-private').checked;
+            const choPhepKhachXemTaiLieu = document.getElementById('edit-group-guest-docs').checked;
+            const choPhepKhachXemThaoLuan = document.getElementById('edit-group-guest-discuss').checked;
+            const choPhepKhachXemThanhVien = document.getElementById('edit-group-guest-members').checked;
+            const choPhepKhachXemChat = document.getElementById('edit-group-guest-chat').checked;
             const noiQuy = document.getElementById('edit-group-rules').value.trim();
             if (!tenNhom) {
                 Swal.fire({ icon: 'warning', title: 'Cảnh báo', text: 'Vui lòng nhập tên nhóm' });
@@ -1106,7 +1167,7 @@ function initGroupDetailControls() {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, isPrivate, noiQuy })
+                    body: JSON.stringify({ tenNhom, moTa, maMonHoc: maMonHoc || null, isPrivate, noiQuy, choPhepKhachXemTaiLieu, choPhepKhachXemThaoLuan, choPhepKhachXemThanhVien, choPhepKhachXemChat })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
@@ -1302,6 +1363,23 @@ async function fetchGroupInfo() {
                 btnJoinGroupDetail.style.backgroundColor = '';
                 btnJoinGroupDetail.style.borderColor = '';
                 btnJoinGroupDetail.onclick = () => window.joinGroup(new URLSearchParams(window.location.search).get('id'), btnJoinGroupDetail);
+            }
+        }
+
+        const tabDocs = document.querySelector('.tab-item[data-target="docs-tab"]');
+        const tabDiscuss = document.querySelector('.tab-item[data-target="discussions-tab"]');
+        const tabChat = document.querySelector('.tab-item[data-target="chat-tab"]');
+        if (tabDocs) tabDocs.style.display = (isMember || group.ChoPhepKhachXemTaiLieu) ? 'block' : 'none';
+        if (tabDiscuss) tabDiscuss.style.display = (isMember || group.ChoPhepKhachXemThaoLuan) ? 'block' : 'none';
+        if (tabChat) tabChat.style.display = (isMember || group.ChoPhepKhachXemChat) ? 'block' : 'none';
+
+        const activeTab = document.querySelector('.tab-item.active');
+        if (activeTab && activeTab.style.display === 'none') {
+            const firstVisibleTab = document.querySelector('.tab-item[style*="display: block"], .tab-item:not([style*="display: none"])');
+            if (firstVisibleTab) {
+                firstVisibleTab.click();
+            } else {
+                document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
             }
         }
         document.getElementById('group-header-info').innerHTML = `
@@ -1901,6 +1979,16 @@ function setupTabs() {
                 targetContent.style.display = targetId === 'chat-tab' ? 'flex' : 'block';
                 void targetContent.offsetWidth;
                 targetContent.classList.add('fade-in');
+                
+                const container = document.querySelector('.container');
+                if (container) {
+                    if (targetId === 'chat-tab') {
+                        container.classList.add('chat-mode-active');
+                    } else {
+                        container.classList.remove('chat-mode-active');
+                    }
+                }
+
                 if (targetId === 'discussions-tab') {
                     fetchGroupPosts(true);
                 } else if (targetId === 'chat-tab') {
@@ -2816,19 +2904,43 @@ window.getAuthHeaders = () => ({ 'Authorization': `Bearer ${token}` });
 let currentGroupReplyTo = null;
 let currentGroupEditMsgId = null;
 
+const EMOJIS = ['😀', '😂', '😅', '🤣', '🙂', '😍', '🥰', '😘', '😋', '😎', '😢', '😭', '😡', '😠', '🤬', '👍', '👎', '👏', '🙌', '🔥', '❤️', '💔', '💯', '✨'];
+
 window.setupGroupChat = function() {
     const chatForm = document.getElementById('group-chat-form');
     const chatInput = document.getElementById('group-chat-input');
     const fileInput = document.getElementById('group-chat-file-upload');
-    const btnSubmit = chatForm ? chatForm.querySelector('button[type="submit"]') : null;
+    const imageInput = document.getElementById('group-chat-image-upload');
+    const btnSubmit = document.getElementById('btn-send-group-chat');
+    const btnEmojiPicker = document.getElementById('btn-emoji-picker');
+    const emojiPanel = document.getElementById('emoji-panel');
+    const typingContainer = document.getElementById('typing-indicator-container');
     const socket = getSocket();
 
     if (chatForm && chatInput && socket && btnSubmit) {
-        btnSubmit.disabled = true;
         btnSubmit.style.opacity = '0.5';
         btnSubmit.style.cursor = 'not-allowed';
+        btnSubmit.disabled = true;
 
+        if (emojiPanel) {
+            emojiPanel.innerHTML = EMOJIS.map(e => `<span onclick="document.getElementById('group-chat-input').value += '${e}'; document.getElementById('group-chat-input').dispatchEvent(new Event('input')); document.getElementById('group-chat-input').focus();">${e}</span>`).join('');
+            
+            btnEmojiPicker.addEventListener('click', (e) => {
+                e.stopPropagation();
+                emojiPanel.style.display = emojiPanel.style.display === 'grid' ? 'none' : 'grid';
+            });
+            document.addEventListener('click', (e) => {
+                if (!emojiPanel.contains(e.target) && e.target !== btnEmojiPicker) {
+                    emojiPanel.style.display = 'none';
+                }
+            });
+        }
+
+        let typingTimer;
         chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+
             const validation = validateMessage(chatInput.value);
             if (validation.isValid) {
                 btnSubmit.disabled = false;
@@ -2839,6 +2951,12 @@ window.setupGroupChat = function() {
                 btnSubmit.style.opacity = '0.5';
                 btnSubmit.style.cursor = 'not-allowed';
             }
+
+            socket.emit('typing_group', { groupId: currentGroupId, user: window.currentUserInfo?.HoTen || 'Ai đó' });
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                socket.emit('stop_typing_group', { groupId: currentGroupId });
+            }, 1000);
         });
 
         chatInput.addEventListener('keydown', (e) => {
@@ -2850,35 +2968,44 @@ window.setupGroupChat = function() {
             }
         });
 
-        if (fileInput) {
-            fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    const res = await fetch(`${API_URL}/api/chat/upload`, {
-                        method: 'POST',
-                        headers: window.getAuthHeaders(),
-                        body: formData
+        const uploadFileAndSend = async (file, isImage) => {
+            if (!file) return;
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch(`${API_URL}/api/chat/upload`, {
+                    method: 'POST',
+                    headers: window.getAuthHeaders(),
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    socket.emit('send_group_message', {
+                        groupId: currentGroupId,
+                        text: data.fileUrl,
+                        type: isImage ? 'image' : data.type,
+                        replyToId: currentGroupReplyTo?.MaTN || null,
+                        replyToName: currentGroupReplyTo?.HoTen || null,
+                        replyToText: currentGroupReplyTo?.NoiDung || null,
+                        replyToType: currentGroupReplyTo?.LoaiTinNhan || null
                     });
-                    const data = await res.json();
-                    if (res.ok) {
-                        socket.emit('send_group_message', {
-                            groupId: currentGroupId,
-                            text: data.fileUrl,
-                            type: data.type,
-                            replyToId: currentGroupReplyTo?.MaTN || null,
-                            replyToName: currentGroupReplyTo?.HoTen || null,
-                            replyToText: currentGroupReplyTo?.NoiDung || null,
-                            replyToType: currentGroupReplyTo?.LoaiTinNhan || null
-                        });
-                        cancelGroupReply();
-                    } else {
-                        showToast(data.message || 'Lỗi tải file', 'error');
-                    }
-                } catch (err) { console.error('Upload error', err); }
+                    cancelGroupReply();
+                } else {
+                    showToast(data.message || 'Lỗi tải file', 'error');
+                }
+            } catch (err) { console.error('Upload error', err); }
+        };
+
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                uploadFileAndSend(e.target.files[0], false);
                 fileInput.value = '';
+            });
+        }
+        if (imageInput) {
+            imageInput.addEventListener('change', (e) => {
+                uploadFileAndSend(e.target.files[0], true);
+                imageInput.value = '';
             });
         }
 
@@ -2946,6 +3073,34 @@ window.setupGroupChat = function() {
             window.appendGroupChatMessage(msg);
         });
 
+        let activeTypers = new Set();
+        socket.on('typing_group_notify', (data) => {
+            if (String(data.groupId) !== String(currentGroupId) || data.user === window.currentUserInfo?.HoTen) return;
+            activeTypers.add(data.user);
+            updateTypingIndicator();
+        });
+
+        socket.on('stop_typing_group_notify', (data) => {
+            if (String(data.groupId) !== String(currentGroupId)) return;
+            activeTypers.delete(data.user);
+            updateTypingIndicator();
+        });
+
+        function updateTypingIndicator() {
+            if (!typingContainer) return;
+            if (activeTypers.size > 0) {
+                const text = Array.from(activeTypers).join(', ') + (activeTypers.size > 1 ? ' đang gõ...' : ' đang gõ...');
+                document.getElementById('typing-users-text').innerText = text;
+                typingContainer.style.display = 'flex';
+                const msgList = document.getElementById('group-chat-messages');
+                if (msgList && (msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 100)) {
+                    msgList.scrollTop = msgList.scrollHeight;
+                }
+            } else {
+                typingContainer.style.display = 'none';
+            }
+        }
+
         socket.on('spam_warning', (data) => {
             if (typeof Swal !== 'undefined') {
                 Swal.fire({
@@ -3007,7 +3162,7 @@ window.fetchGroupChatMessages = async function() {
 window.appendGroupChatMessage = function(msg, isInitial = false) {
     const msgList = document.getElementById('group-chat-messages');
     if (!msgList) return;
-    if (msgList.innerHTML.includes('Hãy gửi lời chào')) {
+    if (msgList.innerHTML.includes('Hãy gửi lời chào') || msgList.innerHTML.includes('Đang kết nối')) {
         msgList.innerHTML = '';
     }
 
@@ -3017,6 +3172,40 @@ window.appendGroupChatMessage = function(msg, isInitial = false) {
     let fallbackChar = '?';
     if (msg.HoTen) fallbackChar = escapeHTML(msg.HoTen.charAt(0).toUpperCase());
 
+    let isGroupedWithPrevious = false;
+    let isGroupedWithNext = false;
+    
+    const lastMsgEl = msgList.lastElementChild;
+    if (lastMsgEl && lastMsgEl.classList.contains('group-msg-item')) {
+        const lastSenderId = lastMsgEl.getAttribute('data-sender');
+        const lastTime = parseInt(lastMsgEl.getAttribute('data-time'), 10);
+        
+        if (lastSenderId === String(msg.MaND_Gui) && (dateObj.getTime() - lastTime < 180000)) {
+            isGroupedWithPrevious = true;
+            lastMsgEl.classList.remove('grouped-me', 'grouped-me-top', 'grouped-me-bottom', 'grouped-other', 'grouped-other-top', 'grouped-other-bottom');
+            if (isMe) {
+                if (lastMsgEl.getAttribute('data-grouped') === 'true') {
+                    lastMsgEl.classList.add('grouped-me');
+                } else {
+                    lastMsgEl.classList.add('grouped-me-top');
+                }
+            } else {
+                if (lastMsgEl.getAttribute('data-grouped') === 'true') {
+                    lastMsgEl.classList.add('grouped-other');
+                } else {
+                    lastMsgEl.classList.add('grouped-other-top');
+                }
+            }
+            lastMsgEl.setAttribute('data-grouped', 'true');
+            if (!isMe) {
+                const prevAvatarBox = lastMsgEl.querySelector('.msg-avatar-box');
+                if (prevAvatarBox) prevAvatarBox.innerHTML = '<div class="msg-avatar-placeholder"></div>';
+            }
+            const prevName = lastMsgEl.querySelector('.msg-sender-name');
+            if (prevName) prevName.style.display = 'none';
+        }
+    }
+
     const avatarHtml = msg.AvatarURL 
         ? `<img src="${escapeHTML(getAssetUrl(msg.AvatarURL))}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">`
         : `<div style="width: 32px; height: 32px; border-radius: 50%; background: ${isMe ? '#e0e7ff' : '#f3f4f6'}; color: ${isMe ? '#4f46e5' : '#6b7280'}; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">${fallbackChar}</div>`;
@@ -3024,27 +3213,33 @@ window.appendGroupChatMessage = function(msg, isInitial = false) {
     const msgDiv = document.createElement('div');
     msgDiv.style.display = 'flex';
     msgDiv.style.gap = '8px';
-    msgDiv.style.marginBottom = '12px';
+    msgDiv.style.marginBottom = isGroupedWithPrevious ? '2px' : '12px';
     msgDiv.style.flexDirection = isMe ? 'row-reverse' : 'row';
     msgDiv.style.alignItems = 'flex-end';
     msgDiv.className = 'group-msg-item';
     msgDiv.id = `group-msg-${msg.MaTN}`;
+    msgDiv.setAttribute('data-sender', String(msg.MaND_Gui));
+    msgDiv.setAttribute('data-time', dateObj.getTime());
+    if (isGroupedWithPrevious) {
+        msgDiv.classList.add(isMe ? 'grouped-me-bottom' : 'grouped-other-bottom');
+        msgDiv.setAttribute('data-grouped', 'true');
+    }
 
     let contentHtml = '';
     if (msg.DaThuHoi) {
-        contentHtml = `<div id="gmsg-text-${msg.MaTN}" style="padding: 10px 14px; border-radius: 18px; border: 1px solid var(--border); background: #f8fafc; color: #94a3b8; font-style: italic; font-size: 14px;">Tin nhắn đã bị thu hồi</div>`;
+        contentHtml = `<div id="gmsg-text-box" style="padding: 10px 14px; border-radius: 18px; border: 1px dashed var(--border); background: transparent; color: #94a3b8; font-style: italic; font-size: 14px;">Bạn đã thu hồi một tin nhắn</div>`;
     } else {
         let innerMedia = '';
         if (msg.LoaiTinNhan === 'text') {
             innerMedia = escapeHTML(msg.NoiDung);
         } else if (msg.LoaiTinNhan === 'image') {
-            innerMedia = `<img src="${getAssetUrl(msg.NoiDung)}" style="max-width:200px; border-radius:8px; cursor:pointer;" onclick="window.open(this.src)">`;
+            innerMedia = `<img src="${getAssetUrl(msg.NoiDung)}" style="max-width:240px; border-radius:12px; cursor:pointer;" onclick="window.open(this.src)">`;
         } else if (msg.LoaiTinNhan === 'file') {
             innerMedia = `<a href="${getAssetUrl(msg.NoiDung)}" target="_blank" style="color: inherit; text-decoration: underline;"><i class="fa-solid fa-file"></i> Tải xuống tệp đính kèm</a>`;
         }
         
         let editedLabel = msg.DaChinhSua ? `<span style="font-size: 10px; opacity: 0.7; margin-left: 6px;">(Đã chỉnh sửa)</span>` : '';
-        contentHtml = `<div id="gmsg-text-${msg.MaTN}" style="padding: 10px 14px; border-radius: 18px; ${isMe ? 'border-bottom-right-radius: 4px; background: var(--primary); color: white;' : 'border-bottom-left-radius: 4px; background: white; border: 1px solid var(--border); color: var(--text-primary);'} font-size: 14.5px; line-height: 1.5; max-width: 100%; word-break: break-word;">${innerMedia}${editedLabel}</div>`;
+        contentHtml = `<div id="gmsg-text-box" style="padding: 10px 14px; border-radius: 18px; ${isMe ? 'background: var(--primary); color: white;' : 'background: #E4E6EB; color: #050505;'} font-size: 15px; line-height: 1.4; max-width: 100%; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">${innerMedia}${editedLabel}</div>`;
     }
 
     let replyHtml = '';
@@ -3096,18 +3291,18 @@ window.appendGroupChatMessage = function(msg, isInitial = false) {
     }
 
     msgDiv.innerHTML = `
-        <div style="flex-shrink: 0;" title="${escapeHTML(msg.HoTen)}">${avatarHtml}</div>
+        <div class="msg-avatar-box" style="flex-shrink: 0;" title="${escapeHTML(msg.HoTen)}">${!isMe ? avatarHtml : '<div class="msg-avatar-placeholder"></div>'}</div>
         <div style="max-width: 75%; display: flex; flex-direction: column; align-items: ${isMe ? 'flex-end' : 'flex-start'}; gap: 2px; position: relative;" onmouseenter="this.querySelector('.gmsg-actions')?.style.setProperty('display', 'flex')" onmouseleave="this.querySelector('.gmsg-actions')?.style.setProperty('display', 'none')">
-            ${!isMe ? `<span style="font-size: 12px; color: var(--text-secondary); margin-left: 4px; font-weight: 500;">${escapeHTML(msg.HoTen)}</span>` : ''}
+            ${!isMe && !isGroupedWithPrevious ? `<span class="msg-sender-name" style="font-size: 12px; color: var(--text-secondary); margin-left: 12px; margin-bottom: 2px; font-weight: 500;">${escapeHTML(msg.HoTen)}</span>` : ''}
             <div style="display: flex; gap: 8px; align-items: center; flex-direction: ${isMe ? 'row-reverse' : 'row'};">
-                <div style="position: relative;">
+                <div style="position: relative;" id="gmsg-text-container-${msg.MaTN}">
                     ${replyHtml}
                     ${contentHtml}
                     ${reactionsHtml}
                 </div>
                 ${actionsMenu}
             </div>
-            <span style="font-size: 11px; color: #9ca3af; margin: 0 4px; margin-top: ${reactionsHtml ? '8px' : '0'};">${timeStr}</span>
+            ${!isGroupedWithPrevious ? `<span class="msg-sender-time" style="font-size: 11px; color: #9ca3af; margin: 0 4px; margin-top: ${reactionsHtml ? '8px' : '0'}; display: none;">${timeStr}</span>` : ''}
         </div>
     `;
 

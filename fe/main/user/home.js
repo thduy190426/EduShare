@@ -430,31 +430,36 @@ function renderRecommendedGroups(groups) {
         return;
     }
     grid.innerHTML = '';
-    groups.forEach(group => {
+    groups.forEach((group, index) => {
         const card = document.createElement('div');
         card.className = 'group-card';
+        card.style.animationDelay = `${index * 0.04}s`;
         const groupIconHtml = group.AnhBia 
-            ? `<img src="${getAssetUrl(group.AnhBia)}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;" alt="${escapeHTML(group.TenNhom)}">` 
-            : '<i class="fa-solid fa-users"></i>';
+            ? `<img src="${getAssetUrl(group.AnhBia)}" alt="${escapeHTML(group.TenNhom)}">` 
+            : `<div class="group-cover-fallback"><i class="fa-solid fa-users"></i></div>`;
+            
         const joinBtnHtml = group.HasRequested 
-            ? `<button class="btn-outline-primary btn-cancel-join" type="button" data-group-cancel="${group.MaNhom}" style="flex:1; color:var(--danger, #ef4444); border-color:var(--danger, #ef4444);"><i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu</button>`
-            : `<button class="btn-outline-primary btn-join-group" type="button" data-group-join="${group.MaNhom}" style="flex:1;"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
+            ? `<button class="btn-outline-primary btn-cancel-join" type="button" data-group-cancel="${group.MaNhom}" style="flex:1; background:var(--danger, #ef4444); border-color:var(--danger, #ef4444); color: white;"><i class="fa-solid fa-xmark" style="margin-right: 5px;"></i> Huỷ yêu cầu</button>`
+            : `<button class="btn-outline-primary btn-join-group" type="button" data-group-join="${group.MaNhom}" style="flex:1; border-color:transparent;"><i class="fa-solid fa-user-plus" style="margin-right: 5px;"></i> Tham gia</button>`;
+            
         card.innerHTML = `
-            <div class="group-header">
-                <div class="group-icon" style="padding:0; overflow:hidden;">${groupIconHtml}</div>
-                <div class="group-members"><i class="fa-solid fa-user-group"></i> ${group.SoLuongThanhVien || 1}</div>
-            </div>
+          <div class="group-cover">
+            ${groupIconHtml}
+            <div class="group-members-badge"><i class="fa-solid fa-user-group"></i> ${group.SoLuongThanhVien || 1}</div>
+          </div>
+          <div class="group-content-wrapper">
             <div class="group-info">
-                <h3 class="group-title">${group.IsPrivate ? '<i class="fa-solid fa-lock" style="font-size: 0.8em; color: #64748b; margin-right: 8px;"></i>' : ''}${escapeHTML(group.TenNhom)}</h3>
-                <span class="group-subject">${escapeHTML(group.TenMonHoc) || 'Chung'}</span>
-                <p class="group-desc">${escapeHTML(group.MoTa) || 'Không có mô tả.'}</p>
+              <h3 class="group-title">${group.IsPrivate ? '<i class="fa-solid fa-lock" style="font-size: 0.8em; color: #64748b; margin-right: 8px;"></i>' : ''}${escapeHTML(group.TenNhom)}</h3>
+              <span class="group-subject">${escapeHTML(group.TenMonHoc) || 'Chung'}</span>
+              <p class="group-desc">${escapeHTML(group.MoTa) || 'Không có mô tả.'}</p>
             </div>
             <div class="group-footer">
-                <button class="btn-outline-primary" style="flex:1;" type="button" data-group-detail="${group.MaNhom}">
-                    <i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chi tiết
-                </button>
-                ${joinBtnHtml}
+              <button class="btn-outline-primary" style="flex:1;" type="button" data-group-detail="${group.MaNhom}">
+                  <i class="fa-solid fa-circle-info" style="margin-right: 5px;"></i> Chi tiết
+              </button>
+              ${joinBtnHtml}
             </div>
+          </div>
         `;
         card.querySelector('[data-group-detail]').addEventListener('click', () => {
             window.location.href = `../group/groupDetails.html?id=${group.MaNhom}`;
@@ -583,9 +588,19 @@ async function fetchTopContributors() {
         let html = '';
         contributors.forEach((user, index) => {
             let rankClass = '';
-            if (index === 0) rankClass = 'rank-1';
-            else if (index === 1) rankClass = 'rank-2';
-            else if (index === 2) rankClass = 'rank-3';
+            let rankContent = index + 1;
+            
+            if (index === 0) {
+                rankClass = 'rank-1';
+                rankContent = '<i class="fa-solid fa-crown" style="color: #F59E0B; font-size: 1.2em;"></i>'; 
+            } else if (index === 1) {
+                rankClass = 'rank-2';
+                rankContent = '<i class="fa-solid fa-crown" style="color: #94A3B8; font-size: 1.2em;"></i>'; 
+            } else if (index === 2) {
+                rankClass = 'rank-3';
+                rankContent = '<i class="fa-solid fa-crown" style="color: #CD7F32; font-size: 1.2em;"></i>';
+            }
+            
             const profileUrl = getUserProfileUrl(user.MaND);
             let avatarHtml;
             const initial = escapeHTML(user.HoTen).trim().split(' ').pop().charAt(0).toUpperCase();
@@ -597,7 +612,7 @@ async function fetchTopContributors() {
             }
             html += `
                 <div class="leaderboard-item">
-                    <div class="lb-rank ${rankClass}">${index + 1}</div>
+                    <div class="lb-rank ${rankClass}">${rankContent}</div>
                     ${avatarHtml}
                     <div class="lb-info">
                         <a href="${profileUrl}" style="color:inherit; text-decoration:none;"><div class="lb-name">${escapeHTML(user.HoTen)}</div></a>

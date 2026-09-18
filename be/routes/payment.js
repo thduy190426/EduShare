@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { cacheMiddleware } = require('../middlewares/cache');
 
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
@@ -14,7 +15,7 @@ const transporter = nodemailer.createTransport({
 const { authMiddleware, superAdminMiddleware } = require('../middlewares/auth');
 const { paymentLimiter } = require('../middlewares/rateLimit');
 
-router.get('/packages', async (req, res) => {
+router.get('/packages', cacheMiddleware(600), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT MaGoi AS id, SoTien AS price, SoXu AS coins, KhuyenMai, TenGoi FROM GOI_NAP_XU WHERE TrangThai = "HoatDong" ORDER BY ThuTu ASC, SoTien ASC');
@@ -86,7 +87,7 @@ router.post('/buy-premium', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/flash-sale', async (req, res) => {
+router.get('/flash-sale', cacheMiddleware(600), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT Code, DiscountPercent, NgayHetHan FROM PROMO_CODE WHERE IsActive = TRUE AND IsFlashSale = TRUE AND (NgayHetHan IS NULL OR NgayHetHan > CURRENT_TIMESTAMP) ORDER BY NgayHetHan ASC LIMIT 1');
@@ -413,7 +414,7 @@ router.post('/donate/request-otp', authMiddleware, async (req, res) => {
         }
 
         const otp = crypto.randomInt(100000, 999999).toString();
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); 
 
         await pool.execute(
             'INSERT INTO DONATE_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',

@@ -136,40 +136,48 @@ window.openFollowModal = function(type) {
     } else {
         list.forEach(user => {
             const avatarHtml = user.AvatarURL 
-                ? `<img src="${getAssetUrl(user.AvatarURL)}" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">` 
-                : `<div style="width:40px; height:40px; border-radius:50%; background:var(--primary-light); color:var(--primary); display:flex; justify-content:center; align-items:center; font-weight:bold;">${user.HoTen.trim().split(' ').pop().charAt(0).toUpperCase()}</div>`;
+                ? `<img src="${getAssetUrl(user.AvatarURL)}" class="avatar-image">` 
+                : `<div class="avatar-placeholder">${user.HoTen.trim().split(' ').pop().charAt(0).toUpperCase()}</div>`;
 
+            let roleClass = 'role-student';
+            if (user.VaiTro === 'GiaoVien' || user.VaiTro === 'GiangVien') roleClass = 'role-teacher';
+            if (user.VaiTro === 'Admin' || user.VaiTro === 'SuperAdmin') roleClass = 'role-admin';
+            
             const roleStr = user.VaiTro === 'SinhVien' ? 'Sinh viên' : (user.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên');
 
             const item = document.createElement('div');
-            item.style.display = 'flex';
-            item.style.alignItems = 'center';
-            item.style.gap = '12px';
-            item.style.padding = '8px';
-            item.style.border = '1px solid var(--border)';
-            item.style.borderRadius = '8px';
+            item.className = 'follow-item';
             item.innerHTML = `
-                ${avatarHtml}
-                <div style="flex:1;">
-                    <div style="font-weight:600; font-size:15px;">${user.HoTen}</div>
-                    <div style="font-size:13px; color:var(--text-secondary);">${roleStr}</div>
+                <div class="avatar-wrapper">
+                    ${avatarHtml}
                 </div>
-                <button onclick="window.location.href='otherUserProfile.html?id=${user.MaND}'" style="padding:6px 12px; background:var(--primary-light); color:var(--primary); border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:13px;">Xem hồ sơ</button>
+                <div class="user-details">
+                    <div class="user-name">${user.HoTen}</div>
+                    <div class="user-role ${roleClass}">${roleStr}</div>
+                </div>
+                <button onclick="window.location.href='otherUserProfile.html?id=${user.MaND}'" class="btn-view-profile">
+                    Xem hồ sơ <i class="fa-solid fa-arrow-right" style="font-size: 12px;"></i>
+                </button>
             `;
             container.appendChild(item);
         });
     }
-    document.getElementById('follow-modal').style.display = 'flex';
+    const modal = document.getElementById('follow-modal');
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+        modal.querySelector('.modal-content').style.transform = 'scale(1)';
+    });
 };
 
 window.closeFollowModal = function() {
     const modal = document.getElementById('follow-modal');
     if (!modal) return;
-    modal.classList.add('closing');
+    modal.style.opacity = '0';
+    modal.querySelector('.modal-content').style.transform = 'scale(0.9)';
     setTimeout(() => {
         modal.style.display = 'none';
-        modal.classList.remove('closing');
-    }, 250);
+    }, 300);
 };
 
 async function initProfile() {
@@ -220,10 +228,11 @@ async function initProfile() {
         }
         document.getElementById('header-email').textContent = profile.Email;
         document.getElementById('header-role').textContent = profile.VaiTro === 'SinhVien' ? 'Sinh viên' : profile.VaiTro === 'GiaoVien' ? 'Giảng viên' : 'Quản trị viên';
-        const elSoDuXu = document.getElementById('header-soduxu');
-        if (elSoDuXu) {
+        const coinUiContainer = document.getElementById('coin-ui-container');
+        if (coinUiContainer) {
             if (profile.VaiTro === 'SinhVien') {
-                elSoDuXu.textContent = (profile.SoDuXu || 0).toLocaleString();
+                const elSoDuXu = document.getElementById('header-soduxu');
+                if (elSoDuXu) elSoDuXu.textContent = (profile.SoDuXu || 0).toLocaleString();
                 
                 const premiumStatus = document.getElementById('header-premium-status');
                 const premiumText = document.getElementById('header-premium-text');
@@ -238,7 +247,7 @@ async function initProfile() {
                     if (btnBuyPremium) btnBuyPremium.style.display = 'inline-block';
                 }
             } else {
-                elSoDuXu.parentElement.style.display = 'none';
+                coinUiContainer.style.display = 'none';
                 const premiumStatus = document.getElementById('header-premium-status');
                 const btnBuyPremium = document.getElementById('btn-buy-premium');
                 if (premiumStatus) premiumStatus.style.display = 'none';
@@ -1012,61 +1021,71 @@ async function fetchMyReports(page = 1) {
 }
 
 function setupTabListeners() {
-    const tabMyDocs = document.getElementById('tab-my-docs');
-    const tabBookmarks = document.getElementById('tab-bookmarks');
-    const tabPurchased = document.getElementById('tab-purchased');
-    const tabMyReports = document.getElementById('tab-my-reports');
+    const tabs = [
+        document.getElementById('tab-my-docs'),
+        document.getElementById('tab-bookmarks'),
+        document.getElementById('tab-collections'),
+        document.getElementById('tab-purchased'),
+        document.getElementById('tab-my-reports')
+    ].filter(Boolean);
 
-    const containerMyDocs = document.getElementById('my-docs-container');
-    const containerBookmarks = document.getElementById('bookmarks-container');
-    const containerPurchased = document.getElementById('purchased-container');
-    const containerMyReports = document.getElementById('my-reports-container');
+    const containers = {
+        'tab-my-docs': document.getElementById('my-docs-container'),
+        'tab-bookmarks': document.getElementById('bookmarks-container'),
+        'tab-collections': document.getElementById('collections-container'),
+        'tab-purchased': document.getElementById('purchased-container'),
+        'tab-my-reports': document.getElementById('my-reports-container')
+    };
 
-    function resetTabs() {
-        tabMyDocs.classList.remove('active');
-        tabBookmarks.classList.remove('active');
-        tabPurchased.classList.remove('active');
-        tabMyReports.classList.remove('active');
+    const indicator = document.getElementById('user-tab-indicator');
 
-        containerMyDocs.style.display = 'none';
-        containerBookmarks.style.display = 'none';
-        containerPurchased.style.display = 'none';
-        containerMyReports.style.display = 'none';
+    function updateIndicator(activeTab) {
+        if (!indicator || !activeTab) return;
+        indicator.style.width = `${activeTab.offsetWidth}px`;
+        indicator.style.transform = `translateX(${activeTab.offsetLeft}px)`;
     }
 
-    tabMyDocs.addEventListener('click', () => {
-        resetTabs();
-        tabMyDocs.classList.add('active');
-        containerMyDocs.style.display = 'flex';
-        containerMyDocs.style.flexDirection = 'column';
-        containerMyDocs.style.gap = '15px';
+    setTimeout(() => {
+        const active = tabs.find(t => t.classList.contains('active'));
+        if (active) updateIndicator(active);
+    }, 100);
+
+    function resetTabs() {
+        tabs.forEach(t => t.classList.remove('active'));
+        Object.values(containers).forEach(c => {
+            if (c) c.style.display = 'none';
+        });
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            resetTabs();
+            tab.classList.add('active');
+            updateIndicator(tab);
+            
+            const c = containers[tab.id];
+            if (c) {
+                if (tab.id === 'tab-collections') {
+                    c.style.display = 'block'; 
+                } else {
+                    c.style.display = 'flex';
+                    c.style.flexDirection = 'column';
+                    c.style.gap = '15px';
+                }
+            }
+
+            if (tab.id === 'tab-bookmarks') fetchBookmarks();
+            if (tab.id === 'tab-purchased') fetchPurchasedDocuments();
+            if (tab.id === 'tab-my-reports') fetchMyReports();
+            if (tab.id === 'tab-collections') {
+                if (typeof loadCollections === 'function') loadCollections();
+            }
+        });
     });
 
-    tabBookmarks.addEventListener('click', () => {
-        resetTabs();
-        tabBookmarks.classList.add('active');
-        containerBookmarks.style.display = 'flex';
-        containerBookmarks.style.flexDirection = 'column';
-        containerBookmarks.style.gap = '15px';
-        fetchBookmarks();
-    });
-
-    tabPurchased.addEventListener('click', () => {
-        resetTabs();
-        tabPurchased.classList.add('active');
-        containerPurchased.style.display = 'flex';
-        containerPurchased.style.flexDirection = 'column';
-        containerPurchased.style.gap = '15px';
-        fetchPurchasedDocuments();
-    });
-
-    tabMyReports.addEventListener('click', () => {
-        resetTabs();
-        tabMyReports.classList.add('active');
-        containerMyReports.style.display = 'flex';
-        containerMyReports.style.flexDirection = 'column';
-        containerMyReports.style.gap = '15px';
-        fetchMyReports();
+    window.addEventListener('resize', () => {
+        const active = tabs.find(t => t.classList.contains('active'));
+        if (active) updateIndicator(active);
     });
 }
 
@@ -2058,59 +2077,90 @@ function parseDeviceInfo(ua) {
 
       myCollections.forEach(col => {
           const card = document.createElement('div');
-          card.style.border = '1px solid var(--border)';
-          card.style.borderRadius = 'var(--radius-card)';
-          card.style.padding = '16px';
+          card.style.border = '1px solid #F3F4F6';
+          card.style.borderRadius = '16px';
+          card.style.padding = '20px';
           card.style.background = 'var(--white)';
           card.style.cursor = 'pointer';
-          card.style.transition = 'transform 0.2s, box-shadow 0.2s';
+          card.style.transition = 'all 0.3s ease';
+          card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
           card.onclick = () => { window.location.href = `../collection/collectionDetails.html?id=${col.MaBoSieuTap}`; };
           
-          card.onmouseenter = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = 'var(--shadow-md)'; };
-          card.onmouseleave = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = 'none'; };
+          card.onmouseenter = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 12px 24px -8px rgba(0,0,0,0.08)'; card.style.borderColor = 'var(--primary)'; };
+          card.onmouseleave = () => { card.style.transform = 'translateY(0)'; card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)'; card.style.borderColor = '#F3F4F6'; };
 
           const header = document.createElement('div');
           header.style.display = 'flex';
           header.style.justifyContent = 'space-between';
           header.style.alignItems = 'flex-start';
           header.style.marginBottom = '12px';
+          header.style.gap = '12px';
 
           const title = document.createElement('h4');
           title.textContent = col.TenBoSieuTap;
           title.style.margin = '0';
-          title.style.fontSize = '16px';
+          title.style.fontSize = '17px';
+          title.style.fontWeight = '600';
           title.style.color = 'var(--text-primary)';
+          title.style.display = '-webkit-box';
+          title.style.webkitLineClamp = '1';
+          title.style.webkitBoxOrient = 'vertical';
+          title.style.overflow = 'hidden';
 
           const visibility = document.createElement('span');
-          visibility.innerHTML = col.CheDoHienThi === 'public' 
-              ? '<i class="fa-solid fa-earth-americas" style="color:var(--text-secondary)" title="Công khai"></i>' 
-              : '<i class="fa-solid fa-lock" style="color:var(--text-secondary)" title="Riêng tư"></i>';
+          visibility.style.padding = '4px 10px';
+          visibility.style.borderRadius = '20px';
+          visibility.style.fontSize = '12px';
+          visibility.style.fontWeight = '500';
+          visibility.style.display = 'flex';
+          visibility.style.alignItems = 'center';
+          visibility.style.gap = '4px';
+          visibility.style.whiteSpace = 'nowrap';
+
+          if (col.CheDoHienThi === 'public') {
+              visibility.style.background = '#ECFDF5';
+              visibility.style.color = '#059669';
+              visibility.innerHTML = '<i class="fa-solid fa-earth-americas"></i> Công khai';
+          } else {
+              visibility.style.background = '#F3F4F6';
+              visibility.style.color = '#4B5563';
+              visibility.innerHTML = '<i class="fa-solid fa-lock"></i> Riêng tư';
+          }
 
           header.appendChild(title);
           header.appendChild(visibility);
 
           const desc = document.createElement('p');
           desc.textContent = col.MoTa || 'Không có mô tả';
-          desc.style.fontSize = '13px';
+          desc.style.fontSize = '14px';
           desc.style.color = 'var(--text-secondary)';
           desc.style.margin = '0 0 16px 0';
           desc.style.display = '-webkit-box';
           desc.style.webkitLineClamp = '2';
           desc.style.webkitBoxOrient = 'vertical';
           desc.style.overflow = 'hidden';
+          desc.style.lineHeight = '1.5';
 
           const footer = document.createElement('div');
           footer.style.display = 'flex';
           footer.style.justifyContent = 'space-between';
           footer.style.alignItems = 'center';
-          footer.style.fontSize = '12px';
+          footer.style.fontSize = '13px';
           footer.style.color = 'var(--text-secondary)';
+          footer.style.marginTop = '16px';
+          footer.style.paddingTop = '16px';
+          footer.style.borderTop = '1px solid #F3F4F6';
 
           const count = document.createElement('span');
-          count.innerHTML = `<i class="fa-solid fa-file-lines" style="margin-right: 4px;"></i> ${col.documentCount || 0} tài liệu`;
+          count.style.display = 'flex';
+          count.style.alignItems = 'center';
+          count.style.gap = '8px';
+          count.style.fontWeight = '500';
+          count.style.color = 'var(--text-primary)';
+          count.innerHTML = `<div style="width:28px;height:28px;border-radius:6px;background:#EEF2FF;color:#4F46E5;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-file-lines"></i></div> ${col.documentCount || 0} tài liệu`;
 
           const date = document.createElement('span');
-          date.textContent = new Date(col.NgayTao).toLocaleDateString('vi-VN');
+          date.innerHTML = `<i class="fa-regular fa-calendar" style="margin-right:4px;"></i> ${new Date(col.NgayTao).toLocaleDateString('vi-VN')}`;
 
           footer.appendChild(count);
           footer.appendChild(date);
@@ -2124,17 +2174,58 @@ function parseDeviceInfo(ua) {
       container.appendChild(grid);
   }
 
+  window.closeCreateCollectionModal = function() {
+      const modal = document.getElementById('create-collection-modal');
+      if (modal) {
+          modal.style.opacity = '0';
+          const content = modal.querySelector('.modal-content');
+          if (content) content.style.transform = 'scale(0.9)';
+          setTimeout(() => {
+              modal.style.display = 'none';
+          }, 300);
+      }
+  };
+
   const btnCreateCollection = document.getElementById('btn-create-collection');
+  const btnSubmitCollection = document.getElementById('btn-submit-collection');
+  const inputCollectionName = document.getElementById('input-collection-name');
+
+  if (inputCollectionName && btnSubmitCollection) {
+      inputCollectionName.addEventListener('input', () => {
+          if (inputCollectionName.value.trim().length > 0) {
+              btnSubmitCollection.disabled = false;
+              btnSubmitCollection.style.opacity = '1';
+              btnSubmitCollection.style.cursor = 'pointer';
+          } else {
+              btnSubmitCollection.disabled = true;
+              btnSubmitCollection.style.opacity = '0.5';
+              btnSubmitCollection.style.cursor = 'not-allowed';
+          }
+      });
+  }
+
   if (btnCreateCollection) {
       btnCreateCollection.addEventListener('click', () => {
           document.getElementById('input-collection-name').value = '';
           document.getElementById('input-collection-desc').value = '';
           document.getElementById('input-collection-visibility').value = 'public';
-          document.getElementById('create-collection-modal').style.display = 'flex';
+          
+          if (btnSubmitCollection) {
+              btnSubmitCollection.disabled = true;
+              btnSubmitCollection.style.opacity = '0.5';
+              btnSubmitCollection.style.cursor = 'not-allowed';
+          }
+
+          const modal = document.getElementById('create-collection-modal');
+          modal.style.display = 'flex';
+
+          modal.offsetHeight; 
+          modal.style.opacity = '1';
+          const content = modal.querySelector('.modal-content');
+          if (content) content.style.transform = 'scale(1)';
       });
   }
 
-  const btnSubmitCollection = document.getElementById('btn-submit-collection');
   if (btnSubmitCollection) {
       btnSubmitCollection.addEventListener('click', async () => {
           const name = document.getElementById('input-collection-name').value.trim();
@@ -2158,7 +2249,11 @@ function parseDeviceInfo(ua) {
 
               if (res.ok) {
                   Swal.fire('Thành công', 'Đã tạo bộ sưu tập', 'success');
-                  document.getElementById('create-collection-modal').style.display = 'none';
+                  if (typeof window.closeCreateCollectionModal === 'function') {
+                      window.closeCreateCollectionModal();
+                  } else {
+                      document.getElementById('create-collection-modal').style.display = 'none';
+                  }
                   loadCollections();
               } else {
                   const err = await res.json();
@@ -2170,16 +2265,7 @@ function parseDeviceInfo(ua) {
       });
   }
 
-  const tabCollections = document.getElementById('tab-collections');
-  if (tabCollections) {
-      tabCollections.addEventListener('click', () => {
-          document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-          tabCollections.classList.add('active');
-          document.querySelectorAll('.doc-list').forEach(d => d.style.display = 'none');
-          document.getElementById('collections-container').style.display = 'block';
-          loadCollections();
-      });
-  }
+
 
 
 window.buyPremium = async function() {

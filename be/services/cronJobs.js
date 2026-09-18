@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { sendNotificationToUser } = require('./socket');
+const { getRedisClient } = require('../config/redis');
 
 function initCronJobs(pool) {
     cron.schedule('1 0 1 * *', async () => {
@@ -173,6 +174,31 @@ function initCronJobs(pool) {
                 revenueSum[0].total || 0,
                 dataJSON
             ]);
+
+            const dashboardData = {
+                users: userCount[0].count,
+                documents: docCount[0].count,
+                downloads: downloadSum[0].total || 0,
+                pendingReports: reportCount[0].count,
+                pendingDocs: pendingDocCount[0].count,
+                pendingPayments: pendingPaymentCount[0].count,
+                pendingTeachers: pendingTeacherCount[0].count,
+                pendingSubjects: pendingSubjectCount[0].count,
+                usersByRole: usersByRoleRows || [],
+                docsByStatus: docsByStatusRows || [],
+                docsBySubject: docsBySubjectRows || [],
+                topDepositors: topDepositors || [],
+                topContributors: topContributors || [],
+                revenueByMonth: revenueRows || [],
+                userGrowth: userGrowthRows || [],
+                trendingSubjects: trendingSubjects || []
+            };
+
+            const redisClient = getRedisClient();
+            if (redisClient) {
+                await redisClient.set('admin:dashboard_summary', JSON.stringify(dashboardData), 'EX', 3600);
+            }
+
             console.log('Đã cập nhật Admin Dashboard Summary (Cronjob 5 phút)');
         } catch (error) {
             console.error('Lỗi khi chạy cronjob cập nhật Dashboard Summary:', error);

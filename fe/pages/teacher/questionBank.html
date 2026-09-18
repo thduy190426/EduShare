@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ngân hàng Câu hỏi — EduShare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <link rel="stylesheet" href="../../css/shared/footer.css">
+    <link rel="stylesheet" href="../../css/teacher/questionBank.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+    <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+</head>
+<body style="font-family: 'Inter', sans-serif !important;">
+    <nav class="navbar">
+        <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+        <div class="nav-actions">
+            <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+                <i class="fa-solid fa-bell"></i>
+                <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+            </button>
+            <div class="user-profile" id="userProfileNav">
+                <div class="avatar" id="navAvatar">?</div>
+                <div class="user-info">
+                    <span class="user-name" id="navUserName">Đang tải...</span>
+                    <span class="user-role" id="navUserRole"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="main-layout">
+        <aside id="app-sidebar" class="sidebar"></aside>
+        <main class="content-area">
+            <nav aria-label="breadcrumb" class="breadcrumb-container">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Ngân hàng Câu hỏi</li>
+                </ol>
+            </nav>
+        <div class="main-container">
+            <div class="page-header">
+                <h1><i class="fa-solid fa-database"></i> Ngân hàng Câu hỏi</h1>
+                <p>Quản lý câu hỏi trắc nghiệm để sử dụng cho các bài thi</p>
+            </div>
+
+            <div class="subject-selector card">
+                <label for="subjectSelect">Chọn môn học:</label>
+                <select id="subjectSelect" class="form-control">
+                    <option value="">-- Đang tải môn học --</option>
+                </select>
+            </div>
+
+            <div class="tabs-container" id="questionBankContainer" style="display: none; margin-top: 20px;">
+                <div class="tab-content" style="border-radius: var(--radius-card); border-top: none;">
+                    <div id="question-bank" class="tab-pane active">
+                        <div class="action-bar">
+                            <h3>Danh sách Câu hỏi</h3>
+                            <button class="btn btn-primary" id="btnCreateQuestion"><i class="fa-solid fa-plus"></i> Thêm câu hỏi mới</button>
+                        </div>
+                        <div class="filter-bar">
+                            <div style="position: relative; flex: 1; min-width: 250px;">
+                                <i class="fa-solid fa-magnifying-glass text-primary" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);"></i>
+                                <input type="text" id="searchQuestion" class="form-control" placeholder="Tìm kiếm câu hỏi..." style="padding-left: 36px; width: 100%;">
+                            </div>
+                            <div style="position: relative; width: 200px;">
+                                <i class="fa-solid fa-filter text-primary" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
+                                <select id="filterQDifficulty" class="form-control" style="padding-left: 36px; width: 100%;">
+                                    <option value="">Tất cả độ khó</option>
+                                    <option value="De">Dễ</option>
+                                    <option value="TrungBinh">Trung bình</option>
+                                    <option value="Kho">Khó</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive table-card">
+                            <table class="table data-table" id="tableQuestions">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fa-solid fa-hashtag text-primary"></i> ID</th>
+                                        <th><i class="fa-solid fa-file-lines text-primary"></i> Nội dung</th>
+                                        <th><i class="fa-solid fa-layer-group text-primary"></i> Loại</th>
+                                        <th><i class="fa-solid fa-signal text-primary"></i> Độ Khó</th>
+                                        <th><i class="fa-solid fa-star text-primary"></i> Điểm</th>
+                                        <th><i class="fa-solid fa-wrench text-primary"></i> Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls" id="paginationQuestions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalCreateQuestion">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>Thêm câu hỏi mới</h2>
+                <button class="btn-close" id="btnCloseQuestionModal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCreateQuestion">
+                    <div class="form-group mb-3">
+                        <label><i class="fa-solid fa-file-lines"></i> Nội dung câu hỏi <span class="text-danger">*</span></label>
+                        <div id="q_content_container">
+                            <div id="q_content_editor" style="min-height: 120px; background: #fff; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;"></div>
+                        </div>
+                        <input type="hidden" id="q_content" required>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label><i class="fa-solid fa-image"></i> Ảnh đính kèm (Tùy chọn)</label>
+                        <input type="file" class="form-control" id="q_image" accept="image/*">
+                        <img id="q_image_preview" src="" alt="Preview" style="display: none; max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-layer-group"></i> Loại câu hỏi</label>
+                            <select id="q_type" class="form-control">
+                                <option value="TracNghiem">Nhiều lựa chọn </option>
+                                <option value="DungSai">Đúng / Sai </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-signal"></i> Độ khó</label>
+                            <select id="q_difficulty" class="form-control">
+                                <option value="De">Dễ</option>
+                                <option value="TrungBinh" selected>Trung bình</option>
+                                <option value="Kho">Khó</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-star"></i> Điểm</label>
+                            <input type="number" id="q_points" value="1" min="1" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="answers-section">
+                        <h4><i class="fa-solid fa-check-double"></i> Đáp án</h4>
+                        <div id="answersList">
+
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnAddAnswer" style="margin-top: 10px;"><i class="fa-solid fa-plus"></i> Thêm đáp án</button>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label><i class="fa-solid fa-comment-dots"></i> Phản hồi tự động (Giải thích đáp án)</label>
+                        <textarea id="q_feedback" class="form-control" rows="3" placeholder="Hiển thị cho sinh viên sau khi nộp bài..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnCancelQuestion"><i class="fa-solid fa-xmark"></i> Hủy</button>
+                <button class="btn btn-primary" id="btnSaveQuestion" disabled><i class="fa-solid fa-save"></i> Lưu câu hỏi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Quill for question editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+    <script type="module" src="../../main/teacher/questionBank.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script type="module" src="../../main/shared/sidebar.js"></script>
+</main></div>
+</body>
+</html>

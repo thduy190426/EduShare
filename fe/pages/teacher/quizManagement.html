@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Trắc nghiệm — EduShare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <link rel="stylesheet" href="../../css/shared/footer.css">
+    <link rel="stylesheet" href="../../css/teacher/quizManagement.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+    <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+</head>
+<body style="font-family: 'Inter', sans-serif !important;">
+    <nav class="navbar">
+        <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+        <div class="nav-actions">
+            <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+                <i class="fa-solid fa-bell"></i>
+                <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+            </button>
+            <div class="user-profile" id="userProfileNav">
+                <div class="avatar" id="navAvatar">?</div>
+                <div class="user-info">
+                    <span class="user-name" id="navUserName">Đang tải...</span>
+                    <span class="user-role" id="navUserRole"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="main-layout">
+        <aside id="app-sidebar" class="sidebar"></aside>
+        <main class="content-area">
+            <nav aria-label="breadcrumb" class="breadcrumb-container">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Quản lý Đề thi & Trắc nghiệm</li>
+                </ol>
+            </nav>
+        <div class="main-container">
+            <div class="page-header">
+                <h1><i class="fa-solid fa-graduation-cap"></i> Quản lý Đề thi & Trắc nghiệm</h1>
+                <p>Quản lý ngân hàng câu hỏi và tạo đề thi cho các môn học</p>
+            </div>
+
+            <div class="subject-selector card">
+                <label for="subjectSelect">Chọn môn học:</label>
+                <select id="subjectSelect" class="form-control">
+                    <option value="">-- Đang tải môn học --</option>
+                </select>
+            </div>
+
+            <div class="tabs-container" id="quizTabs" style="display: none; margin-top: 20px;">
+                <div class="tab-content" style="border-radius: var(--radius-card); border-top: none;">
+                    <div id="quiz-list" class="tab-pane active">
+                        <div class="action-bar">
+                            <h3>Danh sách Đề thi</h3>
+                            <button class="btn btn-primary" id="btnCreateQuiz"><i class="fa-solid fa-plus"></i> Tạo Đề thi mới</button>
+                        </div>
+                        <div class="filter-bar">
+                            <input type="text" id="searchQuiz" class="form-control" placeholder="Tìm kiếm đề thi...">
+                            <select id="filterQuizStatus" class="form-control">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="CongKhai">Công khai</option>
+                                <option value="BanNhap">Bản nháp</option>
+                            </select>
+                        </div>
+                        <div class="quiz-grid" id="quizGrid">
+                        </div>
+                        <div class="pagination-controls" id="paginationQuizzes"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalCreateQuiz">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2>Tạo Đề thi mới</h2>
+                <button class="btn-close" id="btnCloseQuizModal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCreateQuiz">
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-heading"></i> Tiêu đề <span class="required">*</span></label>
+                        <input type="text" id="quiz_title" required class="form-control" placeholder="Nhập tiêu đề đề thi...">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-align-left"></i> Mô tả</label>
+                        <textarea id="quiz_desc" class="form-control" rows="4" placeholder="Nhập mô tả cho đề thi (nếu có)..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fa-regular fa-clock"></i> Thời gian làm bài (Phút) - <i>0 là vô hạn</i></label>
+                            <input type="number" id="quiz_time" value="0" min="0" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-toggle-on"></i> Trạng thái</label>
+                            <select id="quiz_status" class="form-control">
+                                <option value="BanNhap">Bản Nháp (Chỉ mình tôi)</option>
+                                <option value="CongKhai">Công Khai (Cho sinh viên thi)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="quiz_random">
+                        <label for="quiz_random"><i class="fa-solid fa-shuffle"></i> Đảo thứ tự câu hỏi và đáp án khi thi</label>
+                    </div>
+                    
+                    <div class="select-questions-section" style="margin-top: 20px;">
+                        <h4 style="margin-bottom: 1rem;"><i class="fa-solid fa-list-check"></i> Chọn câu hỏi từ Ngân Hàng</h4>
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                            <table class="table" id="tableSelectQuestions">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;"><input type="checkbox" id="selectAllQuestions"></th>
+                                        <th>Nội dung</th>
+                                        <th>Độ khó</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnCancelQuiz"><i class="fa-solid fa-xmark"></i> Hủy</button>
+                <button class="btn btn-primary" id="btnSaveQuiz" disabled><i class="fa-solid fa-save"></i> Lưu Đề thi</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="../../main/teacher/quizManagement.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script type="module" src="../../main/shared/sidebar.js"></script>
+</main></div>
+</body>
+</html>

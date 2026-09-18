@@ -665,7 +665,7 @@ router.get('/:maNhom', authMiddleware, async (req, res) => {
 router.put('/:maNhom', authMiddleware, moderationMiddleware(['tenNhom', 'moTa', 'noiQuy']), async (req, res) => {
     const maNhom = req.params.maNhom;
     const maND = req.user.MaND;
-    const { tenNhom, moTa, maMonHoc, anhBia, isPrivate, noiQuy } = req.body;
+    const { tenNhom, moTa, maMonHoc, anhBia, isPrivate, noiQuy, choPhepKhachXemTaiLieu, choPhepKhachXemThaoLuan, choPhepKhachXemThanhVien, choPhepKhachXemChat } = req.body;
 
     if (!tenNhom) {
         return res.status(400).json({ message: 'Tên nhóm không được để trống.' });
@@ -679,10 +679,15 @@ router.put('/:maNhom', authMiddleware, moderationMiddleware(['tenNhom', 'moTa', 
         if (groupCheck[0].MaND_QuanTri !== maND) return res.status(403).json({ message: 'Bạn không có quyền sửa nhóm này.' });
 
         const isPrivateVal = isPrivate ? 1 : 0;
+        const guestDocs = choPhepKhachXemTaiLieu ? 1 : 0;
+        const guestDiscuss = choPhepKhachXemThaoLuan ? 1 : 0;
+        const guestMembers = choPhepKhachXemThanhVien ? 1 : 0;
+        const guestChat = choPhepKhachXemChat ? 1 : 0;
+
         if (anhBia !== undefined) {
-            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, AnhBia = ?, IsPrivate = ?, NoiQuy = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, anhBia || null, isPrivateVal, noiQuy || null, maNhom]);
+            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, AnhBia = ?, IsPrivate = ?, NoiQuy = ?, ChoPhepKhachXemTaiLieu = ?, ChoPhepKhachXemThaoLuan = ?, ChoPhepKhachXemThanhVien = ?, ChoPhepKhachXemChat = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, anhBia || null, isPrivateVal, noiQuy || null, guestDocs, guestDiscuss, guestMembers, guestChat, maNhom]);
         } else {
-            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, IsPrivate = ?, NoiQuy = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, isPrivateVal, noiQuy || null, maNhom]);
+            await pool.execute('UPDATE NHOM SET TenNhom = ?, MoTa = ?, MaMonHoc = ?, IsPrivate = ?, NoiQuy = ?, ChoPhepKhachXemTaiLieu = ?, ChoPhepKhachXemThaoLuan = ?, ChoPhepKhachXemThanhVien = ?, ChoPhepKhachXemChat = ? WHERE MaNhom = ?', [tenNhom, moTa || null, maMonHoc || null, isPrivateVal, noiQuy || null, guestDocs, guestDiscuss, guestMembers, guestChat, maNhom]);
         }
         res.status(200).json({ message: 'Cập nhật thành công.' });
     } catch (error) {

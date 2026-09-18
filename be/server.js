@@ -170,13 +170,15 @@ app.use(cors({
 app.use(cookieParser());
 app.use(express.json());
 
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 let idleTimeout = null;
-const IDLE_TIME = 5 * 60 * 1000;
+const IDLE_TIME = 10 * 60 * 1000;
 
 function resetIdleTimeout() {
     if (idleTimeout) clearTimeout(idleTimeout);
     idleTimeout = setTimeout(() => {
-        console.log('Hệ thống đã nhàn rỗi trong 5 phút. Đang tự động tắt...');
+        console.log('Hệ thống đã nhàn rỗi trong 10 phút. Đang tự động tắt...');
         process.exit(0);
     }, IDLE_TIME);
 }
@@ -190,6 +192,13 @@ app.use((req, res, next) => {
 
 app.use(requestLogger);
 app.use('/uploads', express.static('public/uploads'));
+
+const { connectRedis } = require('./config/redis');
+connectRedis().then(client => {
+    app.locals.redisClient = client;
+}).catch(err => {
+    console.error('Không thể kết nối Redis trong server.js', err);
+});
 
 const { loginLimiter, registerLimiter, contactLimiter } = require('./middlewares/rateLimit');
 
@@ -219,13 +228,32 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    connectTimeout: 60000,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000
 });
 
-pool.getConnection()
-    .then(conn => { logger.db(`Connected to MySQL — database: ${process.env.DB_NAME || 'edushare_db'}`); conn.release(); })
-    .catch(err => logger.error('MySQL connection failed', err));
+const connectWithRetry = (retries = 5, delay = 3000) => {
+    pool.getConnection()
+        .then(conn => { 
+            logger.db(`Connected to MySQL — database: ${process.env.DB_NAME || 'edushare_db'}`); 
+            conn.release(); 
+        })
+        .catch(err => {
+            if (retries > 0) {
+                logger.error(`MySQL connection failed, retrying in ${delay}ms... (${retries} left)`, err.message);
+                setTimeout(() => connectWithRetry(retries - 1, delay), delay);
+            } else {
+                logger.error('MySQL connection failed permanently', err);
+            }
+        });
+};
+
+connectWithRetry();
 
 app.locals.pool = pool;
+
+
 
 const { initCronJobs } = require('./services/cronJobs');
 if (process.env.NODE_ENV !== 'test') {
@@ -250,6 +278,7 @@ const routes = [
     ['/api/collections', require('./routes/collections')],
     ['/api/cart', require('./routes/cart')],
     ['/api/ai', require('./routes/ai')],
+    ['/api/quizzes', require('./routes/quizRoutes')],
 ];
 routes.forEach(([path, handler]) => {
     app.use(path, handler);
@@ -435,6 +464,8 @@ app.post('/api/auth/google', loginLimiter, async (req, res) => {
             'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt, DeviceInfo, IPAddress) VALUES (?, ?, ?, ?, ?)',
             [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
         );
+
+        await cleanupOldSessions(user.MaND);
 
         res.cookie('token', accessToken, {
             httpOnly: true,
@@ -653,6 +684,8 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
             [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
         );
 
+        await cleanupOldSessions(user.MaND);
+
         res.cookie('token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -686,6 +719,22 @@ app.post('/api/auth/facebook', loginLimiter, async (req, res) => {
         res.status(400).json({ message: 'Đăng nhập Facebook thất bại. Vui lòng thử lại.' });
     }
 });
+
+const cleanupOldSessions = async (maND) => {
+    try {
+        await pool.execute('DELETE FROM REFRESH_TOKENS WHERE ExpiresAt < CURRENT_TIMESTAMP');
+        const [sessions] = await pool.execute('SELECT Id FROM REFRESH_TOKENS WHERE MaND = ? AND Revoked = FALSE ORDER BY CreatedAt DESC', [maND]);
+        if (sessions.length > 5) {
+            const toRevoke = sessions.slice(5).map(s => s.Id);
+            if (toRevoke.length > 0) {
+                const placeholders = toRevoke.map(() => '?').join(',');
+                await pool.execute(`DELETE FROM REFRESH_TOKENS WHERE Id IN (${placeholders})`, toRevoke);
+            }
+        }
+    } catch (err) {
+        logger.error('Error cleaning up sessions', err);
+    }
+};
 
 app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => {
     const { email, matKhau, rememberLogin, recaptchaToken, trustedDeviceToken } = req.body;
@@ -789,6 +838,8 @@ app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => 
             [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
         );
 
+        await cleanupOldSessions(user.MaND);
+
         res.cookie('token', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -858,6 +909,8 @@ app.post('/api/auth/2fa/login', loginLimiter, validate(twoFactorLoginSchema), as
             'INSERT INTO REFRESH_TOKENS (MaND, Token, ExpiresAt, DeviceInfo, IPAddress) VALUES (?, ?, ?, ?, ?)',
             [user.MaND, refreshToken, expiresAt, deviceInfo, ipAddress]
         );
+
+        await cleanupOldSessions(user.MaND);
 
         res.cookie('token', accessToken, {
             httpOnly: true,
@@ -1063,9 +1116,29 @@ app.delete('/api/users/sessions/:id', authMiddleware, async (req, res) => {
 
 app.post('/api/logout', async (req, res) => {
     const refreshToken = (req.cookies && req.cookies.refreshToken) || req.body.refreshToken;
+    const token = (req.cookies && req.cookies.token) || (req.header('Authorization') && req.header('Authorization').split(' ')[1]) || (req.query && req.query.token);
     
     res.clearCookie('token');
     res.clearCookie('refreshToken');
+
+    if (token) {
+        const { getRedisClient } = require('./config/redis');
+        const redisClient = getRedisClient();
+        if (redisClient) {
+            const jwt = require('jsonwebtoken');
+            try {
+                const decoded = jwt.decode(token);
+                if (decoded && decoded.exp) {
+                    const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+                    if (ttl > 0) {
+                        await redisClient.set(`bl_${token}`, '1', 'EX', ttl);
+                    }
+                }
+            } catch (e) {
+                console.error('Lỗi khi blacklist token:', e);
+            }
+        }
+    }
 
     if (!refreshToken) return res.status(200).json({ message: 'Đã đăng xuất.' });
 
@@ -1121,14 +1194,12 @@ const generateOTPRegisterEmail = (hoTen, otp) => {
               <tr>
                 <td class="content">
                   <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Xin chào, ${hoTen}!</h2>
-                  <p>Cảm ơn bạn đã đăng ký tài khoản tại EduShare. Để hoàn tất quá trình đăng ký, vui lòng sử dụng mã xác thực OTP dưới đây:</p>
-
+                  <p>Cảm ơn bạn đã đăng ký tài khoản tại EduShare. Để hoàn tất đăng ký, vui lòng sử dụng mã OTP dưới đây:</p>
                   <div class="otp-box">
                     <div class="otp-code">${otp}</div>
                   </div>
-
-                  <p>Mã xác thực này sẽ <strong>hết hạn sau 10 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai.</p>
-
+                  <p>Mã OTP này có hiệu lực trong vòng 5 phút.</p>
+                  <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
                   <p style="margin-top: 32px; margin-bottom: 0;">Trân trọng,<br><strong style="color: #4F46E5;">Đội ngũ EduShare</strong></p>
                 </td>
               </tr>
@@ -1148,32 +1219,25 @@ const generateOTPRegisterEmail = (hoTen, otp) => {
 </html>`;
 };
 
-const generateOTPResetEmail = (hoTen, otp) => {
-    return `<!DOCTYPE html>
+const generateResetLinkEmail = (hoTen, resetLink) => {
+    return `
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Khôi phục mật khẩu - EduShare</title>
   <style type="text/css">
-    body {
-      margin: 0; padding: 0; background: #F8FAFC; font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;
-    }
+    body { margin: 0; padding: 0; background: #F8FAFC; font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
     table, td { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     .container { width: 100%; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden; }
     .header { padding: 40px 32px 20px; text-align: center; }
     .header h1 { margin: 0; font-size: 28px; font-weight: 700; color: #4F46E5; }
     .content { padding: 0 32px 40px; color: #1E293B; }
     .content p { font-size: 15px; line-height: 1.6; margin-bottom: 20px; color: #334155; }
-    .otp-box { background: #EEF2FF; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0; border: 1px dashed #4F46E5; }
-    .otp-code { font-size: 32px; font-weight: 700; color: #4F46E5; letter-spacing: 4px; }
+    .btn { display: inline-block; padding: 14px 28px; background-color: #4F46E5; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
     .footer { padding: 24px 32px; background: #F8FAFC; text-align: center; border-top: 1px solid #E2E8F0; }
     .footer p { font-size: 13px; color: #64748B; line-height: 1.5; margin: 0; }
-    @media only screen and (max-width: 600px) {
-      .container { border-radius: 0; }
-      .header { padding: 30px 20px 15px; }
-      .content { padding: 0 20px 30px; }
-    }
   </style>
 </head>
 <body>
@@ -1183,24 +1247,18 @@ const generateOTPResetEmail = (hoTen, otp) => {
         <td valign="top" align="center">
           <table class="container" cellspacing="0" cellpadding="0" border="0">
             <tbody>
-              <tr>
-                <td class="header">
-                  <h1>EduShare</h1>
-                </td>
-              </tr>
+              <tr><td class="header"><h1>EduShare</h1></td></tr>
               <tr>
                 <td class="content">
                   <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1E293B;">Xin chào, ${hoTen}!</h2>
-                  <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản EduShare của bạn. Dưới đây là mã xác thực OTP để hoàn tất quá trình thiết lập lại mật khẩu:</p>
-
-                  <div class="otp-box">
-                    <div class="otp-code">${otp}</div>
+                  <p>Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản EduShare của bạn. Vui lòng click vào nút bên dưới để thiết lập lại mật khẩu:</p>
+                  <div style="text-align: center;">
+                    <a href="${resetLink}" class="btn">Đổi mật khẩu</a>
                   </div>
-
-                  <p>Mã xác thực này sẽ <strong>hết hạn sau 10 phút</strong>. Vui lòng không chia sẻ mã này cho bất kỳ ai để đảm bảo an toàn cho tài khoản của bạn.</p>
-
-                  <p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này. Tài khoản của bạn vẫn được an toàn.</p>
-
+                  <p>Hoặc copy đường link này dán vào trình duyệt:</p>
+                  <p style="word-break: break-all; color: #4F46E5; font-size: 13px;">${resetLink}</p>
+                  <p>Đường link này sẽ <strong>hết hạn sau 15 phút</strong>.</p>
+                  <p>Nếu bạn không yêu cầu, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.</p>
                   <p style="margin-top: 32px; margin-bottom: 0;">Trân trọng,<br><strong style="color: #4F46E5;">Đội ngũ EduShare</strong></p>
                 </td>
               </tr>
@@ -1230,24 +1288,27 @@ app.post('/api/forgot-password', async (req, res) => {
             return res.status(404).json({ message: 'Email không tồn tại trong hệ thống.' });
         }
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
         await pool.execute(
             'INSERT INTO RESET_PASSWORD_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',
-            [email, otp, expiresAt, otp, expiresAt]
+            [email, token, expiresAt, token, expiresAt]
         );
+
+        const resetLink = `http://localhost:3001/pages/auth/reset-password.html?email=${encodeURIComponent(email)}&token=${token}`;
 
         const mailOptions = {
             from: `"EduShare Support" <${process.env.GMAIL_USER}>`,
             to: email,
-            subject: 'Mã OTP Khôi Phục Mật Khẩu',
-            html: generateOTPResetEmail(rows[0].HoTen, otp)
+            subject: 'Link Khôi Phục Mật Khẩu',
+            html: generateResetLinkEmail(rows[0].HoTen, resetLink)
         };
 
         await transporter.sendMail(mailOptions);
-        logger.success(`OTP sent to ${email}`);
-        res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
+        logger.success(`Reset link sent to ${email}`);
+        res.status(200).json({ message: 'Link khôi phục mật khẩu đã được gửi đến email của bạn.' });
 
     } catch (err) {
         logger.error('Forgot password failed', err);
@@ -1255,41 +1316,42 @@ app.post('/api/forgot-password', async (req, res) => {
     }
 });
 
-app.post('/api/verify-otp', async (req, res) => {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ message: 'Vui lòng cung cấp email và mã OTP.' });
+app.post('/api/verify-reset-token', async (req, res) => {
+    const { email, token } = req.body;
+    if (!email || !token) return res.status(400).json({ message: 'Vui lòng cung cấp email và token.' });
 
     try {
-        const [rows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+        const [rows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, token]);
         if (rows.length === 0) {
-            return res.status(400).json({ message: 'Mã OTP không chính xác.' });
+            return res.status(400).json({ message: 'Link không hợp lệ hoặc đã được sử dụng.' });
         }
 
         if (new Date() > new Date(rows[0].ExpiresAt)) {
-            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+            return res.status(400).json({ message: 'Link khôi phục mật khẩu đã hết hạn.' });
         }
 
-        res.status(200).json({ message: 'Mã OTP hợp lệ.' });
+        res.status(200).json({ message: 'Token hợp lệ.' });
     } catch (err) {
-        logger.error('Verify OTP failed', err);
+        logger.error('Verify token failed', err);
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
 
 app.post('/api/reset-password', async (req, res) => {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword) return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword) return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin.' });
 
     try {
-        const [rows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, otp]);
+        const [rows] = await pool.execute('SELECT * FROM RESET_PASSWORD_OTP WHERE Email = ? AND OTP = ?', [email, token]);
         if (rows.length === 0) {
-            return res.status(400).json({ message: 'Yêu cầu không hợp lệ. Vui lòng thử lại quá trình quên mật khẩu.' });
+            return res.status(400).json({ message: 'Yêu cầu không hợp lệ hoặc link đã được sử dụng.' });
         }
 
         if (new Date() > new Date(rows[0].ExpiresAt)) {
-            return res.status(400).json({ message: 'Mã OTP đã hết hạn.' });
+            return res.status(400).json({ message: 'Link khôi phục mật khẩu đã hết hạn.' });
         }
 
+        const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         await pool.execute('UPDATE NGUOIDUNG SET MatKhau = ? WHERE Email = ?', [hashedPassword, email]);
         await pool.execute('DELETE FROM RESET_PASSWORD_OTP WHERE Email = ?', [email]);

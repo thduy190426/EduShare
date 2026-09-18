@@ -8,6 +8,15 @@ export const isValidName = (name) => {
   return nameRegex.test(name.trim());
 };
 
+export const formatDate = (dateString) => {
+    if (!dateString) return '--';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('vi-VN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+    }).format(date);
+};
+
 export const decodeJWT = (token) => {
   try {
     const base64Url = token.split(".")[1];

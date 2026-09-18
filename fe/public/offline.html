@@ -4,62 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đã mất kết nối - EduShare</title>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-            color: #1f2937;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            text-align: center;
-        }
-        .container {
-            background-color: #ffffff;
-            padding: 3rem 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            max-width: 90%;
-            width: 400px;
-        }
-        .icon {
-            font-size: 4rem;
-            color: #9ca3af;
-            margin-bottom: 1rem;
-        }
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            color: #111827;
-        }
-        p {
-            color: #6b7280;
-            margin-bottom: 2rem;
-            line-height: 1.5;
-        }
-        .btn {
-            display: inline-block;
-            background-color: #4f46e5;
-            color: white;
-            font-weight: 500;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            text-decoration: none;
-            transition: background-color 0.2s;
-        }
-        .btn:hover {
-            background-color: #4338ca;
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/offline.css">
 </head>
-<body>
-    <div class="container">
-        <div class="icon">📶❌</div>
-        <h1>Bạn đang ngoại tuyến</h1>
-        <p>Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng của bạn và thử lại.</p>
-        <a href="javascript:window.location.reload()" class="btn">Thử lại ngay</a>
+<body style="font-family: 'Inter', sans-serif !important;">
+    <div class="offline-container">
+        <div class="offline-card">
+            <div class="icon-wrapper">
+                <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                    <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+                    <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+                    <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+                    <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                    <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                </svg>
+            </div>
+            <h1>Bạn Đang Ngoại Tuyến</h1>
+            <p>Rất tiếc, không thể kết nối đến máy chủ.<br>Vui lòng kiểm tra lại kết nối mạng của bạn.</p>
+            <button onclick="window.location.reload()" class="retry-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                Thử kết nối lại
+            </button>
+        </div>
     </div>
 </body>
 </html>

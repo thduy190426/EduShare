@@ -30,6 +30,14 @@ const htmlInputs = getAllHtmlFiles(import.meta.dirname);
 export default defineConfig({
   root: './',
   plugins: [
+    {
+      name: 'live-reload-html',
+      handleHotUpdate({ file, server }) {
+        if (file.endsWith('.html')) {
+          server.ws.send({ type: 'full-reload', path: '*' });
+        }
+      }
+    },
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
@@ -67,6 +75,9 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    open: true
+    open: true,
+    watch: {
+      usePolling: true
+    }
   }
 });
