@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thống Kê Đề Thi - EduShare</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link rel="stylesheet" href="../../css/shared/sidebar.css">
+    <link rel="stylesheet" href="../../css/shared/breadcrumb.css">
+    <link rel="stylesheet" href="../../css/teacher/quizStats.css">
+    <script>if(localStorage.getItem('sidebar-collapsed')==='true'){document.documentElement.classList.add('sidebar-collapsed');}</script>
+</head>
+<body style="font-family: 'Inter', sans-serif !important;">
+    <nav class="navbar">
+        <a href="../user/userHome.html" class="logo"><i class="fa-solid fa-book"></i> EduShare</a>
+        <div class="nav-actions">
+            <button class="nav-notifications" id="navNotifications" type="button" title="Thông báo" aria-label="Thông báo">
+                <i class="fa-solid fa-bell"></i>
+                <span class="nav-notification-badge" id="navNotificationBadge" style="display:none;">0</span>
+            </button>
+            <div class="user-profile" id="userProfileNav">
+                <div class="avatar" id="navAvatar">?</div>
+                <div class="user-info">
+                    <span class="user-name" id="navUserName">Đang tải...</span>
+                    <span class="user-role" id="navUserRole"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="main-layout">
+        <aside id="app-sidebar" class="sidebar"></aside>
+        <main class="content-area">
+            <nav aria-label="breadcrumb" class="breadcrumb-container" style="margin-bottom: 2rem;">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="../user/userHome.html"><i class="fa-solid fa-house"></i> Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="quizManagement.html">Quản lý Đề thi</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Thống kê chi tiết</li>
+                </ol>
+            </nav>
+
+            <div class="header-container">
+                <div>
+                    <h1 id="quizTitle" style="margin: 0; font-size: 2rem; color: var(--text-main);">Đang tải dữ liệu...</h1>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted);">Tổng quan kết quả làm bài của sinh viên</p>
+                </div>
+                <a href="quizManagement.html" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a>
+            </div>
+
+            <div class="stats-summary" id="statsSummary">
+                <div class="stat-card total">
+                    <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                    <div class="stat-info">
+                        <h4>TỔNG LƯỢT LÀM</h4>
+                        <p id="totalAttempts">--</p>
+                    </div>
+                </div>
+                <div class="stat-card avg">
+                    <div class="stat-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <h4>ĐIỂM TRUNG BÌNH</h4>
+                        <p id="avgScore">--</p>
+                    </div>
+                </div>
+                <div class="stat-card max">
+                    <div class="stat-icon"><i class="fa-solid fa-trophy"></i></div>
+                    <div class="stat-info">
+                        <h4>ĐIỂM CAO NHẤT</h4>
+                        <p id="maxScore">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-table-container">
+                <div class="table-header">
+                    <h3 style="margin: 0;"><i class="fa-solid fa-list-check" style="color: var(--primary); margin-right: 8px;"></i>Danh sách sinh viên đã nộp bài</h3>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <select id="filterScore" class="form-control" style="padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; outline: none; background: #fff; cursor: pointer;">
+                            <option value="all">Tất cả điểm số</option>
+                            <option value="excellent">Giỏi (≥ 8)</option>
+                            <option value="good">Khá (5 - 7.9)</option>
+                            <option value="poor">Yếu (< 5)</option>
+                        </select>
+                        <div class="search-bar">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="searchStudent" placeholder="Tìm kiếm theo tên hoặc email...">
+                        </div>
+                    </div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th><i class="fa-solid fa-hashtag" style="margin-right: 4px; color: var(--text-muted);"></i> STT</th>
+                                <th><i class="fa-solid fa-user" style="margin-right: 4px; color: var(--text-muted);"></i> Sinh Viên</th>
+                                <th><i class="fa-solid fa-envelope" style="margin-right: 4px; color: var(--text-muted);"></i> Email</th>
+                                <th><i class="fa-solid fa-star" style="margin-right: 4px; color: var(--text-muted);"></i> Điểm Số</th>
+                                <th><i class="fa-solid fa-clock" style="margin-right: 4px; color: var(--text-muted);"></i> Bắt Đầu</th>
+                                <th><i class="fa-solid fa-check-double" style="margin-right: 4px; color: var(--text-muted);"></i> Nộp Bài</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody">
+                            <tr><td colspan="6" style="text-align: center;">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-controls" id="paginationStats" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Cảnh báo khi người dùng rời đi? (Tùy chọn) -->
+
+    <script type="module" src="../../main/shared/sidebar.js"></script>
+    <script type="module" src="../../main/teacher/quizStats.js"></script>
+</body>
+</html>

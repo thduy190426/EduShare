@@ -184,7 +184,7 @@ router.get('/search', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ.' });
     }
 });
-router.get('/top-contributors', cacheMiddleware(60 * 60), async (req, res) => {
+router.get('/top-contributors', cacheMiddleware(60 * 60, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const sql = `

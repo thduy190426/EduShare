@@ -6,7 +6,28 @@ import { makeAdminTablesResizableAndSticky } from '../admin/adminTableUtils.js';
 let allTransactions = [];
 let filteredTransactions = [];
 let currentPage = 1;
+let isFilterApplied = false;
 const ITEMS_PER_PAGE = 10;
+
+function updateFilterButtonsState() {
+    const startDateVal = document.getElementById('filter-start-date')?.value;
+    const endDateVal = document.getElementById('filter-end-date')?.value;
+    const hasInput = !!(startDateVal || endDateVal);
+    
+    const btnFilter = document.getElementById('btn-filter');
+    const btnResetFilter = document.getElementById('btn-reset-filter');
+    
+    if (btnFilter) {
+        btnFilter.disabled = !hasInput;
+        btnFilter.style.opacity = btnFilter.disabled ? '0.5' : '1';
+        btnFilter.style.cursor = btnFilter.disabled ? 'not-allowed' : 'pointer';
+    }
+    if (btnResetFilter) {
+        btnResetFilter.disabled = !hasInput && !isFilterApplied;
+        btnResetFilter.style.opacity = btnResetFilter.disabled ? '0.5' : '1';
+        btnResetFilter.style.cursor = btnResetFilter.disabled ? 'not-allowed' : 'pointer';
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     makeAdminTablesResizableAndSticky();
@@ -22,6 +43,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnFilter = document.getElementById('btn-filter');
     const btnResetFilter = document.getElementById('btn-reset-filter');
 
+    const filterStartDate = document.getElementById('filter-start-date');
+    const filterEndDate = document.getElementById('filter-end-date');
+    
+    if (filterStartDate) {
+        filterStartDate.addEventListener('change', updateFilterButtonsState);
+        filterStartDate.addEventListener('input', updateFilterButtonsState);
+    }
+    if (filterEndDate) {
+        filterEndDate.addEventListener('change', updateFilterButtonsState);
+        filterEndDate.addEventListener('input', updateFilterButtonsState);
+    }
+
     if (btnExportExcel) {
         btnExportExcel.addEventListener('click', exportToExcel);
     }
@@ -35,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnResetFilter.addEventListener('click', resetDateFilter);
     }
 
+    updateFilterButtonsState();
     await fetchTransactions(token);
 });
 
@@ -295,7 +329,9 @@ function applyDateFilter() {
 
     if (!startDateVal && !endDateVal) {
         filteredTransactions = [...allTransactions];
+        isFilterApplied = false;
     } else {
+        isFilterApplied = true;
         filteredTransactions = allTransactions.filter(tx => {
             const txDate = new Date(tx.NgayTao);
             txDate.setHours(0, 0, 0, 0);
@@ -321,6 +357,7 @@ function applyDateFilter() {
 
     currentPage = 1;
     renderTransactions();
+    updateFilterButtonsState();
 }
 
 function resetDateFilter() {
@@ -328,7 +365,9 @@ function resetDateFilter() {
     document.getElementById('filter-end-date').value = '';
     filteredTransactions = [...allTransactions];
     currentPage = 1;
+    isFilterApplied = false;
     renderTransactions();
+    updateFilterButtonsState();
 }
 
 renderBreadcrumb([{ name: 'Trang chủ', url: 'userHome.html' }, { name: 'Lịch sử giao dịch' }]);

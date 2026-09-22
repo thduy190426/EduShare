@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let maKetQua = null;
     let timerInterval = null;
     let endTime = null;
+    let isQuizActive = false;
     
     try {
         const quizInfo = await apiClient.get(`/quizzes/${quizId}`);
@@ -70,12 +71,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('btnStartQuiz').textContent = 'Đang tải...';
         
         try {
+            if (document.documentElement.requestFullscreen) {
+                await document.documentElement.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
+            }
+            
             const res = await apiClient.post(`/quizzes/${quizId}/take`);
             quizData = res;
             maKetQua = res.MaKetQua;
             
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('quizContainer').style.display = 'block';
+            isQuizActive = true;
+            document.body.classList.add('quiz-active');
             
             playSound('start'); 
             
@@ -215,12 +222,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     document.getElementById('btnSubmitQuiz').addEventListener('click', async () => {
+        const totalQuestions = quizData.questions.length;
+        let answeredQuestions = 0;
+        
+        quizData.questions.forEach(q => {
+            if (document.querySelector(`input[name="q_${q.MaCauHoi}"]:checked`)) {
+                answeredQuestions++;
+            }
+        });
+        
+        const unAnswered = totalQuestions - answeredQuestions;
+        let confirmText = "Bạn có chắc chắn muốn nộp bài? Bạn sẽ không thể thay đổi đáp án sau khi nộp.";
+        let confirmIcon = 'question';
+        let confirmColor = '#3b82f6';
+        
+        if (unAnswered > 0) {
+            confirmText = `Bạn còn ${unAnswered} câu hỏi chưa trả lời! Bạn có chắc chắn muốn nộp bài ngay bây giờ không?`;
+            confirmIcon = 'warning';
+            confirmColor = '#ef4444'; 
+        }
+
         const result = await Swal.fire({
             title: 'Nộp bài?',
-            text: "Bạn có chắc chắn muốn nộp bài? Bạn sẽ không thể thay đổi đáp án sau khi nộp.",
-            icon: 'question',
+            text: confirmText,
+            icon: confirmIcon,
             showCancelButton: true,
-            confirmButtonColor: '#3b82f6',
+            confirmButtonColor: confirmColor,
             cancelButtonColor: '#94a3b8',
             confirmButtonText: '<i class="fa-solid fa-paper-plane"></i> Nộp bài',
             cancelButtonText: 'Hủy',
@@ -236,9 +263,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     const submitQuiz = async () => {
+        isQuizActive = false;
+        document.body.classList.remove('quiz-active');
         clearInterval(timerInterval);
         document.getElementById('btnSubmitQuiz').disabled = true;
         document.getElementById('btnSubmitQuiz').textContent = 'Đang nộp...';
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(err => console.log(err));
+        }
 
         const answers = [];
         quizData.questions.forEach(q => {
@@ -333,4 +366,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     }
+
+    document.addEventListener('fullscreenchange', () => {
+        if (isQuizActive && !document.fullscreenElement) {
+            Swal.fire({
+                title: 'Cảnh báo!',
+                text: 'Bạn vừa thoát khỏi chế độ toàn màn hình. Yêu cầu làm bài ở chế độ toàn màn hình để đảm bảo tính minh bạch.',
+                icon: 'warning',
+                confirmButtonText: '<i class="fa-solid fa-expand"></i> Quay lại toàn màn hình',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                confirmButtonColor: '#3b82f6',
+                customClass: { popup: 'modern-swal-popup' }
+            }).then((result) => {
+                if (result.isConfirmed && document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(err => console.log(err));
+                }
+            });
+        }
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (isQuizActive) {
+            e.preventDefault();
+            e.returnValue = ''; 
+        }
+    });
 });

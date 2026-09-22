@@ -9,6 +9,20 @@ let onlineUsers = new Set();
 let typingTimeout;
 let editMessageId = null;
 let replyMessageId = null;
+let isUploading = false;
+let messageOffset = 0;
+let isFetchingMessages = false;
+let hasMoreMessages = true;
+
+function escapeHtmlAndLinkify(text) {
+    if (!text) return '';
+    let escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    escaped = escaped.replace(/\n/g, '<br>');
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return escaped.replace(urlRegex, function(url) {
+        return '<a href="' + url + '" target="_blank" style="color: inherit; text-decoration: underline;">' + url + '</a>';
+    });
+}
 
 function formatTime(isoString) {
     const d = new Date(isoString);
@@ -90,22 +104,28 @@ function injectChatWidget() {
             </div>
         </div>
 
-        <div id="chat-info-modal" class="chat-info-modal" style="display:none;">
-            <button class="chat-info-close" id="chat-info-close"><i class="fa-solid fa-xmark"></i></button>
+        <div id="chat-info-modal" class="chat-info-modal">
+            <div class="chat-info-drag-handle"></div>
+            <button class="chat-info-close" id="chat-info-close" title="Đóng"><i class="fa-solid fa-xmark"></i></button>
             <div id="chat-info-avatar-container"></div>
             <h3 id="chat-info-name"></h3>
             <p id="chat-info-role"></p>
+            <div class="chat-info-divider"></div>
             <div class="chat-info-stats">
-                <div>
+                <div class="stat-box">
+                    <div class="stat-icon"><i class="fa-solid fa-file-lines"></i></div>
                     <div id="chat-info-docs" class="stat-val">0</div>
                     <div class="stat-lbl">Tài liệu</div>
                 </div>
-                <div>
+                <div class="stat-box">
+                    <div class="stat-icon"><i class="fa-solid fa-calendar-days"></i></div>
                     <div id="chat-info-joined" class="stat-val">-</div>
                     <div class="stat-lbl">Tham gia</div>
                 </div>
             </div>
-            <a id="chat-info-profile-link" href="#">Xem trang cá nhân</a>
+            <a id="chat-info-profile-link" href="#">
+                <i class="fa-solid fa-user"></i> Xem trang cá nhân
+            </a>
         </div>
     `;
     document.body.appendChild(container);
@@ -142,7 +162,7 @@ function initChatEvents() {
     btnClose.addEventListener('click', () => {
         panel.classList.remove('open');
         document.body.style.overflow = '';
-        infoModal.style.display = 'none';
+        infoModal.classList.remove('show');
     });
 
     btnBack.addEventListener('click', () => {
@@ -151,7 +171,7 @@ function initChatEvents() {
         document.getElementById('chat-back-btn').style.display = 'none';
         document.getElementById('chat-header-title').innerText = 'Tin nhắn';
         document.getElementById('chat-info-btn').style.display = 'none';
-        infoModal.style.display = 'none';
+        infoModal.classList.remove('show');
         document.getElementById('messages-list').style.overflow = '';
         currentPartnerId = null;
         cancelReply();
@@ -160,7 +180,7 @@ function initChatEvents() {
     });
 
     btnInfoClose.addEventListener('click', () => {
-        infoModal.style.display = 'none';
+        infoModal.classList.remove('show');
         document.getElementById('messages-list').style.overflow = '';
     });
 
@@ -191,7 +211,7 @@ function initChatEvents() {
                     e.preventDefault();
                     window.location.href = profileUrl;
                 };
-                infoModal.style.display = 'block';
+                infoModal.classList.add('show');
                 document.getElementById('messages-list').style.overflow = 'hidden';
             }
         } catch (err) {
@@ -230,6 +250,9 @@ function initChatEvents() {
     });
 
     inputMessage.addEventListener('input', () => {
+        inputMessage.style.height = 'auto';
+        inputMessage.style.height = Math.min(inputMessage.scrollHeight, 120) + 'px';
+
         const validation = validateMessage(inputMessage.value);
         if (validation.isValid) {
             btnSend.disabled = false;
@@ -274,6 +297,48 @@ function initChatEvents() {
                 console.error('Lỗi upload file:', err);
             }
             e.target.value = '';
+        }
+    });
+
+    const chatConversationView = document.getElementById('chat-conversation-view');
+    chatConversationView.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        chatConversationView.classList.add('drag-over');
+    });
+
+    chatConversationView.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        chatConversationView.classList.remove('drag-over');
+    });
+
+    chatConversationView.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        chatConversationView.classList.remove('drag-over');
+        
+        if (!currentPartnerId) return;
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`${API_URL}/api/chat/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getToken()}` },
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    let type = 'file';
+                    if (file.type.startsWith('image/')) type = 'image';
+                    else if (file.type.startsWith('audio/')) type = 'audio';
+                    sendMessage(type, data.url + '|' + data.originalName);
+                }
+            } catch (err) {
+                console.error('Lỗi upload file qua kéo thả:', err);
+            }
         }
     });
 
@@ -430,6 +495,9 @@ async function openConversation(partnerId, partnerName, partnerAvatar) {
     currentPartnerId = partnerId;
     currentPartnerName = partnerName;
     currentPartnerAvatar = partnerAvatar;
+    messageOffset = 0;
+    hasMoreMessages = true;
+    isFetchingMessages = false;
 
     document.getElementById('chat-contacts-view').style.display = 'none';
     document.getElementById('chat-conversation-view').style.display = 'flex';
@@ -440,10 +508,11 @@ async function openConversation(partnerId, partnerName, partnerAvatar) {
     document.getElementById('messages-list').innerHTML = '<div style="text-align:center; padding:40px 20px; color:#94a3b8; font-size:13px;"><i class="fa-regular fa-hand-peace" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i><br>Đang tải...</div>';
 
     try {
-        const res = await fetch(`${API_URL}/api/chat/history/${partnerId}`, { headers: getAuthHeaders() });
+        const res = await fetch(`${API_URL}/api/chat/history/${partnerId}?offset=0&limit=50`, { headers: getAuthHeaders() });
         const data = await res.json();
         if (res.ok) {
             renderMessages(data.messages);
+            hasMoreMessages = data.messages.length === 50;
             scrollToBottom(false);
             setTimeout(() => scrollToBottom(false), 100);
             setTimeout(() => scrollToBottom(false), 500);
@@ -573,7 +642,7 @@ function renderMessages(messages) {
             msgDiv.classList.add('msg-file');
             contentHtml = `<i class="fa-solid fa-file"></i> <span class="msg-file-name">${name}</span> <a href="${getAssetUrl(url)}" download target="_blank" style="margin-left: auto; color: inherit;"><i class="fa-solid fa-download"></i></a>`;
         } else {
-            contentHtml = m.NoiDung;
+            contentHtml = escapeHtmlAndLinkify(m.NoiDung);
             if (m.DaChinhSua) {
                 contentHtml += `<span class="msg-edited-label">(Đã chỉnh sửa)</span>`;
             }
@@ -665,6 +734,173 @@ function renderMessages(messages) {
     list.appendChild(fragment);
 }
 
+function prependMessages(messages) {
+    const list = document.getElementById('messages-list');
+    const myId = parseJwt(getToken())?.MaND;
+
+    if (!messages || messages.length === 0) return;
+
+    const fragment = document.createDocumentFragment();
+    let lastSenderId = null;
+    let wrapper = null;
+    let lastMsgTime = null;
+
+    messages.forEach((m, index) => {
+        const isMe = m.NguoiGui === myId;
+        const msgTime = new Date(m.NgayGui);
+
+        if (!lastMsgTime || (msgTime - lastMsgTime) > 60 * 60 * 1000) {
+            const div = document.createElement('div');
+            div.className = 'date-divider';
+            div.textContent = formatDateDivider(m.NgayGui);
+            fragment.appendChild(div);
+            lastSenderId = null; 
+        }
+        lastMsgTime = msgTime;
+
+        if (m.NguoiGui !== lastSenderId) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'message-wrapper';
+            wrapper.style.alignItems = isMe ? 'flex-end' : 'flex-start';
+
+            if (!isMe) {
+                wrapper.classList.add('received-group');
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'message-sender-name';
+                nameDiv.textContent = currentPartnerName;
+                wrapper.appendChild(nameDiv);
+
+                if (currentPartnerAvatar && currentPartnerAvatar !== 'null') {
+                    const avatarImg = document.createElement('img');
+                    avatarImg.className = 'group-avatar';
+                    avatarImg.src = getAssetUrl(currentPartnerAvatar);
+                    avatarImg.onerror = function() {
+                        const initial = currentPartnerName ? currentPartnerName.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
+                        this.outerHTML = `<div class="group-avatar chat-header-fallback" style="font-size: 12px; margin-bottom: 2px;">${initial}</div>`;
+                    };
+                    wrapper.appendChild(avatarImg);
+                } else {
+                    const initial = currentPartnerName ? currentPartnerName.trim().split(' ').pop().charAt(0).toUpperCase() : '?';
+                    const avatarDiv = document.createElement('div');
+                    avatarDiv.className = 'group-avatar chat-header-fallback';
+                    avatarDiv.style.fontSize = '12px';
+                    avatarDiv.style.marginBottom = '2px';
+                    avatarDiv.textContent = initial;
+                    wrapper.appendChild(avatarDiv);
+                }
+            }
+
+            fragment.appendChild(wrapper);
+            lastSenderId = m.NguoiGui;
+        }
+
+        if (m.TraLoiCho_MaTN && m.ReplyToNoiDung && !m.DaThuHoi) {
+            const quoteText = m.ReplyToLoaiTinNhan === 'image' ? '[Hình ảnh]' : (m.ReplyToLoaiTinNhan === 'file' ? '[Tập tin]' : (m.ReplyToLoaiTinNhan === 'audio' ? '[Ghi âm]' : m.ReplyToNoiDung));
+            const quoteDiv = document.createElement('div');
+            quoteDiv.className = 'reply-quote';
+            quoteDiv.textContent = `Trích dẫn: ${quoteText}`;
+            wrapper.appendChild(quoteDiv);
+        }
+
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isMe ? 'msg-sent' : 'msg-received'}`;
+        msgDiv.id = `msg-${m.MaTN}`;
+        msgDiv.title = formatTime(m.NgayGui); 
+
+        let contentHtml = '';
+        let linkHtml = '';
+        if (m.DaThuHoi) {
+            msgDiv.classList.add('msg-unsent');
+            contentHtml = 'Tin nhắn đã bị thu hồi';
+        } else if (m.LoaiTinNhan === 'image') {
+            const url = m.NoiDung.split('|')[0];
+            msgDiv.classList.add('msg-image');
+            contentHtml = `<img src="${getAssetUrl(url)}" onload="window.scrollToBottom(false)" onclick="window.openChatLightbox('${getAssetUrl(url)}')">`;
+        } else if (m.LoaiTinNhan === 'audio') {
+            const url = m.NoiDung.split('|')[0];
+            msgDiv.classList.add('msg-audio');
+            contentHtml = `<audio controls src="${getAssetUrl(url)}"></audio>`;
+        } else if (m.LoaiTinNhan === 'file') {
+            const parts = m.NoiDung.split('|');
+            const url = parts[0];
+            const name = parts[1] || 'File đính kèm';
+            msgDiv.classList.add('msg-file');
+            contentHtml = `<i class="fa-solid fa-file"></i> <span class="msg-file-name">${name}</span> <a href="${getAssetUrl(url)}" download target="_blank" style="margin-left: auto; color: inherit;"><i class="fa-solid fa-download"></i></a>`;
+        } else {
+            contentHtml = escapeHtmlAndLinkify(m.NoiDung);
+            if (m.DaChinhSua) {
+                contentHtml += `<span class="msg-edited-label">(Đã chỉnh sửa)</span>`;
+            }
+
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const urls = m.NoiDung.match(urlRegex);
+            if (urls && urls.length > 0) {
+                const url = urls[0];
+                linkHtml = `<div class="link-preview-container" data-url="${url}"></div>`;
+                fetchPreview(url, m.MaTN);
+            }
+        }
+        msgDiv.innerHTML = contentHtml + linkHtml;
+
+        if (!m.DaThuHoi) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'msg-actions-wrapper';
+
+            const safeContent = m.NoiDung.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+
+            let actionsHtml = '';
+            if (isMe) {
+                actionsHtml += `<i class="fa-solid fa-trash msg-action-icon" title="Thu hồi" onclick="unsendMessage(${m.MaTN})"></i>`;
+                actionsHtml += `<i class="fa-solid fa-trash-can msg-action-icon" title="Xóa ở phía tôi" onclick="deleteMessageForMe(${m.MaTN})"></i>`;
+                if (m.LoaiTinNhan === 'text') {
+                    actionsHtml += `<i class="fa-solid fa-pen msg-action-icon" title="Sửa" onclick="startEdit(${m.MaTN}, '${safeContent}')"></i>`;
+                }
+            } else {
+                actionsHtml += `<i class="fa-solid fa-trash-can msg-action-icon" title="Xóa ở phía tôi" onclick="deleteMessageForMe(${m.MaTN})"></i>`;
+            }
+            actionsHtml += `<i class="fa-solid fa-reply msg-action-icon" title="Trả lời" onclick="startReply(${m.MaTN}, '${safeContent}')"></i>`;
+            if (m.LoaiTinNhan === 'text') {
+                actionsHtml += `<i class="fa-solid fa-copy msg-action-icon" title="Copy" onclick="copyMessage('${safeContent}')"></i>`;
+            }
+            
+            actionsHtml += `<i class="fa-solid fa-ellipsis-vertical msg-action-icon" title="Thêm" onclick="toggleDropdown(${m.MaTN}, event)"></i>`;
+            actionsHtml += `<div class="msg-dropdown" id="dropdown-${m.MaTN}">
+                <div class="msg-dropdown-item" onclick="reactMessage(${m.MaTN}, '❤️')">❤️ Thả tim</div>
+                <div class="msg-dropdown-item" onclick="reactMessage(${m.MaTN}, '👍')">👍 Thích</div>
+                <div class="msg-dropdown-item" onclick="reactMessage(${m.MaTN}, '😂')">😂 Cười</div>
+                <div class="msg-dropdown-item" onclick="reactMessage(${m.MaTN}, '😮')">😮 Wow</div>
+                <div class="msg-dropdown-item" onclick="reactMessage(${m.MaTN}, '😢')">😢 Buồn</div>
+            </div>`;
+
+            actionsDiv.innerHTML = actionsHtml;
+            wrapper.appendChild(actionsDiv);
+        }
+
+        if (m.Reactions) {
+            const rDiv = document.createElement('div');
+            rDiv.className = 'msg-reactions';
+            rDiv.textContent = m.Reactions;
+            wrapper.appendChild(rDiv);
+        }
+
+        const isLast = index === messages.length - 1;
+        if (isLast && m.DaDoc) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'msg-status';
+            statusDiv.innerHTML = '<i class="fa-solid fa-check-double"></i> Đã xem';
+            wrapper.appendChild(statusDiv);
+        } else if (isLast && m.DaNhan) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'msg-status';
+            statusDiv.innerHTML = '<i class="fa-solid fa-check-double" style="color: #94a3b8"></i> Đã nhận';
+            wrapper.appendChild(statusDiv);
+        }
+    });
+
+    list.insertBefore(fragment, list.firstChild);
+}
+
 async function fetchPreview(url, msgId) {
     try {
         const res = await fetch(`${API_URL}/api/chat/link-preview?url=${encodeURIComponent(url)}`, { headers: getAuthHeaders() });
@@ -705,6 +941,7 @@ function scrollToBottom(smooth = true) {
     }, 50);
 }
 window.scrollToBottom = scrollToBottom;
+
 
 let lastMessageTime = 0;
 const MESSAGE_COOLDOWN_MS = 2000;
@@ -750,6 +987,7 @@ async function sendMessage(type = 'text', content = null) {
         socket.emit('send_message', { receiverId: currentPartnerId, text: text, type: type, replyToId: replyMessageId });
         if (type === 'text') {
             input.value = '';
+            input.style.height = 'auto';
             input.dispatchEvent(new Event('input'));
         }
         cancelReply();
@@ -1040,8 +1278,26 @@ function appendMessage(msg, isMe) {
     if (msg.LoaiTinNhan === 'image') {
         msgDiv.classList.add('msg-image');
         msgDiv.innerHTML = `<img src="${getAssetUrl(msg.NoiDung)}" onload="window.scrollToBottom(true)">`;
+    } else if (msg.LoaiTinNhan === 'audio') {
+        msgDiv.classList.add('msg-audio');
+        msgDiv.innerHTML = `<audio controls src="${getAssetUrl(msg.NoiDung)}"></audio>`;
+    } else if (msg.LoaiTinNhan === 'file') {
+        const parts = msg.NoiDung.split('|');
+        const url = parts[0];
+        const name = parts[1] || 'File đính kèm';
+        msgDiv.classList.add('msg-file');
+        msgDiv.innerHTML = `<i class="fa-solid fa-file"></i> <span class="msg-file-name">${name}</span> <a href="${getAssetUrl(url)}" download target="_blank" style="margin-left: auto; color: inherit;"><i class="fa-solid fa-download"></i></a>`;
     } else {
-        msgDiv.textContent = msg.NoiDung;
+        msgDiv.innerHTML = escapeHtmlAndLinkify(msg.NoiDung);
+        
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = msg.NoiDung.match(urlRegex);
+        if (urls && urls.length > 0) {
+            const url = urls[0];
+            const linkHtml = `<div class="link-preview-container" data-url="${url}"></div>`;
+            msgDiv.innerHTML += linkHtml;
+            fetchPreview(url, msg.MaTN);
+        }
     }
 
     wrapper.appendChild(msgDiv);

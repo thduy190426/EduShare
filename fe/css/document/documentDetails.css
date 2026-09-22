@@ -453,3 +453,16 @@ input, textarea { -webkit-user-select: auto; user-select: auto; }
 .modal-actions .btn-primary:disabled {
   cursor: not-allowed; opacity: 0.5;
 }
+
+#btn-bookmark:hover, #btn-share:hover, #btn-verify:hover, #btn-more-options:hover {
+  background-color: #f1f5f9 !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+#btn-bookmark:active, #btn-share:active, #btn-verify:active, #btn-more-options:active {
+  transform: translateY(0);
+  box-shadow: none;
+}

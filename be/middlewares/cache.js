@@ -3,8 +3,9 @@ const { getRedisClient } = require('../config/redis');
 /**
  * Middleware để cache các request GET
  * @param {number} duration Thời gian cache (giây)
+ * @param {boolean} isGlobal Cờ để đánh dấu cache toàn cục (không dùng userId)
  */
-const cacheMiddleware = (duration = 60) => {
+const cacheMiddleware = (duration = 60, isGlobal = false) => {
     return async (req, res, next) => {
         if (req.method !== 'GET') {
             return next();
@@ -17,7 +18,8 @@ const cacheMiddleware = (duration = 60) => {
 
         try {
             const userId = req.user ? req.user.MaND : 'guest';
-            const key = `cache:${userId}:${req.originalUrl || req.url}`;
+            const urlPath = req.originalUrl || req.url;
+            const key = isGlobal ? `cache:global:${urlPath}` : `cache:${userId}:${urlPath}`;
 
             const cachedResponse = await redisClient.get(key);
 
@@ -45,4 +47,30 @@ const cacheMiddleware = (duration = 60) => {
     };
 };
 
-module.exports = { cacheMiddleware };
+const deleteCacheByPattern = async (pattern) => {
+    const redisClient = getRedisClient();
+    if (!redisClient) return;
+
+    try {
+        const stream = redisClient.scanStream({
+            match: pattern,
+            count: 100
+        });
+
+        stream.on('data', (keys) => {
+            if (keys.length) {
+                const pipeline = redisClient.pipeline();
+                keys.forEach((key) => pipeline.del(key));
+                pipeline.exec();
+            }
+        });
+
+        stream.on('end', () => {
+            console.log(`Đã dọn dẹp cache cho pattern: ${pattern}`);
+        });
+    } catch (error) {
+        console.error('Lỗi xóa cache bằng pattern:', error);
+    }
+};
+
+module.exports = { cacheMiddleware, deleteCacheByPattern };

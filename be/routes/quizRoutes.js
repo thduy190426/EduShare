@@ -136,8 +136,12 @@ router.get('/subject/:subjectId', authMiddleware, cacheMiddleware(30), async (re
 
 router.get('/:id/stats', teacherMiddleware, async (req, res) => {
     try {
-        const result = await getQuizService(req).getQuizStats(req.params.id);
-        res.json(result);
+        const results = await getQuizService(req).getQuizStats(req.params.id);
+        const quizInfo = await getQuizService(req).getQuizById(req.params.id);
+        res.json({
+            quiz: quizInfo,
+            stats: results
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Lỗi server' });

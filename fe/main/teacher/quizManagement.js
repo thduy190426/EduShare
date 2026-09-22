@@ -143,6 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <button class="btn btn-secondary btn-sm" onclick="editQuiz(${q.MaQuiz})"><i class="fa-solid fa-pen"></i> Sửa</button>
                         </div>
                         <div class="quiz-actions-right">
+                            <a href="../teacher/quizStats.html?id=${q.MaQuiz}" class="quiz-btn-icon stats" title="Thống kê chi tiết" style="color: var(--primary);"><i class="fa-solid fa-chart-pie"></i></a>
                             <button class="quiz-btn-icon excel" onclick="exportStats(${q.MaQuiz}, 'xlsx')" title="Xuất Excel"><i class="fa-solid fa-file-excel"></i></button>
                             <button class="quiz-btn-icon csv" onclick="exportStats(${q.MaQuiz}, 'csv')" title="Xuất CSV"><i class="fa-solid fa-file-csv"></i></button>
                             <button class="quiz-btn-icon delete" onclick="deleteQuiz(${q.MaQuiz})" title="Xóa đề thi"><i class="fa-solid fa-trash"></i></button>

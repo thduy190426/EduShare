@@ -325,7 +325,7 @@ class QuizService {
             `SELECT k.MaKetQua, k.MaND, u.HoTen, u.Email, k.DiemSo, k.ThoiGianBatDau, k.ThoiGianNopBai
              FROM KETQUA_QUIZ k
              JOIN NGUOIDUNG u ON k.MaND = u.MaND
-             WHERE k.MaQuiz = ? AND k.TrangThai = 'DaNop'
+             WHERE k.MaQuiz = ? AND k.TrangThai = 'DaNop' AND u.VaiTro = 'SinhVien'
              ORDER BY k.ThoiGianNopBai DESC`,
             [quizId]
         );

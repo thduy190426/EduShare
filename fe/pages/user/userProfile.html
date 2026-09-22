@@ -9,7 +9,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
   <link rel="stylesheet" href="../../css/user/userProfile.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
   <link rel="stylesheet" href="../../css/shared/sidebar.css">
   <script>if (localStorage.getItem('sidebar-collapsed') === 'true') { document.documentElement.classList.add('sidebar-collapsed'); }</script>
 </head>
@@ -71,31 +72,68 @@
 
         <div class="profile-info">
           <h1 class="profile-name">
-            <span style="display: flex; align-items: center; gap: 8px;"><span id="header-name">Đang tải...</span> <span id="header-badge"></span></span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span id="header-name">Đang tải...</span> <span
+                id="header-badge"></span></span>
             <span class="role-badge" id="header-role">...</span>
           </h1>
-          <div class="profile-desc">
-            <span><i class="fa-solid fa-envelope" style="width: 16px; text-align: center; margin-right: 6px;"></i> <span
-                id="header-email">...</span></span>
-            <span style="margin: 0 10px; color: var(--border);">|</span>
-            <span style="cursor:pointer; color: var(--primary);"
-              onclick="window.openFollowModal && window.openFollowModal('followers')"><i class="fa-solid fa-users "
-                style="width: 16px; text-align: center; margin-right: 8px;"></i>
-              Người theo dõi: <strong id="count-followers">0</strong></span>
-            <span style="margin: 0 10px; color: var(--border);">|</span>
-            <span style="cursor:pointer; color: var(--primary);"
-              onclick="window.openFollowModal && window.openFollowModal('following')"><i class="fa-solid fa-user-check"
-                style="width: 16px; text-align: center; margin-right: 8px;"></i> Đang theo dõi: <strong
-                id="count-following">0</strong></span>
-            <span id="coin-ui-container">
-                <span style="margin: 0 10px; color: var(--border);">|</span>
-                <span style="color: #D97706; display: inline-flex; align-items: center;" title="Số dư xu"><i class="fa-solid fa-coins"
-                    style="width: 16px; text-align: center; margin-right: 8px;"></i> Số dư: &nbsp;<strong
-                    id="header-soduxu">0</strong> &nbsp;Xu</span>
-                <button type="button" id="btn-topup" class="btn btn-primary" onclick="document.body.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; document.body.style.opacity = '0'; document.body.style.transform = 'translateY(-10px)'; setTimeout(() => { window.location.href = 'buyCoins.html'; setTimeout(() => { document.body.style.opacity = '1'; document.body.style.transform = 'none'; }, 100); }, 300);" style="margin-left: 8px; padding: 2px 8px; font-size: 12px; background: #FFFBEB; color: #D97706; border: 1px solid #FCD34D; border-radius: 4px; font-weight: 600;"><i class="fa-solid fa-plus" style="margin-right: 4px;"></i>Nạp thêm xu</button>
-            </span>
-            <span id="header-premium-status" style="display:none; margin: 0 10px; color: #EAB308; font-weight: 600;"><i class="fa-solid fa-crown" style="margin-right: 6px;"></i><span id="header-premium-text"></span></span>
-            <button type="button" id="btn-buy-premium" class="btn btn-primary" onclick="window.buyPremium()" style="display:none; margin-left: 10px; padding: 4px 10px; font-size: 13px; background: #EAB308; border-color: #EAB308;"><i class="fa-solid fa-crown" style="margin-right: 4px;"></i>Nâng cấp Premium</button>
+          <div class="profile-desc"
+            style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px;">
+            <!-- Email -->
+            <div
+              style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-secondary); border-radius: 20px; font-size: 13px; color: var(--text-secondary); border: 1px solid var(--border);">
+              <i class="fa-solid fa-envelope"></i>
+              <span id="header-email">...</span>
+            </div>
+
+            <!-- Followers -->
+            <div
+              style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(79, 70, 229, 0.05); border-radius: 20px; font-size: 13px; color: var(--primary); border: 1px solid rgba(79, 70, 229, 0.1); cursor: pointer; transition: all 0.2s;"
+              onclick="window.openFollowModal && window.openFollowModal('followers')"
+              onmouseover="this.style.background='rgba(79, 70, 229, 0.1)'"
+              onmouseout="this.style.background='rgba(79, 70, 229, 0.05)'">
+              <i class="fa-solid fa-users"></i>
+              <span>Người theo dõi: <strong id="count-followers">0</strong></span>
+            </div>
+
+            <!-- Following -->
+            <div
+              style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(79, 70, 229, 0.05); border-radius: 20px; font-size: 13px; color: var(--primary); border: 1px solid rgba(79, 70, 229, 0.1); cursor: pointer; transition: all 0.2s;"
+              onclick="window.openFollowModal && window.openFollowModal('following')"
+              onmouseover="this.style.background='rgba(79, 70, 229, 0.1)'"
+              onmouseout="this.style.background='rgba(79, 70, 229, 0.05)'">
+              <i class="fa-solid fa-user-check"></i>
+              <span>Đang theo dõi: <strong id="count-following">0</strong></span>
+            </div>
+
+            <!-- Balance -->
+            <div id="coin-ui-container"
+              style="display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: #FFFBEB; border-radius: 20px; font-size: 13px; color: #D97706; border: 1px solid #FDE68A;">
+              <span style="display: flex; align-items: center; gap: 6px;" title="Số dư xu">
+                <i class="fa-solid fa-coins"></i>
+                <span>Số dư: <strong id="header-soduxu">0</strong> Xu</span>
+              </span>
+              <button type="button" id="btn-topup"
+                onclick="document.body.style.transition = 'opacity 0.3s ease, transform 0.3s ease'; document.body.style.opacity = '0'; document.body.style.transform = 'translateY(-10px)'; setTimeout(() => { window.location.href = 'buyCoins.html'; setTimeout(() => { document.body.style.opacity = '1'; document.body.style.transform = 'none'; }, 100); }, 300);"
+                style="padding: 4px 10px; font-size: 12px; background: #F59E0B; color: white; border: none; border-radius: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 4px;"
+                onmouseover="this.style.background='#D97706'" onmouseout="this.style.background='#F59E0B'">
+                <i class="fa-solid fa-plus"></i> Nạp
+              </button>
+            </div>
+
+            <!-- Premium Status -->
+            <div id="header-premium-status"
+              style="display:none; align-items: center; gap: 6px; padding: 6px 12px; background: #FEFCE8; border-radius: 20px; font-size: 13px; color: #EAB308; border: 1px solid #FEF08A; font-weight: 600;">
+              <i class="fa-solid fa-crown"></i>
+              <span id="header-premium-text"></span>
+            </div>
+
+            <!-- Buy Premium Button -->
+            <button type="button" id="btn-buy-premium" onclick="window.buyPremium()"
+              style="display:none; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; background: linear-gradient(135deg, #F59E0B, #EAB308); color: white; border: none; border-radius: 20px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2); transition: all 0.2s;"
+              onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 6px rgba(245, 158, 11, 0.3)'"
+              onmouseout="this.style.transform='none'; this.style.boxShadow='0 2px 4px rgba(245, 158, 11, 0.2)'">
+              <i class="fa-solid fa-crown"></i> Nâng cấp Premium
+            </button>
           </div>
         </div>
       </div>
@@ -155,16 +193,24 @@
             </div>
           </div>
           <div class="form-row" style="margin-top: 25px; margin-bottom: 10px; grid-template-columns: 1fr;">
-            <div class="form-group" style="padding: 15px; background: var(--bg-secondary); border-radius: var(--radius-btn); border: 1px solid var(--border);">
-              <label class="form-label" style="font-weight: 600; color: var(--primary); margin-bottom: 12px; display: block;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Quyền riêng tư (Privacy Settings)</label>
+            <div class="form-group"
+              style="padding: 15px; background: var(--bg-secondary); border-radius: var(--radius-btn); border: 1px solid var(--border);">
+              <label class="form-label"
+                style="font-weight: 600; color: var(--primary); margin-bottom: 12px; display: block;"><i
+                  class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Quyền riêng tư (Privacy
+                Settings)</label>
               <div style="display: flex; flex-direction: column; gap: 12px;">
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                  <input type="checkbox" id="input-privacy-downloads" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" checked>
-                  <span style="font-size: 14.5px;">Hiển thị danh sách <b>tài liệu đã tải xuống</b> trên trang cá nhân</span>
+                  <input type="checkbox" id="input-privacy-downloads"
+                    style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" checked>
+                  <span style="font-size: 14.5px;">Hiển thị danh sách <b>tài liệu đã tải xuống</b> trên trang cá
+                    nhân</span>
                 </label>
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                  <input type="checkbox" id="input-privacy-ratings" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" checked>
-                  <span style="font-size: 14.5px;">Hiển thị danh sách <b>tài liệu đã đánh giá</b> trên trang cá nhân</span>
+                  <input type="checkbox" id="input-privacy-ratings"
+                    style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);" checked>
+                  <span style="font-size: 14.5px;">Hiển thị danh sách <b>tài liệu đã đánh giá</b> trên trang cá
+                    nhân</span>
                 </label>
               </div>
             </div>
@@ -176,194 +222,262 @@
         </form>
       </div>
 
-      <div class="form-card" id="change-password-section" style="border-left: 4px solid var(--primary);">
-        <div class="collapsible-header" id="btn-toggle-pwd" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-lock" style="color: var(--primary); margin-right: 5px;"></i> Đổi mật khẩu</h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; font-weight: 400;">Cập nhật mật khẩu mới để bảo vệ tài khoản của bạn.</p>
-          </div>
-          <span class="toggle-status"
-            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
-            <span class="toggle-text">Mở rộng</span>
-            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
-          </span>
-        </div>
+      <style>
+        .settings-accordion-wrapper {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-bottom: 24px;
+        }
 
-        <div class="collapsible-content" id="pwd-content">
-          <form>
-            <div id="change-pw-wrapper" class="form-group">
-              <label class="form-label">Mật khẩu hiện tại</label>
-              <div style="position: relative;">
-                <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
-                  autocomplete="current-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
-                <i class="fa-regular fa-eye-slash toggle-password"
-                  style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
-              </div>
+        .settings-accordion-wrapper .form-card {
+          margin-bottom: 0 !important;
+          padding: 0 !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+        }
+
+        .settings-accordion-wrapper .collapsible-header {
+          padding: 16px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .settings-accordion-wrapper .collapsible-header p {
+          margin-bottom: 0;
+        }
+
+        .settings-accordion-wrapper .collapsible-content {
+          padding: 16px 20px 20px 20px;
+        }
+
+        .settings-accordion-wrapper .card-title {
+          font-size: 15px !important;
+        }
+      </style>
+      <div class="settings-accordion-wrapper">
+        <div class="form-card" id="change-password-section" style="border-left: 4px solid var(--primary);">
+          <div class="collapsible-header" id="btn-toggle-pwd" style="cursor: pointer;">
+            <div>
+              <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i
+                  class="fa-solid fa-lock" style="color: var(--primary); margin-right: 5px;"></i> Đổi mật khẩu</h2>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0; font-weight: 400;">Cập nhật mật
+                khẩu mới để bảo vệ tài khoản của bạn.</p>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Mật khẩu mới</label>
+            <span class="toggle-status"
+              style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+              <span class="toggle-text">Mở rộng</span>
+              <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+            </span>
+          </div>
+
+          <div class="collapsible-content" id="pwd-content">
+            <form>
+              <div id="change-pw-wrapper" class="form-group">
+                <label class="form-label">Mật khẩu hiện tại</label>
                 <div style="position: relative;">
-                  <input type="password" id="input-new-pw" class="form-control" placeholder="Mật khẩu mới"
-                    autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
+                  <input type="password" id="input-old-pw" class="form-control" placeholder="Nhập mật khẩu hiện tại"
+                    autocomplete="current-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
                   <i class="fa-regular fa-eye-slash toggle-password"
                     style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
                 </div>
               </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Mật khẩu mới</label>
+                  <div style="position: relative;">
+                    <input type="password" id="input-new-pw" class="form-control" placeholder="Mật khẩu mới"
+                      autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
+                    <i class="fa-regular fa-eye-slash toggle-password"
+                      style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Xác nhận mật khẩu mới</label>
+                  <div style="position: relative;">
+                    <input type="password" id="input-confirm-pw" class="form-control"
+                      placeholder="Nhập lại mật khẩu mới" autocomplete="new-password"
+                      style="padding-right: 40px; width: 100%; box-sizing: border-box;">
+                    <i class="fa-regular fa-eye-slash toggle-password"
+                      style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label" style="display: flex; align-items: center; gap: 6px;"><i
+                    class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Mã xác thực OTP</label>
+                <div style="display: flex; gap: 12px;">
+                  <input type="text" id="input-change-pw-otp" class="form-control" placeholder="Nhập mã OTP 6 số"
+                    style="flex: 1;" maxlength="6">
+                  <button type="button" id="btn-send-pw-otp" class="btn-secondary"
+                    style="white-space: nowrap; margin-right: 4px"><i class="fa-solid fa-paper-plane"
+                      style="margin-right: 6px;"></i> Gửi mã OTP</button>
+                </div>
+                <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về
+                  email
+                  hiện tại của bạn để xác thực.</small>
+              </div>
+              <div class="form-actions">
+                <button type="button" id="btn-change-pw" class="btn-primary" disabled
+                  style="opacity: 0.5; cursor: not-allowed;"><i class="fa-solid fa-key" style="margin-right: 6px;"></i>
+                  Cập nhật mật khẩu</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="form-card" id="twofa-section" style="border-left: 4px solid #10b981;">
+          <div class="collapsible-header" id="btn-toggle-2fa" style="cursor: pointer;">
+            <div>
+              <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i
+                  class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Xác thực 2 bước (2FA)</h2>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0; font-weight: 400;">Tăng cường
+                bảo mật với lớp bảo vệ thứ hai khi đăng nhập.</p>
+            </div>
+            <span class="toggle-status"
+              style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+              <span class="toggle-text">Mở rộng</span>
+              <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+            </span>
+          </div>
+
+          <div class="collapsible-content" id="twofa-content">
+            <div style="padding: 10px 0;">
+              <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Tăng cường bảo mật cho tài
+                khoản của bạn bằng cách yêu cầu mã xác thực từ ứng dụng Google Authenticator hoặc Authy mỗi khi đăng
+                nhập.</p>
+              <button type="button" id="btn-setup-2fa" class="btn-primary" style="background-color: #10b981;"><i
+                  class="fa-solid fa-qrcode" style="margin-right: 6px;"></i> Thiết lập 2FA</button>
+              <button type="button" id="btn-disable-2fa" class="btn-primary"
+                style="background-color: #ef4444; display: none;"><i class="fa-solid fa-shield-halved"
+                  style="margin-right: 6px;"></i> Tắt 2FA</button>
+              <div id="2fa-status-msg" style="margin-top: 10px; font-weight: 600; color: #10b981; display: none;"><i
+                  class="fa-solid fa-circle-check"></i> Xác thực 2 bước đang được BẬT</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card" id="sessions-section" style="border-left: 4px solid #3b82f6;">
+          <div class="collapsible-header" id="btn-toggle-sessions" style="cursor: pointer;">
+            <div>
+              <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i
+                  class="fa-solid fa-desktop" style="color: #3b82f6;"></i> Quản lý thiết bị</h2>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0; font-weight: 400;">Quản lý và
+                đăng xuất các phiên hoạt động trên các thiết bị khác.</p>
+            </div>
+            <span class="toggle-status"
+              style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+              <span class="toggle-text">Mở rộng</span>
+              <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+            </span>
+          </div>
+
+          <div class="collapsible-content" id="sessions-content">
+            <div style="padding: 10px 0;">
+              <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Quản lý các thiết bị và
+                trình duyệt đang đăng nhập vào tài khoản của bạn. Đăng xuất các phiên lạ để bảo vệ tài khoản.</p>
+              <div id="sessions-list" style="display: flex; flex-direction: column; gap: 12px;">
+                <p>Đang tải danh sách thiết bị...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="form-card" id="upgrade-teacher-section"
+          style="display: none; border-left: 4px solid var(--primary);">
+          <div class="collapsible-header" id="upgrade-teacher-header" style="cursor: pointer;">
+            <div>
+              <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-chalkboard-user" style="color: var(--primary); margin-right: 8px;"></i> Bạn muốn
+                trở thành Giáo viên?
+              </h2>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Nâng cấp tài khoản để có quyền
+                xác minh và kiểm duyệt tài liệu.</p>
+            </div>
+            <span class="toggle-status"
+              style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+              <span class="toggle-text">Mở rộng</span>
+              <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+            </span>
+          </div>
+
+          <div class="collapsible-content" id="upgrade-teacher-content">
+            <div id="upgrade-status-container"
+              style="margin-bottom: 20px; display: none; padding: 12px 16px; border-radius: 8px; font-weight: 500; font-size: 14px;">
+
+            </div>
+
+            <form id="form-upgrade-teacher">
               <div class="form-group">
-                <label class="form-label">Xác nhận mật khẩu mới</label>
-                <div style="position: relative;">
-                  <input type="password" id="input-confirm-pw" class="form-control" placeholder="Nhập lại mật khẩu mới"
-                    autocomplete="new-password" style="padding-right: 40px; width: 100%; box-sizing: border-box;">
-                  <i class="fa-regular fa-eye-slash toggle-password"
-                    style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #6b7280;"></i>
+                <label class="form-label">Minh chứng Giáo viên (Ảnh)</label>
+                <div id="proof-upload-zone" class="file-upload-wrapper"
+                  style="border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; background: var(--bg-secondary); cursor: pointer;"
+                  onclick="document.getElementById('input-upgrade-proof').click()">
+                  <i class="fa-solid fa-cloud-arrow-up"
+                    style="font-size: 32px; color: var(--primary); margin-bottom: 12px;"></i>
+                  <p style="font-weight: 500; margin-bottom: 4px;">Bấm để chọn ảnh minh chứng</p>
+                  <p style="font-size: 13px; color: var(--text-secondary);">Thẻ giảng viên, chứng chỉ giảng dạy,... (Chỉ
+                    nhận file ảnh)</p>
+                </div>
+                <input type="file" id="input-upgrade-proof" accept="image/*" style="display: none;">
+
+                <div id="proof-preview-zone"
+                  style="display: none; border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--bg-secondary); text-align: center; margin-top: 10px;">
+                  <img id="proof-preview-img"
+                    style="max-width: 100%; max-height: 250px; object-fit: contain; border-radius: 4px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                  <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button type="button" class="btn-secondary"
+                      onclick="document.getElementById('input-upgrade-proof').click()"
+                      style="padding: 8px 16px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); border-radius: 6px; background: white;">
+                      <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Đổi ảnh khác
+                    </button>
+                    <button type="button" class="btn-danger" id="btn-remove-proof"
+                      style="padding: 8px 16px; font-size: 13px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                      <i class="fa-solid fa-trash" style="margin-right: 4px;"></i> Xóa ảnh này
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="form-group" style="margin-top: 16px;">
-              <label class="form-label" style="display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Mã xác thực OTP</label>
-              <div style="display: flex; gap: 12px;">
-                <input type="text" id="input-change-pw-otp" class="form-control" placeholder="Nhập mã OTP 6 số"
-                  style="flex: 1;" maxlength="6">
-                <button type="button" id="btn-send-pw-otp" class="btn-secondary"
-                  style="white-space: nowrap; margin-right: 4px"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP</button>
+
+              <div class="form-actions" style="margin-top: 16px;">
+                <button type="button" id="btn-submit-upgrade" class="btn-primary"
+                  style="width: 100%; opacity: 0.5; cursor: not-allowed;" disabled>
+                  <i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi yêu cầu duyệt
+                </button>
               </div>
-              <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email
-                hiện tại của bạn để xác thực.</small>
+            </form>
+          </div>
+        </div>
+
+        <div class="form-card" id="deactivate-account-section" style="border-left: 4px solid var(--danger);">
+          <div class="card-header collapsible-header"
+            onclick="document.getElementById('deactivate-account-content').classList.toggle('expanded'); this.querySelector('.toggle-icon').style.transform = document.getElementById('deactivate-account-content').classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)'; this.querySelector('.toggle-text').textContent = document.getElementById('deactivate-account-content').classList.contains('expanded') ? 'Thu gọn' : 'Mở rộng';"
+            style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h2 class="card-title"
+                style="margin: 0; display: flex; align-items: center; gap: 8px; color: var(--danger);">
+                <i class="fa-solid fa-user-slash" style="color: var(--danger);"></i> Vô hiệu hóa tài khoản
+              </h2>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                Khi vô hiệu hóa, tài khoản của bạn sẽ bị đăng xuất và không thể đăng nhập lại. Các tài liệu của bạn vẫn
+                sẽ tồn tại.
+              </p>
             </div>
-            <div class="form-actions">
-              <button type="button" id="btn-change-pw" class="btn-primary" disabled
-                style="opacity: 0.5; cursor: not-allowed;"><i class="fa-solid fa-key" style="margin-right: 6px;"></i>
-                Cập nhật mật khẩu</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <div class="form-card" id="twofa-section" style="border-left: 4px solid #10b981;">
-        <div class="collapsible-header" id="btn-toggle-2fa" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-shield-cat" style="color: #10b981;"></i> Xác thực 2 bước (2FA)</h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; font-weight: 400;">Tăng cường bảo mật với lớp bảo vệ thứ hai khi đăng nhập.</p>
+            <span style="color: var(--text-secondary); font-size: 13px; display: flex; align-items: center; gap: 6px;">
+              <span class="toggle-text">Mở rộng</span>
+              <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
+            </span>
           </div>
-          <span class="toggle-status"
-            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
-            <span class="toggle-text">Mở rộng</span>
-            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
-          </span>
-        </div>
-
-        <div class="collapsible-content" id="twofa-content">
-          <div style="padding: 10px 0;">
-            <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Tăng cường bảo mật cho tài khoản của bạn bằng cách yêu cầu mã xác thực từ ứng dụng Google Authenticator hoặc Authy mỗi khi đăng nhập.</p>
-            <button type="button" id="btn-setup-2fa" class="btn-primary" style="background-color: #10b981;"><i class="fa-solid fa-qrcode" style="margin-right: 6px;"></i> Thiết lập 2FA</button>
-            <button type="button" id="btn-disable-2fa" class="btn-primary" style="background-color: #ef4444; display: none;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i> Tắt 2FA</button>
-            <div id="2fa-status-msg" style="margin-top: 10px; font-weight: 600; color: #10b981; display: none;"><i class="fa-solid fa-circle-check"></i> Xác thực 2 bước đang được BẬT</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-card" id="sessions-section" style="border-left: 4px solid #3b82f6;">
-        <div class="collapsible-header" id="btn-toggle-sessions" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-desktop" style="color: #3b82f6;"></i> Quản lý thiết bị</h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; font-weight: 400;">Quản lý và đăng xuất các phiên hoạt động trên các thiết bị khác.</p>
-          </div>
-          <span class="toggle-status"
-            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
-            <span class="toggle-text">Mở rộng</span>
-            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
-          </span>
-        </div>
-
-        <div class="collapsible-content" id="sessions-content">
-          <div style="padding: 10px 0;">
-            <p style="margin-bottom: 15px; color: var(--text-secondary); line-height: 1.5;">Quản lý các thiết bị và trình duyệt đang đăng nhập vào tài khoản của bạn. Đăng xuất các phiên lạ để bảo vệ tài khoản.</p>
-            <div id="sessions-list" style="display: flex; flex-direction: column; gap: 12px;">
-              <p>Đang tải danh sách thiết bị...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      <div class="form-card" id="upgrade-teacher-section" style="display: none; border-left: 4px solid var(--primary);">
-        <div class="collapsible-header" id="upgrade-teacher-header" style="cursor: pointer;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
-              <i class="fa-solid fa-chalkboard-user" style="color: var(--primary); margin-right: 8px;"></i> Bạn muốn trở thành Giáo viên?
-            </h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Nâng cấp tài khoản để có quyền
-              xác minh và kiểm duyệt tài liệu.</p>
-          </div>
-          <span class="toggle-status"
-            style="color:var(--text-secondary); display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
-            <span class="toggle-text">Mở rộng</span>
-            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
-          </span>
-        </div>
-
-        <div class="collapsible-content" id="upgrade-teacher-content">
-          <div id="upgrade-status-container"
-            style="margin-bottom: 20px; display: none; padding: 12px 16px; border-radius: 8px; font-weight: 500; font-size: 14px;">
-
-          </div>
-
-          <form id="form-upgrade-teacher">
-            <div class="form-group">
-              <label class="form-label">Minh chứng Giáo viên (Ảnh)</label>
-              <div id="proof-upload-zone" class="file-upload-wrapper"
-                style="border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; background: var(--bg-secondary); cursor: pointer;"
-                onclick="document.getElementById('input-upgrade-proof').click()">
-                <i class="fa-solid fa-cloud-arrow-up"
-                  style="font-size: 32px; color: var(--primary); margin-bottom: 12px;"></i>
-                <p style="font-weight: 500; margin-bottom: 4px;">Bấm để chọn ảnh minh chứng</p>
-                <p style="font-size: 13px; color: var(--text-secondary);">Thẻ giảng viên, chứng chỉ giảng dạy,... (Chỉ nhận file ảnh)</p>
-              </div>
-              <input type="file" id="input-upgrade-proof" accept="image/*" style="display: none;">
-              
-              <div id="proof-preview-zone" style="display: none; border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--bg-secondary); text-align: center; margin-top: 10px;">
-                <img id="proof-preview-img" style="max-width: 100%; max-height: 250px; object-fit: contain; border-radius: 4px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
-                <div style="display: flex; gap: 12px; justify-content: center;">
-                  <button type="button" class="btn-secondary" onclick="document.getElementById('input-upgrade-proof').click()" style="padding: 8px 16px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); border-radius: 6px; background: white;">
-                    <i class="fa-solid fa-pen" style="margin-right: 4px;"></i> Đổi ảnh khác
-                  </button>
-                  <button type="button" class="btn-danger" id="btn-remove-proof" style="padding: 8px 16px; font-size: 13px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                    <i class="fa-solid fa-trash" style="margin-right: 4px;"></i> Xóa ảnh này
-                  </button>
-                </div>
-              </div>
-            </div>
-
+          <div class="collapsible-content" id="deactivate-account-content">
             <div class="form-actions" style="margin-top: 16px;">
-              <button type="button" id="btn-submit-upgrade" class="btn-primary" style="width: 100%; opacity: 0.5; cursor: not-allowed;" disabled>
-                <i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi yêu cầu duyệt
+              <button type="button" id="btn-deactivate-account" class="btn-danger"
+                style="padding: 10px 16px; font-weight: 500; font-size: 14px; background-color: var(--danger); color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s;">
+                <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> Vô hiệu hóa tài khoản
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-
-      <div class="form-card" id="deactivate-account-section" style="border-left: 4px solid var(--danger);">
-        <div class="card-header collapsible-header" onclick="document.getElementById('deactivate-account-content').classList.toggle('expanded'); this.querySelector('.toggle-icon').style.transform = document.getElementById('deactivate-account-content').classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)'; this.querySelector('.toggle-text').textContent = document.getElementById('deactivate-account-content').classList.contains('expanded') ? 'Thu gọn' : 'Mở rộng';" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h2 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px; color: var(--danger);">
-              <i class="fa-solid fa-user-slash" style="color: var(--danger);"></i> Vô hiệu hóa tài khoản
-            </h2>
-            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-              Khi vô hiệu hóa, tài khoản của bạn sẽ bị đăng xuất và không thể đăng nhập lại. Các tài liệu của bạn vẫn sẽ tồn tại.
-            </p>
-          </div>
-          <span style="color: var(--text-secondary); font-size: 13px; display: flex; align-items: center; gap: 6px;">
-            <span class="toggle-text">Mở rộng</span>
-            <i class="fa-solid fa-chevron-down toggle-icon" style="transition: transform 0.3s ease;"></i>
-          </span>
-        </div>
-        <div class="collapsible-content" id="deactivate-account-content">
-          <div class="form-actions" style="margin-top: 16px;">
-            <button type="button" id="btn-deactivate-account" class="btn-danger" style="padding: 10px 16px; font-weight: 500; font-size: 14px; background-color: var(--danger); color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s;">
-              <i class="fa-solid fa-triangle-exclamation" style="margin-right: 6px;"></i> Vô hiệu hóa tài khoản
-            </button>
           </div>
         </div>
       </div>
@@ -371,28 +485,46 @@
 
       <div class="form-card">
 
-        <div class="tabs-container" style="position: relative; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-          <div class="tab-item active" id="tab-my-docs" style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
+        <div class="tabs-container"
+          style="position: relative; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+          <div class="tab-item active" id="tab-my-docs"
+            style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
             <i class="fa-solid fa-folder-open" style="margin-right: 6px;"></i> Tài liệu của tôi
           </div>
-          <div class="tab-item" id="tab-bookmarks" style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
+          <div class="tab-item" id="tab-bookmarks"
+            style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
             <i class="fa-solid fa-bookmark" style="margin-right: 6px;"></i> Tài liệu đã lưu
           </div>
-          <div class="tab-item" id="tab-collections" style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
+          <div class="tab-item" id="tab-collections"
+            style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
             <i class="fa-solid fa-folder" style="margin-right: 6px;"></i> Bộ sưu tập
           </div>
-          <div class="tab-item" id="tab-purchased" style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
+          <div class="tab-item" id="tab-purchased"
+            style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
             <i class="fa-solid fa-crown" style="margin-right: 6px;"></i> Tài liệu PREMIUM
           </div>
-          <div class="tab-item" id="tab-my-reports" style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
+          <div class="tab-item" id="tab-my-reports"
+            style="cursor: pointer; padding-bottom: 12px; font-weight: 500; font-size: 15px; transition: color 0.3s;">
             <i class="fa-solid fa-flag" style="margin-right: 6px;"></i> Báo cáo vi phạm
           </div>
-          <div id="user-tab-indicator" style="position: absolute; bottom: -1px; left: 0; height: 3px; background-color: var(--primary); border-radius: 3px 3px 0 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); width: 0;"></div>
+          <div id="user-tab-indicator"
+            style="position: absolute; bottom: -1px; left: 0; height: 3px; background-color: var(--primary); border-radius: 3px 3px 0 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); width: 0;">
+          </div>
         </div>
         <style>
-          .tabs-container::-webkit-scrollbar { display: none; }
-          .tab-item { position: relative; z-index: 1; color: var(--text-secondary); }
-          .tab-item.active { color: var(--primary); }
+          .tabs-container::-webkit-scrollbar {
+            display: none;
+          }
+
+          .tab-item {
+            position: relative;
+            z-index: 1;
+            color: var(--text-secondary);
+          }
+
+          .tab-item.active {
+            color: var(--primary);
+          }
         </style>
 
         <div class="doc-list" id="my-docs-container">
@@ -404,14 +536,19 @@
         </div>
 
         <div class="doc-list" id="collections-container" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 10px 0;">
-            <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-              <div style="width: 36px; height: 36px; background: #EEF2FF; color: #4F46E5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 10px 0;">
+            <h3
+              style="margin: 0; font-size: 18px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+              <div
+                style="width: 36px; height: 36px; background: #EEF2FF; color: #4F46E5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">
                 <i class="fa-solid fa-layer-group"></i>
               </div>
               Danh sách Bộ sưu tập
             </h3>
-            <button id="btn-create-collection" class="btn-primary" style="padding: 10px 20px; font-size: 14px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);"><i class="fa-solid fa-plus"></i> Tạo mới</button>
+            <button id="btn-create-collection" class="btn-primary"
+              style="padding: 10px 20px; font-size: 14px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);"><i
+                class="fa-solid fa-plus"></i> Tạo mới</button>
           </div>
         </div>
 
@@ -440,30 +577,50 @@
     </main>
   </div>
 
-  <div id="create-collection-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;" onclick="if(event.target === this) { window.closeCreateCollectionModal(); }">
-    <div class="modal-content" style="background: var(--white); width: 100%; max-width: 500px; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
+  <div id="create-collection-modal" class="modal-overlay"
+    style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 999; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;"
+    onclick="if(event.target === this) { window.closeCreateCollectionModal(); }">
+    <div class="modal-content"
+      style="background: var(--white); width: 100%; max-width: 500px; border-radius: 16px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h3 style="margin: 0; font-size: 20px; color: #1E293B; font-weight: 700;">Tạo Bộ sưu tập mới</h3>
-        <i class="fa-solid fa-times" style="cursor: pointer; color: var(--text-secondary); font-size: 20px; padding: 4px;" onclick="window.closeCreateCollectionModal();"></i>
+        <i class="fa-solid fa-times"
+          style="cursor: pointer; color: var(--text-secondary); font-size: 20px; padding: 4px;"
+          onclick="window.closeCreateCollectionModal();"></i>
       </div>
       <div class="form-group" style="margin-bottom: 20px;">
-        <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #475569;"><i class="fa-solid fa-font" style="color: #64748B;"></i> Tên bộ sưu tập <span style="color: #EF4444;">*</span></label>
-        <input type="text" id="input-collection-name" class="form-control" placeholder="Nhập tên bộ sưu tập" style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 15px;">
+        <label class="form-label"
+          style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #475569;"><i
+            class="fa-solid fa-font" style="color: #64748B;"></i> Tên bộ sưu tập <span
+            style="color: #EF4444;">*</span></label>
+        <input type="text" id="input-collection-name" class="form-control" placeholder="Nhập tên bộ sưu tập"
+          style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 15px;">
       </div>
       <div class="form-group" style="margin-bottom: 24px;">
-        <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #475569;"><i class="fa-solid fa-align-left" style="color: #64748B;"></i> Mô tả (Tùy chọn)</label>
-        <textarea id="input-collection-desc" class="form-control" rows="5" placeholder="Nhập mô tả cho bộ sưu tập này..." style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 15px; resize: vertical;"></textarea>
+        <label class="form-label"
+          style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #475569;"><i
+            class="fa-solid fa-align-left" style="color: #64748B;"></i> Mô tả (Tùy chọn)</label>
+        <textarea id="input-collection-desc" class="form-control" rows="5"
+          placeholder="Nhập mô tả cho bộ sưu tập này..."
+          style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 15px; resize: vertical;"></textarea>
       </div>
       <div class="form-group" style="margin-bottom: 32px;">
-        <label class="form-label" style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #475569;"><i class="fa-solid fa-eye" style="color: #64748B;"></i> Chế độ hiển thị</label>
-        <select id="input-collection-visibility" class="form-control" style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 15px; appearance: none; background: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E') no-repeat right 16px top 50%; background-size: 12px auto;">
+        <label class="form-label"
+          style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; color: #475569;"><i
+            class="fa-solid fa-eye" style="color: #64748B;"></i> Chế độ hiển thị</label>
+        <select id="input-collection-visibility" class="form-control"
+          style="width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid #E2E8F0; font-size: 15px; appearance: none; background: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2364748B%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E') no-repeat right 16px top 50%; background-size: 12px auto;">
           <option value="public">Công khai (Mọi người có thể xem)</option>
           <option value="private">Riêng tư (Chỉ mình tôi)</option>
         </select>
       </div>
       <div style="display: flex; justify-content: flex-end; gap: 16px;">
-        <button class="btn-outline" style="padding: 10px 24px; border-radius: 8px; font-weight: 600; color: #64748B; border-color: #E2E8F0; display: flex; align-items: center; gap: 8px; transition: all 0.2s;" onclick="window.closeCreateCollectionModal();"><i class="fa-solid fa-xmark"></i> Hủy</button>
-        <button id="btn-submit-collection" class="btn-primary" style="padding: 10px 24px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); transition: all 0.2s;" disabled><i class="fa-solid fa-check"></i> Tạo mới</button>
+        <button class="btn-outline"
+          style="padding: 10px 24px; border-radius: 8px; font-weight: 600; color: #64748B; border-color: #E2E8F0; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+          onclick="window.closeCreateCollectionModal();"><i class="fa-solid fa-xmark"></i> Hủy</button>
+        <button id="btn-submit-collection" class="btn-primary"
+          style="padding: 10px 24px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); transition: all 0.2s;"
+          disabled><i class="fa-solid fa-check"></i> Tạo mới</button>
       </div>
     </div>
   </div>
@@ -473,16 +630,18 @@
     onclick="if(event.target === this) { window.closeFollowModal && window.closeFollowModal(); }">
     <div class="modal-content"
       style="background: var(--white); width: 100%; max-width: 480px; border-radius: 16px; padding: 0; max-height: 85vh; display: flex; flex-direction: column; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 10px 15px -3px rgba(0, 0, 0, 0.1); overflow: hidden;">
-      
+
       <div class="modal-header"
         style="display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border); background: #F8FAFC;">
-        <h2 class="modal-title" id="follow-modal-title" style="font-size: 20px; font-weight: 700; margin: 0; color: #1E293B;">Danh sách</h2>
+        <h2 class="modal-title" id="follow-modal-title"
+          style="font-size: 20px; font-weight: 700; margin: 0; color: #1E293B;">Danh sách</h2>
         <button onclick="window.closeFollowModal && window.closeFollowModal()"
-          style="background: transparent; border: none; font-size: 20px; color: #64748B; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: all 0.2s;" onmouseover="this.style.background='#E2E8F0'" onmouseout="this.style.background='transparent'">
+          style="background: transparent; border: none; font-size: 20px; color: #64748B; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: all 0.2s;"
+          onmouseover="this.style.background='#E2E8F0'" onmouseout="this.style.background='transparent'">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      
+
       <div id="follow-list-container"
         style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; padding: 16px 24px; gap: 12px; background: #fff;">
       </div>
@@ -533,20 +692,22 @@
           <div style="position: relative;">
             <input type="password" id="input-delete-pw" class="form-control" placeholder="Nhập mật khẩu của bạn..."
               autocomplete="current-password" style="width: 100%; box-sizing: border-box; padding-right: 40px;">
-            <i class="fa-solid fa-eye-slash" id="toggle-delete-pw" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary);"></i>
+            <i class="fa-solid fa-eye-slash" id="toggle-delete-pw"
+              style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary);"></i>
           </div>
         </div>
-        
+
         <label class="form-label"
           style="font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; margin-top: 16px; margin-bottom: 8px;"><i
             class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Mã xác thực OTP</label>
         <div style="display: flex; gap: 12px;">
-          <input type="text" id="input-delete-otp" class="form-control" placeholder="Nhập mã OTP 6 số"
-            style="flex: 1;" maxlength="6">
-          <button type="button" id="btn-send-delete-otp" class="btn-secondary"
-            style="white-space: nowrap;"><i class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP</button>
+          <input type="text" id="input-delete-otp" class="form-control" placeholder="Nhập mã OTP 6 số" style="flex: 1;"
+            maxlength="6">
+          <button type="button" id="btn-send-delete-otp" class="btn-secondary" style="white-space: nowrap;"><i
+              class="fa-solid fa-paper-plane" style="margin-right: 6px;"></i> Gửi mã OTP</button>
         </div>
-        <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email hiện tại của bạn.</small>
+        <small style="color: var(--text-secondary); margin-top: 6px; display: block;">Mã OTP sẽ được gửi về email hiện
+          tại của bạn.</small>
 
         <span id="delete-pw-error"
           style="color: #EF4444; font-size: 13px; display: none; margin-top: 6px; font-weight: 500;"><i
@@ -585,8 +746,7 @@
           style="font-weight: 600; color: #374151; display: flex; align-items: center; margin-bottom: 10px;"><i
             class="fa-solid fa-circle-exclamation" style="color: #EF4444; margin-right: 8px; font-size: 16px;"></i>
           Lý do</label>
-        <div
-          style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px;">
+        <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px;">
           <p id="reject-reason-content"
             style="color: #111827; font-size: 14px; margin: 0; font-style: italic; white-space: pre-wrap; word-break: break-word;">
           </p>

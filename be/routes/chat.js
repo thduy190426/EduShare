@@ -70,6 +70,7 @@ router.get('/history/:partnerId', authMiddleware, async (req, res) => {
         const userId = req.user.MaND;
         const partnerId = req.params.partnerId;
         const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
         const pool = req.app.locals.pool;
 
         const sql = `
@@ -81,13 +82,13 @@ router.get('/history/:partnerId', authMiddleware, async (req, res) => {
                 WHERE ((NguoiGui = ? AND NguoiNhan = ? AND DaXoa_NguoiGui = FALSE) OR (NguoiGui = ? AND NguoiNhan = ? AND DaXoa_NguoiNhan = FALSE))
                   AND (C.NgayXoa IS NULL OR NgayGui > C.NgayXoa)
                 ORDER BY NgayGui DESC
-                LIMIT ?
+                LIMIT ? OFFSET ?
             ) sub
             LEFT JOIN TINNHAN M2 ON sub.TraLoiCho_MaTN = M2.MaTN
             ORDER BY sub.NgayGui ASC
         `;
 
-        const [messages] = await pool.execute(sql, [userId, partnerId, userId, partnerId, partnerId, userId, limit.toString()]);
+        const [messages] = await pool.execute(sql, [userId, partnerId, userId, partnerId, partnerId, userId, limit.toString(), offset.toString()]);
         await pool.execute(
             'UPDATE TINNHAN SET DaDoc = TRUE WHERE NguoiGui = ? AND NguoiNhan = ? AND DaDoc = FALSE',
             [partnerId, userId]

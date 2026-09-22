@@ -1,0 +1,204 @@
+:root {
+  --primary: #4F46E5;
+  --primary-light: #EEF2FF;
+  --primary-dark: #4338ca;
+  --secondary: #06B6D4;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --text-primary: #1E293B;
+  --text-main: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #64748B;
+  --border: #E2E8F0;
+  --border-color: #E2E8F0;
+  --bg: #F8FAFC;
+  --bg-color: #F8FAFC;
+  --white: #FFFFFF;
+  --card-bg: #ffffff;
+  --radius-card: 12px;
+  --radius-btn: 8px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+  --header-height: 72px;
+  --sidebar-width: 260px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.navbar { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); position: fixed; top: 0; left: 0; right: 0; height: var(--header-height, 72px); z-index: 100; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
+.logo { font-size: 24px; font-weight: 700; color: var(--primary, #4f46e5); display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.nav-actions { display: flex; align-items: center; gap: 20px; }
+.icon-btn, .nav-notifications { position: relative; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; font-size: 20px; border: none; background: transparent; color: var(--text-main, #1e293b); }
+.icon-btn:hover, .nav-notifications:hover { background: #F1F5F9; }
+.user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 8px; border-radius: 30px; transition: background 0.2s; border: none; background: transparent; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--primary, #4f46e5); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; object-fit: cover; }
+.user-name { font-weight: 600; font-size: 14px; color: var(--text-main, #1e293b); }
+.user-role { font-size: 12px; color: var(--text-muted, #64748b); display: block; text-align: left; }
+
+.main-layout { display: flex; margin-top: var(--header-height, 72px); flex: 1; }
+.content-area { flex: 1; margin-left: var(--sidebar-width, 260px); padding: 32px 48px; padding-top: 24px; background: var(--bg-color, #f8fafc); min-height: calc(100vh - 72px); transition: margin-left 0.3s ease; }
+.sidebar-collapsed .content-area { margin-left: 80px; }
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: var(--radius-btn, 8px);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    font-family: inherit;
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn-secondary:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+body {
+    background-color: var(--bg-color);
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+}
+
+.main-container {
+    padding: 0;
+    max-width: 1200px;
+    margin: 0;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.stats-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-card.total { border-left: 4px solid #3b82f6; }
+.stat-card.avg { border-left: 4px solid #10b981; }
+.stat-card.max { border-left: 4px solid #f59e0b; }
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+.stat-card.total .stat-icon { background: #eff6ff; color: #3b82f6; }
+.stat-card.avg .stat-icon { background: #ecfdf5; color: #10b981; }
+.stat-card.max .stat-icon { background: #fef3c7; color: #f59e0b; }
+
+.stat-info h4 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin: 0 0 0.25rem 0;
+}
+.stat-info p {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.data-table-container {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-color);
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.search-bar {
+    position: relative;
+    width: 300px;
+}
+.search-bar input {
+    width: 100%;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.search-bar input:focus { border-color: var(--primary); }
+.search-bar i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th, table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+table th {
+    font-weight: 600;
+    color: var(--text-muted);
+    background: #f8fafc;
+}
+
+table tbody tr:hover {
+    background: #f1f5f9;
+}
+
+.score-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.score-badge.excellent { background: #dcfce7; color: #166534; }
+.score-badge.good { background: #fef3c7; color: #92400e; }
+.score-badge.poor { background: #fee2e2; color: #991b1b; }

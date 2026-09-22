@@ -58,28 +58,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const card = document.createElement('div');
-            card.className = 'quest-card';
+            card.className = `quest-card ${isClaimed ? 'claimed' : ''}`;
             card.innerHTML = `
-                <div class="quest-info">
-                    <div class="quest-title">
-                        <div class="quest-name">
-                            ${getIconForType(q.LoaiNV)}
-                            <span>${q.TenNV}</span>
-                        </div>
-                        <span class="quest-badge">${q.TanSuat === 'HangNgay' ? 'Hàng ngày' : 'Hàng tuần'}</span>
+                <div class="quest-header-row">
+                    <div class="quest-icon-wrapper">
+                        ${getIconForType(q.LoaiNV)}
                     </div>
-                    <div class="quest-desc">${q.MoTa}</div>
-                    <div class="quest-reward">
-                        <i class="fa-solid fa-coins"></i> +${q.ThuongXu} EduCoin
+                    <div style="display: flex; gap: 8px;">
+                        <span class="quest-badge ${q.TanSuat === 'HangNgay' ? 'daily' : 'weekly'}">${q.TanSuat === 'HangNgay' ? 'Hàng ngày' : 'Hàng tuần'}</span>
+                        <span class="quest-badge" style="background: ${q.ThuongXu <= 20 ? '#ecfdf5' : q.ThuongXu <= 50 ? '#fffbeb' : '#fef2f2'}; color: ${q.ThuongXu <= 20 ? '#059669' : q.ThuongXu <= 50 ? '#d97706' : '#dc2626'};">${q.ThuongXu <= 20 ? 'Dễ' : q.ThuongXu <= 50 ? 'Trung bình' : 'Khó'}</span>
+                    </div>
+                </div>
+                
+                <div class="quest-main-info">
+                    <div class="quest-text-content">
+                        <h3 class="quest-name">${q.TenNV}</h3>
+                        <p class="quest-desc">${q.MoTa}</p>
+                    </div>
+                </div>
+                
+                <div class="quest-reward">
+                    <i class="fa-solid fa-coins"></i> +${q.ThuongXu} EduCoin
+                </div>
+                
+                <div class="quest-footer">
+                    <div class="quest-progress-wrap">
+                        <div class="progress-info">
+                            <span class="progress-text">Tiến độ</span>
+                            <span class="progress-numbers">${q.TienDo} / ${q.MucTieu}</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: ${progressPercent}%;"></div>
+                        </div>
                     </div>
                     
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: ${progressPercent}%; ${isClaimed ? 'background: #10b981;' : ''}"></div>
+                    <div class="quest-action-wrap">
+                        ${actionHtml}
                     </div>
-                    <div class="progress-text">${q.TienDo} / ${q.MucTieu} hoàn thành</div>
-                </div>
-                <div class="quest-action">
-                    ${actionHtml}
                 </div>
             `;
             questsList.appendChild(card);
@@ -91,16 +106,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (claimableCount > 0 && !hasRemindedQuests) {
             hasRemindedQuests = true;
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 4000,
-                timerProgressBar: true,
-                icon: 'info',
-                title: `Bạn có ${claimableCount} nhiệm vụ chưa nhận thưởng!`,
-                text: 'Hãy click "Nhận thưởng" để lấy EduCoin nhé.'
-            });
         }
     }
 
@@ -134,19 +139,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } catch(e) {
                     console.error('Audio notification failed', e);
                 }
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Nhận thưởng thành công',
-                    text: `Bạn nhận được ${data.thuongXu} EduCoin.`,
-                    confirmButtonColor: '#4f46e5'
-                });
                 
-                const parent = btn.closest('.quest-action');
+                const parent = btn.closest('.quest-action-wrap');
                 parent.innerHTML = `<span class="status-badge status-done"><i class="fa-solid fa-check"></i> Đã nhận</span>`;
                 
-                const progressBar = parent.previousElementSibling.querySelector('.progress-bar');
-                progressBar.style.background = '#10b981';
+                const card = parent.closest('.quest-card');
+                card.classList.add('claimed');
             } else {
                 throw new Error(data.message || 'Có lỗi xảy ra, vui lòng thử lại!');
             }

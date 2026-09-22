@@ -3,7 +3,7 @@ const router = express.Router();
 
 const { authMiddleware } = require('../middlewares/auth');
 const { sendNotificationToUser } = require('../services/socket');
-const { cacheMiddleware } = require('../middlewares/cache');
+const { cacheMiddleware, deleteCacheByPattern } = require('../middlewares/cache');
 
 const parseId = (value) => {
     const id = Number.parseInt(value, 10);
@@ -153,6 +153,8 @@ router.post('/:maMonHoc/follow', authMiddleware, async (req, res) => {
             [req.user.MaND, maMonHoc]
         );
 
+        deleteCacheByPattern(`cache:${req.user.MaND}:*subjects*`);
+
         res.status(201).json({ message: 'Đã thêm vào môn học của tôi.', subject: subjectRows[0] });
     } catch (error) {
         console.error('Lỗi API POST /subjects/:maMonHoc/follow:', error);
@@ -174,6 +176,8 @@ router.delete('/:maMonHoc/follow', authMiddleware, async (req, res) => {
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Môn học này chưa có trong danh sách của bạn.' });
         }
+
+        deleteCacheByPattern(`cache:${req.user.MaND}:*subjects*`);
 
         res.status(200).json({ message: 'Đã xoá môn học ra khỏi danh sách của bạn.' });
     } catch (error) {

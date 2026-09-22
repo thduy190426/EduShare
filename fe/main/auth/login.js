@@ -46,43 +46,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.head.appendChild(googleScript);
 
   let trustedDeviceToken = localStorage.getItem("trustedDeviceToken");
-  let isTrusted = false;
   if (trustedDeviceToken) {
     try {
       const payload = JSON.parse(atob(trustedDeviceToken.split(".")[1]));
-      if (payload.exp * 1000 > Date.now()) {
-        isTrusted = true;
+      if (payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem("trustedDeviceToken");
       }
-    } catch (e) {}
-  }
-  if (!isTrusted) {
-    trustedDeviceToken = null;
-    localStorage.removeItem("trustedDeviceToken");
-  } else {
-    window.isCaptchaSolved = true;
-    const rc = document.getElementById("recaptcha-container");
-    if (rc) rc.style.display = "none";
-  }
-
-  window.onRecaptchaLoad = function () {
-    const recaptchaContainer = document.getElementById("recaptcha-container");
-    if (recaptchaContainer && config.recaptchaSiteKey && !isTrusted) {
-      grecaptcha.render(recaptchaContainer, {
-        sitekey: config.recaptchaSiteKey,
-        callback: enableSubmitBtn,
-        "expired-callback": disableSubmitBtn,
-      });
-    } else if (!config.recaptchaSiteKey) {
-      window.isCaptchaSolved = true; 
-      if (typeof validateLoginForm === "function") validateLoginForm();
+    } catch (e) {
+      localStorage.removeItem("trustedDeviceToken");
     }
-  };
-  const recaptchaScript = document.createElement("script");
-  recaptchaScript.src =
-    "https://www.google.com/recaptcha/api.js?render=explicit&onload=onRecaptchaLoad";
-  recaptchaScript.async = true;
-  recaptchaScript.defer = true;
-  document.head.appendChild(recaptchaScript);
+  }
 
   const loginForm = document.getElementById("loginForm");
 
@@ -126,12 +99,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   const loginSubmitBtn = loginForm?.querySelector('button[type="submit"]');
-  if (loginSubmitBtn) {
-    loginSubmitBtn.disabled = true;
-    loginSubmitBtn.style.opacity = "0.5";
-    loginSubmitBtn.style.cursor = "not-allowed";
-    loginSubmitBtn.style.transition = "all 0.3s ease";
-  }
 
   const validateLoginForm = () => {
     if (!loginSubmitBtn) return;
@@ -156,7 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("loginEmail").style.borderColor = "";
     }
 
-    if (isValidEmail(email) && matKhau.length > 0 && window.isCaptchaSolved) {
+    if (isValidEmail(email) && matKhau.length > 0) {
       loginSubmitBtn.disabled = false;
       loginSubmitBtn.style.opacity = "1";
       loginSubmitBtn.style.cursor = "pointer";
@@ -221,18 +188,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      let recaptchaToken = "";
-      if (!isTrusted && config.recaptchaSiteKey) {
-        recaptchaToken =
-          typeof grecaptcha !== "undefined" ? grecaptcha.getResponse() : "";
-        if (!recaptchaToken) {
-          Toast.fire({
-            icon: "warning",
-            title: "Vui lòng xác nhận bạn không phải người máy",
-          });
-          return;
-        }
-      }
 
       try {
         const submitBtn = loginForm.querySelector('button[type="submit"]');
@@ -265,8 +220,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               email,
               matKhau,
               rememberLogin,
-              recaptchaToken,
-              trustedDeviceToken,
             }),
           }),
           new Promise((resolve) => setTimeout(resolve, 1000)),

@@ -267,7 +267,7 @@ async function notifyActiveAdmins(pool, noiDung, linkDich, excludeUserId = null)
         console.error('Lỗi gửi thông báo cho Admin:', error);
     }
 }
-router.get('/subjects/popular', cacheMiddleware(600), async (req, res) => {
+router.get('/subjects/popular', cacheMiddleware(600, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
@@ -285,7 +285,7 @@ router.get('/subjects/popular', cacheMiddleware(600), async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách môn học phổ biến.' });
     }
 });
-router.get('/subjects', cacheMiddleware(600), async (req, res) => {
+router.get('/subjects', cacheMiddleware(600, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
@@ -300,7 +300,7 @@ router.get('/subjects', cacheMiddleware(600), async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy danh sách môn học.' });
     }
 });
-router.get('/levels', cacheMiddleware(600), async (req, res) => {
+router.get('/levels', cacheMiddleware(600, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute(`
@@ -336,7 +336,7 @@ router.get('/generate-signature', authMiddleware, (req, res) => {
         res.status(500).json({ message: 'Lỗi tạo chữ ký upload.' });
     }
 });
-router.get('/stats/platform', cacheMiddleware(600), async (req, res) => {
+router.get('/stats/platform', cacheMiddleware(600, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [docRows] = await pool.execute("SELECT COUNT(*) AS count FROM TAILIEU WHERE TrangThaiKiemDuyet = 'DaDuyet'");
@@ -766,7 +766,7 @@ router.get('/feed', authMiddleware, async (req, res) => {
         res.status(500).json({ message: 'Lỗi máy chủ khi lấy bảng tin.' });
     }
 });
-router.get('/trending-searches', cacheMiddleware(600), async (req, res) => {
+router.get('/trending-searches', cacheMiddleware(600, true), async (req, res) => {
     try {
         const trendingSearches = [
             'Giải tích 1', 

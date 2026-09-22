@@ -737,20 +737,7 @@ const cleanupOldSessions = async (maND) => {
 };
 
 app.post('/api/login', loginLimiter, validate(loginSchema), async (req, res) => {
-    const { email, matKhau, rememberLogin, recaptchaToken, trustedDeviceToken } = req.body;
-
-    let isHuman = false;
-    if (trustedDeviceToken) {
-        try {
-            const decoded = jwt.verify(trustedDeviceToken, process.env.JWT_SECRET);
-            if (decoded.trusted) isHuman = true;
-        } catch (err) {}
-    }
-
-    if (!isHuman) {
-        isHuman = await verifyRecaptcha(recaptchaToken);
-        if (!isHuman) return res.status(400).json({ message: 'Xác thực Captcha thất bại.' });
-    }
+    const { email, matKhau, rememberLogin } = req.body;
 
     try {
         const [rows] = await pool.execute('SELECT * FROM NGUOIDUNG WHERE Email = ?', [email]);
@@ -1290,7 +1277,7 @@ app.post('/api/forgot-password', async (req, res) => {
 
         const crypto = require('crypto');
         const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
 
         await pool.execute(
             'INSERT INTO RESET_PASSWORD_OTP (Email, OTP, ExpiresAt) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE OTP = ?, ExpiresAt = ?',

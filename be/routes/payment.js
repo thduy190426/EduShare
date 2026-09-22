@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 const { authMiddleware, superAdminMiddleware } = require('../middlewares/auth');
 const { paymentLimiter } = require('../middlewares/rateLimit');
 
-router.get('/packages', cacheMiddleware(600), async (req, res) => {
+router.get('/packages', cacheMiddleware(600, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT MaGoi AS id, SoTien AS price, SoXu AS coins, KhuyenMai, TenGoi FROM GOI_NAP_XU WHERE TrangThai = "HoatDong" ORDER BY ThuTu ASC, SoTien ASC');
@@ -87,7 +87,7 @@ router.post('/buy-premium', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/flash-sale', cacheMiddleware(600), async (req, res) => {
+router.get('/flash-sale', cacheMiddleware(600, true), async (req, res) => {
     try {
         const pool = req.app.locals.pool;
         const [rows] = await pool.execute('SELECT Code, DiscountPercent, NgayHetHan FROM PROMO_CODE WHERE IsActive = TRUE AND IsFlashSale = TRUE AND (NgayHetHan IS NULL OR NgayHetHan > CURRENT_TIMESTAMP) ORDER BY NgayHetHan ASC LIMIT 1');

@@ -810,32 +810,80 @@ function setupSidebarResizer(sidebarEl) {
     let startX = 0;
     let startWidth = 0;
 
-    resizer.addEventListener('mousedown', (e) => {
-        if (document.documentElement.classList.contains('sidebar-collapsed')) return;
+    const setSidebarCollapsedState = (shouldCollapse) => {
+        const isCurrentlyCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
+        if (shouldCollapse !== isCurrentlyCollapsed) {
+            const btnToggle = document.getElementById('btn-toggle-sidebar');
+            if (btnToggle) {
+                btnToggle.click();
+            } else {
+                if (shouldCollapse) {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                    localStorage.setItem('sidebar-collapsed', 'true');
+                } else {
+                    document.documentElement.classList.remove('sidebar-collapsed');
+                    localStorage.setItem('sidebar-collapsed', 'false');
+                }
+            }
+        }
+    };
+
+    const startDrag = (e) => {
+        e.preventDefault(); 
+
+        if (document.documentElement.classList.contains('sidebar-collapsed')) {
+            setSidebarCollapsedState(false);
+        }
+
         isResizing = true;
-        startX = e.clientX;
-        startWidth = parseInt(getComputedStyle(sidebarEl, null).getPropertyValue('width'), 10);
+        startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+        
+        const rootWidth = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
+        let parsedWidth = parseInt(rootWidth, 10);
+        if (isNaN(parsedWidth) || parsedWidth < 200) {
+            parsedWidth = 260;
+        }
+        startWidth = parsedWidth;
+
         resizer.classList.add('is-resizing');
         document.body.style.userSelect = 'none';
         document.documentElement.classList.remove('sidebar-animated');
-    });
+    };
 
-    document.addEventListener('mousemove', (e) => {
+    const doDrag = (e) => {
         if (!isResizing) return;
-        const width = startWidth + (e.clientX - startX);
-        if (width >= 200 && width <= 400) {
-            document.documentElement.style.setProperty('--sidebar-width', width + 'px');
+        const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+        const width = startWidth + (clientX - startX);
+        
+        if (width < 150) {
+            setSidebarCollapsedState(true);
+        } else {
+            setSidebarCollapsedState(false);
+            const clampedWidth = Math.min(Math.max(200, width), 400);
+            document.documentElement.style.setProperty('--sidebar-width', clampedWidth + 'px');
         }
-    });
+    };
 
-    document.addEventListener('mouseup', () => {
+    const stopDrag = () => {
         if (isResizing) {
             isResizing = false;
             resizer.classList.remove('is-resizing');
             document.body.style.userSelect = '';
             document.documentElement.classList.add('sidebar-animated');
-            const finalWidth = getComputedStyle(sidebarEl, null).getPropertyValue('width');
-            localStorage.setItem('custom-sidebar-width', finalWidth);
+            
+            if (!document.documentElement.classList.contains('sidebar-collapsed')) {
+                const finalWidth = sidebarEl.offsetWidth + 'px';
+                localStorage.setItem('custom-sidebar-width', finalWidth);
+            }
         }
-    });
+    };
+
+    resizer.addEventListener('mousedown', startDrag);
+    resizer.addEventListener('touchstart', startDrag, {passive: false});
+
+    document.addEventListener('mousemove', doDrag);
+    document.addEventListener('touchmove', doDrag, {passive: false});
+
+    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('touchend', stopDrag);
 }
