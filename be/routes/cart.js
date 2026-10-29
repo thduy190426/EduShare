@@ -8,7 +8,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const userId = req.user.MaND;
 
         const [rows] = await pool.execute(`
-            SELECT G.MaTL, G.NgayThem, T.TenTL, T.GiaXu, T.ThumbnailURL, U.HoTen as TenTacGia
+            SELECT G.MaTL, G.NgayThem, T.TenTL, T.GiaXu, T.ThumbnailURL, T.PreviewURL, U.HoTen as TenTacGia
             FROM GIOHANG G
             JOIN TAILIEU T ON G.MaTL = T.MaTL
             JOIN NGUOIDUNG U ON T.MaND_NguoiDang = U.MaND
@@ -175,7 +175,7 @@ router.post('/checkout', authMiddleware, async (req, res) => {
             );
 
             for (const item of cartItems) {
-                await connection.execute('INSERT INTO TAILIEU_DAMUA (MaND, MaTL) VALUES (?, ?)', [userId, item.MaTL]);
+                await connection.execute('INSERT INTO TAILIEU_DAMUA (MaND, MaTL, GiaXuThoiDiemMua) VALUES (?, ?, ?)', [userId, item.MaTL, item.GiaXu]);
                 
                 await connection.execute('UPDATE NGUOIDUNG SET SoDuXu = SoDuXu + ? WHERE MaND = ?', [item.GiaXu, item.MaND_NguoiDang]);
                 await connection.execute(

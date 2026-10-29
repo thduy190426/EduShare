@@ -36,10 +36,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('resultContent').style.display = 'block';
 
         document.getElementById('quizTitle').textContent = data.attempt.TieuDe;
-        document.getElementById('quizScore').textContent = `${data.attempt.DiemSo} / 100`;
+        
+        const scoreEl = document.getElementById('quizScore');
+        scoreEl.textContent = `${data.attempt.DiemSo} / 100`;
+        scoreEl.style.color = data.attempt.DiemSo < 50 ? 'var(--danger, #dc2626)' : 'var(--success, #16a34a)';
+        
         document.getElementById('totalQuestions').textContent = data.TongSoCau;
         document.getElementById('correctAnswers').textContent = `${data.SoCauDung} / ${data.TongSoCau}`;
-        document.getElementById('submitTime').textContent = formatDate(data.attempt.ThoiGianNopBai);
+        
+        const d = new Date(data.attempt.ThoiGianNopBai);
+        const timeStr = [
+            String(d.getHours()).padStart(2, '0'),
+            String(d.getMinutes()).padStart(2, '0'),
+            String(d.getSeconds()).padStart(2, '0')
+        ].join(':');
+        const dateStr = [
+            String(d.getDate()).padStart(2, '0'),
+            String(d.getMonth() + 1).padStart(2, '0'),
+            d.getFullYear()
+        ].join('/');
+        document.getElementById('submitTime').textContent = `${timeStr} | ${dateStr}`;
 
         const qList = document.getElementById('questionsList');
         qList.innerHTML = '';

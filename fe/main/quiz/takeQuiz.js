@@ -66,6 +66,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnStartQuiz').disabled = false;
 
+    window.saveDraft = () => {
+        if (!isQuizActive || !quizData || !maKetQua) return;
+        const answers = [];
+        quizData.questions.forEach(q => {
+            const selected = document.querySelector(`input[name="q_${q.MaCauHoi}"]:checked`);
+            if (selected) {
+                answers.push({ MaCauHoi: q.MaCauHoi, MaDapAn: Number(selected.value) });
+            }
+        });
+        const bookmarks = Array.from(document.querySelectorAll('.nav-btn.flagged')).map(btn => parseInt(btn.id.replace('nav-btn-', '')));
+        localStorage.setItem(`quiz_draft_${quizId}`, JSON.stringify({
+            quizData, maKetQua, endTime, answers, bookmarks
+        }));
+    };
+
+    window.toggleFlag = (qId) => {
+        const navBtn = document.getElementById(`nav-btn-${qId}`);
+        const flagBtnIcon = document.getElementById(`flag-icon-${qId}`);
+        if (navBtn.classList.contains('flagged')) {
+            navBtn.classList.remove('flagged');
+            navBtn.style.border = '';
+            if (flagBtnIcon) {
+                flagBtnIcon.classList.remove('fa-solid');
+                flagBtnIcon.classList.add('fa-regular');
+                flagBtnIcon.style.color = '';
+            }
+        } else {
+            navBtn.classList.add('flagged');
+            navBtn.style.border = '2px solid #f59e0b';
+            if (flagBtnIcon) {
+                flagBtnIcon.classList.remove('fa-regular');
+                flagBtnIcon.classList.add('fa-solid');
+                flagBtnIcon.style.color = '#f59e0b';
+            }
+        }
+        if (window.saveDraft) window.saveDraft();
+    };
+
     document.getElementById('btnStartQuiz').addEventListener('click', async () => {
         document.getElementById('btnStartQuiz').disabled = true;
         document.getElementById('btnStartQuiz').textContent = 'Đang tải...';
@@ -75,9 +113,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await document.documentElement.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
             }
             
-            const res = await apiClient.post(`/quizzes/${quizId}/take`);
-            quizData = res;
-            maKetQua = res.MaKetQua;
+            const draftStr = localStorage.getItem(`quiz_draft_${quizId}`);
+            let draft = null;
+            if (draftStr) {
+                try { draft = JSON.parse(draftStr); } catch(e) {}
+            }
+            
+            let timeRemaining = 0;
+            if (draft && draft.endTime > Date.now()) {
+                quizData = draft.quizData;
+                maKetQua = draft.maKetQua;
+                endTime = draft.endTime;
+                timeRemaining = (endTime - Date.now()) / 60000;
+            } else {
+                const res = await apiClient.post(`/quizzes/${quizId}/take`);
+                quizData = res;
+                maKetQua = res.MaKetQua;
+                if (res.quiz && res.quiz.ThoiGianLamBai > 0) {
+                    endTime = Date.now() + res.quiz.ThoiGianLamBai * 60000;
+                    timeRemaining = res.quiz.ThoiGianLamBai;
+                }
+            }
             
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('quizContainer').style.display = 'block';
@@ -87,7 +143,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             playSound('start'); 
             
             renderQuestions();
-            startTimer(res.quiz.ThoiGianLamBai);
+            
+            if (draft && draft.endTime > Date.now()) {
+                if (draft.answers) {
+                    draft.answers.forEach(a => {
+                        const r = document.querySelector(`input[name="q_${a.MaCauHoi}"][value="${a.MaDapAn}"]`);
+                        if (r) {
+                            r.checked = true;
+                            window.markAnswered(a.MaCauHoi, true);
+                        }
+                    });
+                }
+                if (draft.bookmarks) {
+                    draft.bookmarks.forEach(qId => window.toggleFlag(qId));
+                }
+            }
+            
+            if (endTime) {
+                startTimer(timeRemaining);
+            }
+            window.saveDraft();
             
         } catch (err) {
             alert(err.message || 'Lỗi khi bắt đầu bài thi');
@@ -118,8 +193,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             qList.innerHTML += `
-                <div class="question-card" id="q${q.MaCauHoi}">
-                    <span class="q-points">${q.Diem} điểm</span>
+                <div class="question-card" id="q${q.MaCauHoi}" style="position: relative;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span class="q-points" style="position: static; margin-bottom: 0;">${q.Diem} điểm</span>
+                        <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;" onclick="window.toggleFlag(${q.MaCauHoi})">
+                            <i class="fa-regular fa-flag" id="flag-icon-${q.MaCauHoi}"></i> Đánh dấu
+                        </button>
+                    </div>
                     <div class="q-title"><span style="font-weight: 700; color: var(--primary);">Câu ${qNum}:</span></div>
                     <div class="q-content-html" style="margin-top: 8px; margin-bottom: 12px; font-size: 1.05rem; line-height: 1.6;">${q.NoiDung}</div>
                     ${q.HinhAnh ? '<div style="text-align: center; margin: 10px 0;"><img src="' + q.HinhAnh + '" alt="Ảnh câu hỏi" style="max-width: 100%; max-height: 300px; border-radius: 8px;"></div>' : ''}
@@ -131,13 +211,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    window.markAnswered = (qId) => {
-        document.getElementById(`nav-btn-${qId}`).classList.add('answered');
+    window.markAnswered = (qId, skipSave = false) => {
+        const navBtn = document.getElementById(`nav-btn-${qId}`);
+        if (navBtn) navBtn.classList.add('answered');
         const opts = document.querySelectorAll(`input[name="q_${qId}"]`);
         opts.forEach(opt => {
             opt.parentElement.classList.remove('selected');
             if (opt.checked) opt.parentElement.classList.add('selected');
         });
+        if (!skipSave && window.saveDraft) window.saveDraft();
     };
 
     const playSound = (type) => {
@@ -189,7 +271,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const countSpan = document.getElementById('countdown');
         container.style.display = 'flex';
 
-        endTime = Date.now() + minutes * 60000;
+        if (!endTime || endTime <= Date.now()) {
+            endTime = Date.now() + minutes * 60000;
+        }
         warningPlayed = false;
         
         const updateTimer = () => {
@@ -266,6 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         isQuizActive = false;
         document.body.classList.remove('quiz-active');
         clearInterval(timerInterval);
+        localStorage.removeItem(`quiz_draft_${quizId}`);
         document.getElementById('btnSubmitQuiz').disabled = true;
         document.getElementById('btnSubmitQuiz').textContent = 'Đang nộp...';
 

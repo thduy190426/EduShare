@@ -6,6 +6,7 @@
     <title>EduShare - Lịch sử làm bài thi</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA0NDggNTEyJz48cGF0aCBmaWxsPScjNGY0NmU1JyBkPSdNOTYgMEM0MyAwIDAgNDMgMCA5NlY0MTZjMCA1MyA0MyA5NiA5NiA5NkgzODRoMzJjMTcuNyAwIDMyLTE0LjMgMzItMzJzLTE0LjMtMzItMzItMzJWMzg0YzE3LjcgMCAzMi0xNC4zIDMyLTMyVjMyYzAtMTcuNy0xNC4zLTMyLTMyLTMySDM4NCA5NnptMCAzODRIMzUydjY0SDk2Yy0xNy43IDAtMzItMTQuMy0zMi0zMnMxNC4zLTMyIDMyLTMyem0zMi0yNDBjMC04LjggNy4yLTE2IDE2LTE2SDMzNmM4LjggMCAxNiA3LjIgMTYgMTZzLTcuMiAxNi0xNiAxNkgxNDRjLTguOCAwLTE2LTcuMi0xNi0xNnptMTYgNDhIMzM2YzguOCAwIDE2IDcuMiAxNiAxNnMtNy4yIDE2LTE2IDE2SDE0NGMtOC44IDAtMTYtNy4yLTE2LTE2czcuMi0xNiAxNi0xNnonLz48L3N2Zz4=">
     <link rel="stylesheet" href="../../css/shared/variables.css">
     <link rel="stylesheet" href="../../css/shared/sidebar.css">
     <link rel="stylesheet" href="../../css/user/userHome.css">
@@ -57,14 +58,15 @@
             </div>
 
             <div class="history-container">
-                <table class="history-table">
+                <table class="history-table data-table">
                     <thead>
                         <tr>
-                            <th>Đề thi</th>
-                            <th>Môn học</th>
-                            <th>Thời gian nộp</th>
-                            <th>Điểm số</th>
-                            <th>Hành động</th>
+                            <th><i class="fa-solid fa-file-signature fa-fw"></i> Đề thi</th>
+                            <th><i class="fa-solid fa-book-open fa-fw"></i> Môn học</th>
+                            <th><i class="fa-regular fa-clock fa-fw"></i> Thời gian nộp</th>
+                            <th><i class="fa-solid fa-stopwatch fa-fw"></i> Thời gian làm bài</th>
+                            <th><i class="fa-solid fa-medal fa-fw" style="color: #f59e0b;"></i> Điểm số</th>
+                            <th><i class="fa-solid fa-sliders fa-fw"></i> Hành động</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody">
@@ -75,6 +77,7 @@
                         </tr>
                     </tbody>
                 </table>
+                <div id="pagination" class="pagination" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;"></div>
                 <div id="noHistoryMessage" class="empty-state" style="display: none;">
                     <i class="fa-regular fa-folder-open"></i>
                     <p>Bạn chưa hoàn thành bài thi nào.</p>

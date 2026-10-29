@@ -437,7 +437,7 @@ class QuizService {
 
     async getQuizHistory(userId) {
         const query = `
-            SELECT kq.MaKetQua, kq.MaQuiz, kq.DiemSo, kq.ThoiGianNopBai,
+            SELECT kq.MaKetQua, kq.MaQuiz, kq.DiemSo, kq.ThoiGianBatDau, kq.ThoiGianNopBai,
                    q.TieuDe, m.TenMonHoc
             FROM KETQUA_QUIZ kq
             JOIN QUIZ q ON kq.MaQuiz = q.MaQuiz

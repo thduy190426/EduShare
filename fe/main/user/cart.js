@@ -70,10 +70,11 @@ function renderCart() {
         document.getElementById('btn-checkout').disabled = false;
         let html = '';
         cartItems.forEach(item => {
-            const thumbUrl = item.ThumbnailURL ? getAssetUrl(item.ThumbnailURL) : '../../assets/images/doc-placeholder.png';
+            const fallbackImg = 'https://placehold.co/120x160/e2e8f0/64748b?text=Doc';
+            const thumbUrl = item.ThumbnailURL ? getAssetUrl(item.ThumbnailURL) : (item.PreviewURL ? getAssetUrl(item.PreviewURL) : fallbackImg);
             html += `
                 <div class="cart-item" data-id="${item.MaTL}">
-                    <img src="${thumbUrl}" alt="Thumbnail" class="cart-item-img" onerror="this.src='../../assets/images/doc-placeholder.png'">
+                    <img src="${thumbUrl}" alt="Thumbnail" class="cart-item-img" onerror="this.src='${fallbackImg}'">
                     <div class="cart-item-info">
                         <a href="../document/documentDetails.html?id=${item.MaTL}" class="cart-item-title">${item.TenTL}</a>
                         <div class="cart-item-author"><i class="fa-solid fa-user-pen"></i> ${item.TenTacGia}</div>

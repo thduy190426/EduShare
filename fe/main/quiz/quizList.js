@@ -22,9 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchSubjects() {
         try {
-            const res = await fetch(`${API_URL}/subjects`);
+            const res = await fetch(`${API_URL}/documents/subjects`);
             if (res.ok) {
-                const subjects = await res.json();
+                const data = await res.json();
+                const subjects = data.subjects || [];
                 subjects.forEach(sub => {
                     const option = document.createElement('option');
                     option.value = sub.MaMonHoc;
@@ -163,15 +164,29 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     }
 
+    const validateSearchButton = () => {
+        const inputSearch = searchInput.value.trim();
+        const inputSubject = subjectFilter.value;
+        if (inputSearch !== currentSearch || inputSubject !== currentSubjectId) {
+            btnSearch.disabled = false;
+        } else {
+            btnSearch.disabled = true;
+        }
+    };
+
+    searchInput.addEventListener('input', validateSearchButton);
+    subjectFilter.addEventListener('change', validateSearchButton);
+
     btnSearch.addEventListener('click', () => {
         currentPage = 1;
         currentSearch = searchInput.value.trim();
         currentSubjectId = subjectFilter.value;
+        validateSearchButton();
         loadQuizzes();
     });
 
     searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !btnSearch.disabled) {
             btnSearch.click();
         }
     });

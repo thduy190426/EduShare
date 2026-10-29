@@ -397,8 +397,9 @@ body {
 .nav-legend {
     margin-top: 1.5rem;
     display: flex;
-    justify-content: space-between;
-    font-size: 0.85rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
 }
 .legend-item {
     display: flex;

@@ -572,10 +572,10 @@ function renderDocumentInfo(doc, hasPurchased, isPremium) {
                         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                         const blobUrl = URL.createObjectURL(blob);
                         
-                        previewContent.innerHTML = `<iframe src="${blobUrl}" width="100%" height="600px" style="border: none; border-radius: 8px;"></iframe>`;
+                        previewContent.innerHTML = `<iframe src="/pdfjs/web/viewer.html?file=${encodeURIComponent(blobUrl)}#zoom=page-width" width="100%" height="600px" style="border: none; border-radius: 8px;"></iframe>`;
                     } catch(e) {
                         console.error("Lỗi fix title PDF, dùng bản gốc", e);
-                        previewContent.innerHTML = `<iframe src="${fullFileUrl}" width="100%" height="600px" style="border: none; border-radius: 8px;"></iframe>`;
+                        previewContent.innerHTML = `<iframe src="/pdfjs/web/viewer.html?file=${encodeURIComponent(fullFileUrl)}#zoom=page-width" width="100%" height="600px" style="border: none; border-radius: 8px;"></iframe>`;
                     }
                 })();
             } else {
@@ -587,10 +587,12 @@ function renderDocumentInfo(doc, hasPurchased, isPremium) {
              if (loaiFilePreview === 'pdf') {
                  const previewUrl = `${API_URL}/documents/${doc.MaTL}/preview-pdf`;
                  previewContent.innerHTML = `
-                    <div style="background-color: #FEF3C7; color: #92400E; padding: 12px 16px; font-size: 14px; text-align: center; border-bottom: 1px solid #FDE68A;">
+                  <div style="display: flex; flex-direction: column; width: 100%; height: 100%;">
+                    <div style="background-color: #FEF3C7; color: #92400E; padding: 12px 16px; font-size: 14px; text-align: center; border-bottom: 1px solid #FDE68A; flex-shrink: 0;">
                        <i class="fa-solid fa-eye" style="margin-right: 6px;"></i> Bạn đang xem trước một phần của tài liệu. Hãy nâng cấp Premium để xem toàn bộ nội dung.
                     </div>
-                    <iframe src="${previewUrl}" width="100%" height="600px" style="border: none; border-radius: 0 0 8px 8px;"></iframe>
+                    <iframe src="/pdfjs/web/viewer.html?file=${encodeURIComponent(previewUrl)}#zoom=page-width" style="flex-grow: 1; width: 100%; min-height: 600px; border: none; border-radius: 0 0 8px 8px;"></iframe>
+                  </div>
                  `;
              } else {
                  previewContent.innerHTML = `

@@ -25,28 +25,38 @@
 .history-container {
     background-color: var(--surface);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     padding: 24px;
     margin-top: 24px;
 }
 
 .history-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 .history-table th, .history-table td {
-    padding: 16px;
+    padding: 16px 20px;
     text-align: left;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .history-table th {
     font-weight: 600;
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    background-color: #f8fafc;
+}
+
+.history-table th:first-child {
+    border-top-left-radius: 8px;
+}
+
+.history-table th:last-child {
+    border-top-right-radius: 8px;
 }
 
 .history-table td {
@@ -55,8 +65,29 @@
     vertical-align: middle;
 }
 
+.history-table tbody tr {
+    transition: all 0.2s ease;
+}
+
 .history-table tbody tr:hover {
-    background-color: var(--background);
+    background-color: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.time-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--text-secondary);
+    background: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+.time-badge i {
+    color: var(--primary);
 }
 
 .score-badge {
@@ -150,4 +181,43 @@
 
 .btn-explore-empty:hover i {
     transform: translateX(4px);
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.page-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.page-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--background);
 }
